@@ -5,8 +5,8 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
-#include <time.h>
-#include <math.h>
+#include <ctime>
+#include <cmath>
 #include <unordered_map>
 #include <unordered_set>
 

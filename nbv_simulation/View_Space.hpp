@@ -4,7 +4,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
-#include <time.h>
+#include <ctime>
 #include <mutex>
 #include <unordered_set>
 #include <bitset>
