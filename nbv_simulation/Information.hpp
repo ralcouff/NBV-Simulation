@@ -64,7 +64,7 @@ public:
 	int voxel_num;
 	bool previous_voxel_unknown;
 
-	Ray_Information(Ray* _ray) {
+	explicit Ray_Information(Ray* _ray) {
 		ray = _ray;
 		information_gain = 0;
 		visible = 1;
