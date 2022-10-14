@@ -623,7 +623,7 @@ inline octomap::point3d project_pixel_to_ray_end(int x,int y, rs2_intrinsics& co
 	rs2_deproject_pixel_to_point(point, &color_intrinsics, pixel, max_range);
 	Eigen::Vector4d point_world(point[0], point[1], point[2],1);
 	point_world = now_camera_pose_world * point_world;
-	return octomap::point3d(point_world(0), point_world(1), point_world(2));
+	return {point_world(0), point_world(1), point_world(2)};
 }
 
 void ray_information_thread_process(int ray_id, Ray_Information** rays_info, unordered_map<Ray, int, Ray_Hash>* rays_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* occupancy_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* object_weight, octomap::ColorOcTree* octo_model, Voxel_Information* voxel_information, View_Space* view_space, short method )
