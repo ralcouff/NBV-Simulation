@@ -1,4 +1,4 @@
-#include <windows.h>
+
 #include <iostream>
 #include <thread>
 #include <atomic>

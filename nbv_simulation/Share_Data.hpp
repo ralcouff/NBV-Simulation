@@ -2,8 +2,8 @@
 #include <unordered_set>
 #include <algorithm>
 #include <iostream>
-#include <direct.h>
-#include <fstream>  
+
+#include <fstream>
 #include <string>  
 #include <vector> 
 #include <thread>
@@ -14,6 +14,7 @@
 #include <mutex>
 #include <map>
 #include <set>
+#include <filesystem>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -38,6 +39,7 @@
 #include <octomap/octomap.h>
 #include <octomap/ColorOcTree.h>
 
+namespace fs = std::filesystem;
 using namespace std;
 
 /** \brief Distortion model: defines how pixel coordinates should be mapped to sensor coordinates. */
@@ -352,11 +354,14 @@ public:
 		string temp;
 		for (int i = 0; i < cd.length(); i++)
 			if (cd[i] == '/') {
-				if (access(temp.c_str(), 0) != 0) mkdir(temp.c_str());
+				if (access(temp.c_str(), 0) != 0)
+                                  fs::create_directory(temp);
 				temp += cd[i];
 			}
 			else temp += cd[i];
-		if (access(temp.c_str(), 0) != 0) mkdir(temp.c_str());
+		if (access(temp.c_str(), 0) != 0)
+                  fs::create_directory(temp);
+
 	}
 
 	void save_posetrans_to_disk(Eigen::Matrix4d& T, string cd, string name, int frames_cnt)
