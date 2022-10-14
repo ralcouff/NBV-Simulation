@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <queue>
 #include <chrono>
 #include <ctime>
 #include <cmath>
