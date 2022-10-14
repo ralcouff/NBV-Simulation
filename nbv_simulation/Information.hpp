@@ -158,7 +158,7 @@ public:
 					&& coordinate.z() >= view_space->object_center_world(2) - map_size && coordinate.z() <= view_space->object_center_world(2) + map_size)
 				{
 					points.push_back(coordinate);
-					if (frontier_check(coordinate, octo_model, voxel_information, octomap_resolution)==2) edge->points.push_back(pcl::PointXYZ(coordinate.x(), coordinate.y(), coordinate.z()));
+					if (frontier_check(coordinate, octo_model, voxel_information, octomap_resolution)==2) edge->points.emplace_back(coordinate.x(), coordinate.y(), coordinate.z());
 				}
 			}
 		}
@@ -204,14 +204,14 @@ public:
 		double y2 = view_space->object_center_world(1) + map_size;
 		double z1 = view_space->object_center_world(2) - map_size;
 		double z2 = view_space->object_center_world(2) + map_size;
-		convex_3d.push_back(Eigen::Vector4d(x1, y1, z1, 1));
-		convex_3d.push_back(Eigen::Vector4d(x1, y2, z1, 1));
-		convex_3d.push_back(Eigen::Vector4d(x2, y1, z1, 1));
-		convex_3d.push_back(Eigen::Vector4d(x2, y2, z1, 1));
-		convex_3d.push_back(Eigen::Vector4d(x1, y1, z2, 1));
-		convex_3d.push_back(Eigen::Vector4d(x1, y2, z2, 1));
-		convex_3d.push_back(Eigen::Vector4d(x2, y1, z2, 1));
-		convex_3d.push_back(Eigen::Vector4d(x2, y2, z2, 1));
+		convex_3d.emplace_back(x1, y1, z1, 1);
+		convex_3d.emplace_back(x1, y2, z1, 1);
+		convex_3d.emplace_back(x2, y1, z1, 1);
+		convex_3d.emplace_back(x2, y2, z1, 1);
+		convex_3d.emplace_back(x1, y1, z2, 1);
+		convex_3d.emplace_back(x1, y2, z2, 1);
+		convex_3d.emplace_back(x2, y1, z2, 1);
+		convex_3d.emplace_back(x2, y2, z2, 1);
 		voxel_information->convex = convex_3d;
 		//分配视点的射线生成器
 		thread** ray_caster = new thread *[view_space->views.size()];
@@ -292,7 +292,7 @@ public:
 					&& coordinate.z() >= view_space->object_center_world(2) - map_size && coordinate.z() <= view_space->object_center_world(2) + map_size)
 				{
 					points.push_back(coordinate);
-					if (frontier_check(coordinate, octo_model, voxel_information, octomap_resolution)==2) edge->points.push_back(pcl::PointXYZ(coordinate.x(), coordinate.y(), coordinate.z()));
+					if (frontier_check(coordinate, octo_model, voxel_information, octomap_resolution)==2) edge->points.emplace_back(coordinate.x(), coordinate.y(), coordinate.z());
 				}
 			}
 		}
@@ -356,14 +356,14 @@ public:
 			double y2 = view_space->object_center_world(1) + map_size;
 			double z1 = view_space->object_center_world(2) - map_size;
 			double z2 = view_space->object_center_world(2) + map_size;
-			convex_3d.push_back(Eigen::Vector4d(x1, y1, z1, 1));
-			convex_3d.push_back(Eigen::Vector4d(x1, y2, z1, 1));
-			convex_3d.push_back(Eigen::Vector4d(x2, y1, z1, 1));
-			convex_3d.push_back(Eigen::Vector4d(x2, y2, z1, 1));
-			convex_3d.push_back(Eigen::Vector4d(x1, y1, z2, 1));
-			convex_3d.push_back(Eigen::Vector4d(x1, y2, z2, 1));
-			convex_3d.push_back(Eigen::Vector4d(x2, y1, z2, 1));
-			convex_3d.push_back(Eigen::Vector4d(x2, y2, z2, 1));
+			convex_3d.emplace_back(x1, y1, z1, 1);
+			convex_3d.emplace_back(x1, y2, z1, 1);
+			convex_3d.emplace_back(x2, y1, z1, 1);
+			convex_3d.emplace_back(x2, y2, z1, 1);
+			convex_3d.emplace_back(x1, y1, z2, 1);
+			convex_3d.emplace_back(x1, y2, z2, 1);
+			convex_3d.emplace_back(x2, y1, z2, 1);
+			convex_3d.emplace_back(x2, y2, z2, 1);
 			voxel_information->convex = convex_3d;
 			//分配视点的射线生成器
 			thread** ray_caster = new thread * [view_space->views.size()];
@@ -589,7 +589,7 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
 		float point[3] = { vertex(0), vertex(1),vertex(2) };
 		float pixel[2];
 		rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
-		contours.push_back(cv::Point2f(pixel[0], pixel[1]));
+		contours.emplace_back(pixel[0], pixel[1]);
 		//cout << pixel[0] << " " << pixel[1] << endl;
 		//计算一下最远点离开视点距离
 		Eigen::Vector4d view_pos(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
@@ -796,8 +796,8 @@ public:
 
 	void AddEdge(int from, int to, int cap, double cost) {
 		//cerr << from << ' ' << to << ' ' << cap << ' ' << cost << endl;
-		edges.push_back(Edge(from, to, cap, 0, cost));
-		edges.push_back(Edge(to, from, 0, 0, -cost));
+		edges.emplace_back(from, to, cap, 0, cost);
+		edges.emplace_back(to, from, 0, 0, -cost);
 		m = edges.size();
 		G[from].push_back(m - 2);
 		G[to].push_back(m - 1);
