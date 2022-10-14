@@ -5,6 +5,8 @@
 #include <chrono>
 typedef unsigned long long pop_t;
 
+#include <boost/thread/thread.hpp>
+
 using namespace std;
 
 #include "Share_Data.hpp"
