@@ -410,7 +410,7 @@ public:
 
 void information_gain_thread_process(Ray_Information** rays_info, unordered_map<int, vector<int>>* views_to_rays_map, View_Space* view_space, int pos) {
 	//视点的每个相关射线信息加入视点
-	for (vector<int>::iterator it = (*views_to_rays_map)[pos].begin(); it != (*views_to_rays_map)[pos].end(); it++) {
+	for (auto it = (*views_to_rays_map)[pos].begin(); it != (*views_to_rays_map)[pos].end(); it++) {
 		view_space->views[pos].information_gain += rays_info[*it]->information_gain;
 		view_space->views[pos].voxel_num += rays_info[*it]->voxel_num;
 	}
@@ -478,13 +478,13 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 					//把终点放入射线组
 					ray_set->addKey(key_end);
 					//第一个非空节点作为射线起点，尾巴开始最后一个非空元素作为射线终点
-					octomap::KeyRay::iterator last = ray_set->end();
+					auto last = ray_set->end();
 					last--;
 					while (last != ray_set->begin() && (octo_model->search(*last) == NULL)) last--;
 					//二分第一个非空元素
-					octomap::KeyRay::iterator l = ray_set->begin();
-					octomap::KeyRay::iterator r = last;
-					octomap::KeyRay::iterator mid = l + (r - l) / 2;
+					auto l = ray_set->begin();
+					auto r = last;
+					auto mid = l + (r - l) / 2;
 					while (mid != r) {
 						if (octo_model->search(*mid) != NULL)
 							r = mid;
@@ -492,7 +492,7 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 							l = mid + 1;
 						mid = l + (r - l) / 2;
 					}
-					octomap::KeyRay::iterator first = mid;
+					auto first = mid;
 					while (first  != ray_set->end() && (octo_model->keyToCoord(*first).x() < view_space->object_center_world(0) - view_space->predicted_size || octo_model->keyToCoord(*first).x() > view_space->object_center_world(0) + view_space->predicted_size
 						|| octo_model->keyToCoord(*first).y() < view_space->object_center_world(1) - view_space->predicted_size || octo_model->keyToCoord(*first).y() > view_space->object_center_world(1) + view_space->predicted_size
 						|| octo_model->keyToCoord(*first).z() < view_space->object_center_world(2) - view_space->predicted_size || octo_model->keyToCoord(*first).z() > view_space->object_center_world(2) + view_space->predicted_size)) first++;
@@ -501,7 +501,7 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 						delete ray_set;
 						continue;
 					}
-					octomap::KeyRay::iterator stop = last;
+					auto stop = last;
 					stop++;
 					//显示一下
 					//while (octo_model->keyToCoord(*first).x() < view_space->object_center_world(0) - view_space->predicted_size || octo_model->keyToCoord(*first).x() > view_space->object_center_world(0) + view_space->predicted_size
@@ -629,10 +629,10 @@ inline octomap::point3d project_pixel_to_ray_end(int x,int y, rs2_intrinsics& co
 void ray_information_thread_process(int ray_id, Ray_Information** rays_info, unordered_map<Ray, int, Ray_Hash>* rays_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* occupancy_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* object_weight, octomap::ColorOcTree* octo_model, Voxel_Information* voxel_information, View_Space* view_space, short method )
 {
 	//由于检查过，所以第一个节点就是非空节点
-	octomap::KeyRay::iterator first = rays_info[ray_id]->ray->start;
-	octomap::KeyRay::iterator last = rays_info[ray_id]->ray->stop;
+	auto first = rays_info[ray_id]->ray->start;
+	auto last = rays_info[ray_id]->ray->stop;
 	last--;
-	for (octomap::KeyRay::iterator it = rays_info[ray_id]->ray->start; it != rays_info[ray_id]->ray->stop; ++it) {
+	for (auto it = rays_info[ray_id]->ray->start; it != rays_info[ray_id]->ray->stop; ++it) {
 		//从hash表里查询该key
 		auto hash_this_key = (*occupancy_map).find(*it);
 		//找不到节点就下一个
@@ -969,9 +969,9 @@ void adjacency_list_thread_process(int ray_id, int* nz, int ray_index_shift, int
 		(*bipartite_list)[ray_id + ray_index_shift].push_back(make_pair(views_id[i], 0.0));
 	//仅保留感兴趣体素
 	double visible = 1.0;
-	octomap::KeyRay::iterator first = views_information->rays_info[ray_id]->ray->start;
-	octomap::KeyRay::iterator last = views_information->rays_info[ray_id]->ray->stop;
-	for (octomap::KeyRay::iterator it = views_information->rays_info[ray_id]->ray->start; it != views_information->rays_info[ray_id]->ray->stop; ++it) {
+	auto first = views_information->rays_info[ray_id]->ray->start;
+	auto last = views_information->rays_info[ray_id]->ray->stop;
+	for (auto it = views_information->rays_info[ray_id]->ray->start; it != views_information->rays_info[ray_id]->ray->stop; ++it) {
 		//从hash表里查询该key
 		auto hash_this_key = (*views_information->occupancy_map).find(*it);
 		//找不到节点就下一个
