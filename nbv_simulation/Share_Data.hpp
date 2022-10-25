@@ -40,6 +40,7 @@
 #include <octomap/ColorOcTree.h>
 
 namespace fs = std::filesystem;
+
 using namespace std;
 
 /** \brief Distortion model: defines how pixel coordinates should be mapped to sensor coordinates. */
@@ -186,33 +187,38 @@ static void rs2_deproject_pixel_to_point(float point[3], const struct rs2_intrin
 class Share_Data
 {
 public:
-	//可变输入参数
+	// Variable input parameters
 	string pcd_file_path;
 	string yaml_file_path;
 	string name_of_pcd;
 	string nbv_net_path;
 
-	int num_of_views;					//一次采样视点个数
+        // Number of viewpoints sampled at one time
+	int num_of_views;
 	double cost_weight;
 	rs2_intrinsics color_intrinsics;
 	double depth_scale;
 
-	//运行参数
-	int process_cnt;					//过程编号
-	atomic<double> pre_clock;			//系统时钟
-	atomic<bool> over;					//过程是否结束
+	//Operating parameters
+        //Process number
+	int process_cnt;
+        //System clock
+	atomic<double> pre_clock;
+        //Is the process finished
+	atomic<bool> over;
 	bool show;
 	int num_of_max_iteration;
 
-	//点云数据
+	//Point cloud data
 	atomic<int> vaild_clouds;
-	vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr > clouds;							//点云组
+        //Point cloud group
+	vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr > clouds;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_pcd;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground_truth;
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_final;
 	bool move_wait;
 
-	//八叉地图
+	//Eight Forks Map
 	octomap::ColorOcTree* octo_model;
 	//octomap::ColorOcTree* cloud_model;
 	octomap::ColorOcTree* ground_truth_model;
@@ -223,14 +229,16 @@ public:
 	double p_unknown_upper_bound; //! Upper bound for voxels to still be considered uncertain. Default: 0.97.
 	double p_unknown_lower_bound; //! Lower bound for voxels to still be considered uncertain. Default: 0.12.
 	
-	//工作空间与视点空间
+	//Workspace and viewpoint space
 	atomic<bool> now_view_space_processed;
 	atomic<bool> now_views_infromation_processed;
 	atomic<bool> move_on;
 
 	Eigen::Matrix4d now_camera_pose_world;
-	Eigen::Vector3d object_center_world;		//物体中心
-	double predicted_size;						//物体BBX半径
+        // Object centre
+	Eigen::Vector3d object_center_world;
+        // Object BBX radius
+	double predicted_size;
 
 	int method_of_IG;
 	pcl::visualization::PCLVisualizer::Ptr viewer;
@@ -250,9 +258,12 @@ public:
 	int num_of_max_flow_node;
 	double interesting_threshold;
 
-	int init_voxels;     //点云voxel个数
-	int voxels_in_BBX;   //地图voxel个数
-	double init_entropy; //地图信息熵
+        //Number of point cloud voxels
+	int init_voxels;
+        // Number of voxels on the map
+	int voxels_in_BBX;
+        // Map information entropy
+	double init_entropy;
 
 	string save_path;
 
@@ -260,7 +271,7 @@ public:
 	{
 		process_cnt = -1;
 		yaml_file_path = _config_file_path;
-		//读取yaml文件
+		// Reading yaml files
 		cv::FileStorage fs;
 		fs.open(yaml_file_path, cv::FileStorage::READ);
 		fs["model_path"] >> pcd_file_path;
@@ -294,34 +305,34 @@ public:
 		fs["color_p2"] >> color_intrinsics.coeffs[4];
 		fs["depth_scale"] >> depth_scale;
 		fs.release();
-		//读取转换后模型的pcd文件
+		// Read the pcd file of the converted model
 		pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
 		cloud_pcd = temp_pcd;
 		if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1) {
 			cout << "Can not read 3d model file. Check." << endl;
 		}
 		octo_model = new octomap::ColorOcTree(octomap_resolution);
-		//octo_model->setProbHit(0.95);	//设置传感器命中率,初始0.7
-		//octo_model->setProbMiss(0.05);	//设置传感器失误率，初始0.4
-		//octo_model->setClampingThresMax(1.0);	//设置地图节点最大值，初始0.971
-		//octo_model->setClampingThresMin(0.0);	//设置地图节点最小值，初始0.1192
-		//octo_model->setOccupancyThres(0.5);	//设置节点占用阈值，初始0.5
+		//octo_model->setProbHit(0.95);	//Set sensor hit rate, initially 0.7
+		//octo_model->setProbMiss(0.05);	//Set sensor error rate, initially 0.4
+		//octo_model->setClampingThresMax(1.0);	//Set the maximum value of the map node, initially 0.971
+		//octo_model->setClampingThresMin(0.0);	//Set the map node minimum value, initially 0.1192
+		//octo_model->setOccupancyThres(0.5);	//Set the node occupancy threshold, initially 0.5
 		ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
-		//ground_truth_model->setProbHit(0.95);	//设置传感器命中率,初始0.7
-		//ground_truth_model->setProbMiss(0.05);	//设置传感器失误率，初始0.4
-		//ground_truth_model->setClampingThresMax(1.0);	//设置地图节点最大值，初始0.971
-		//ground_truth_model->setClampingThresMin(0.0);	//设置地图节点最小值，初始0.1192
+		//ground_truth_model->setProbHit(0.95);	//Set sensor hit rate, initially 0.7
+		//ground_truth_model->setProbMiss(0.05);	//Set sensor error rate, initially 0.4
+		//ground_truth_model->setClampingThresMax(1.0);	//Set the maximum value of the map node, initially 0.971
+		//ground_truth_model->setClampingThresMin(0.0);	//Set the map node minimum value, initially 0.1192
 		GT_sample = new octomap::ColorOcTree(octomap_resolution);
-		//GT_sample->setProbHit(0.95);	//设置传感器命中率,初始0.7
-		//GT_sample->setProbMiss(0.05);	//设置传感器失误率，初始0.4
-		//GT_sample->setClampingThresMax(1.0);	//设置地图节点最大值，初始0.971
-		//GT_sample->setClampingThresMin(0.0);	//设置地图节点最小值，初始0.1192
+		//GT_sample->setProbHit(0.95);	//Set sensor hit rate, initially 0.7
+		//GT_sample->setProbMiss(0.05);	//Set sensor error rate, initially 0.4
+		//GT_sample->setClampingThresMax(1.0);	//Set the maximum value of the map node, initially 0.971
+		//GT_sample->setClampingThresMin(0.0);	//Set the map node minimum value, initially 0.1192
 		/*cloud_model = new octomap::ColorOcTree(ground_truth_resolution);
-		//cloud_model->setProbHit(0.95);	//设置传感器命中率,初始0.7
-		//cloud_model->setProbMiss(0.05);	//设置传感器失误率，初始0.4
-		//cloud_model->setClampingThresMax(1.0);	//设置地图节点最大值，初始0.971
-		//cloud_model->setClampingThresMin(0.0);	//设置地图节点最小值，初始0.1192
-		//cloud_model->setOccupancyThres(0.5);	//设置节点占用阈值，初始0.5*/
+		//cloud_model->setProbHit(0.95);	//Set sensor hit rate, initially 0.7
+		//cloud_model->setProbMiss(0.05);	//Set sensor error rate, initially 0.4
+		//cloud_model->setClampingThresMax(1.0);	//Set the maximum value of the map node, initially 0.971
+		//cloud_model->setClampingThresMin(0.0);	//Set the map node minimum value, initially 0.11921
+		//cloud_model->setOccupancyThres(0.5);	//Set the node occupancy threshold, initially 0.5*/
 		if (num_of_max_flow_node == -1) num_of_max_flow_node = num_of_views;
 		now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
 		over = false;
@@ -342,7 +353,8 @@ public:
 	}
 
 	double out_clock()
-	{   //返回用时，并更新时钟
+	{   // Return the time used and update the clock
+
 		double now_clock = clock();
 		double time_len = now_clock - pre_clock;
 		pre_clock = now_clock;
@@ -350,7 +362,7 @@ public:
 	}
 
 	void access_directory(string cd)
-	{   //检测多级目录的文件夹是否存在，不存在就创建
+	{   //Check for the existence of folders in multi-level directories and create them if they do not exist
 		string temp;
 		for (int i = 0; i < cd.length(); i++)
 			if (cd[i] == '/') {
@@ -365,7 +377,7 @@ public:
 	}
 
 	void save_posetrans_to_disk(Eigen::Matrix4d& T, string cd, string name, int frames_cnt)
-	{   //存放旋转矩阵数据至磁盘
+	{   //Storage of rotation matrix data to disk
 		std::stringstream pose_stream, path_stream;
 		std::string pose_file, path;
 		path_stream << "../data" << "_" << process_cnt << cd;
@@ -391,7 +403,7 @@ public:
 	}
 
 	void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string cd, string name)
-	{   //存放点云数据至磁盘，速度很慢，少用
+	{   //Store point cloud data to disk, very slow, rarely used
 		std::stringstream cloud_stream, path_stream;
 		std::string cloud_file, path;
 		path_stream << save_path << cd;
@@ -403,7 +415,7 @@ public:
 	}
 
 	void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string cd, string name, int frames_cnt)
-	{   //存放点云数据至磁盘，速度很慢，少用
+	{   //Store point cloud data to disk, very slow, rarely used
 		std::stringstream cloud_stream, path_stream;
 		std::string cloud_file, path;
 		path_stream << "../data" << "_" << process_cnt << cd;
@@ -415,7 +427,7 @@ public:
 	}
 
 	void save_octomap_to_disk(octomap::ColorOcTree* octo_model, string cd, string name)
-	{   //存放点云数据至磁盘，速度很慢，少用
+	{   //Store point cloud data to disk, very slow, rarely used
 		std::stringstream octomap_stream, path_stream;
 		std::string octomap_file, path;
 		path_stream << "../data" << "_" << process_cnt << cd;
