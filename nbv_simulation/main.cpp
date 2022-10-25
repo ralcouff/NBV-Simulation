@@ -44,18 +44,23 @@ public:
 		bool key_origin_have = ground_truth_model->coordToKeyChecked(now_best_view->init_pos(0), now_best_view->init_pos(1), now_best_view->init_pos(2), key_origin);
 		if (key_origin_have) {
 			octomap::point3d origin = ground_truth_model->keyToCoord(key_origin);
-			//±éÀúÏñÆ½Ãæ
-			thread** precept_process = new thread * [share_data->color_intrinsics.width * share_data->color_intrinsics.height];
-			for (int x = 0; x < share_data->color_intrinsics.width; x++)
-				for (int y = 0; y < share_data->color_intrinsics.height; y++) {
-					int i = x * share_data->color_intrinsics.height + y;
-					precept_process[i] = new thread(precept_thread_process, x,y, cloud_parallel, &origin, &view_pose_world,share_data);
-				}
-			for (int x = 0; x < share_data->color_intrinsics.width; x++)
-				for (int y = 0; y < share_data->color_intrinsics.height; y++) {
-					int i = x * share_data->color_intrinsics.height + y;
-					(*precept_process[i]).join();
-				}
+			// Traversing the image plane
+//			thread** precept_process = new thread * [share_data->color_intrinsics.width * share_data->color_intrinsics.height];
+//			for (int x = 0; x < share_data->color_intrinsics.width; x++)
+//				for (int y = 0; y < share_data->color_intrinsics.height; y++) {
+//					int i = x * share_data->color_intrinsics.height + y;
+//					precept_process[i] = new thread(precept_thread_process, x,y, cloud_parallel, &origin, &view_pose_world,share_data);
+//				}
+//			for (int x = 0; x < share_data->color_intrinsics.width; x++)
+//				for (int y = 0; y < share_data->color_intrinsics.height; y++) {
+//					int i = x * share_data->color_intrinsics.height + y;
+//					(*precept_process[i]).join();
+//				}
+                        for (int x = 0; x < share_data->color_intrinsics.width; ++x)
+                          for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
+                            int i = x * share_data->color_intrinsics.height + y;
+                            precept_thread_process(x,y, cloud_parallel, &origin, &view_pose_world,share_data);
+                          }
 		}
 		else {
 			cout << "View out of map.check." << endl;
