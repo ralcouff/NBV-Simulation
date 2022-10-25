@@ -151,7 +151,7 @@ void precept_thread_process(int x, int y, pcl::PointCloud<pcl::PointXYZRGB>::Ptr
 	bool key_end_have = share_data->ground_truth_model->coordToKeyChecked(end_point, key_end);
 	if (key_end_have) {
 		octomap::ColorOcTreeNode* node = share_data->ground_truth_model->search(key_end);
-		if (node != NULL) {
+		if (node != nullptr) {
 			octomap::ColorOcTreeNode::Color color = node->getColor();
 			point.x = end_point.x();
 			point.y = end_point.y();
