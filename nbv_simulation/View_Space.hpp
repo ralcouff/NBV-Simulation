@@ -132,7 +132,7 @@ public:
 };
 
 inline double get_random_coordinate(double from, double to) {
-	//生成比较随机的0-1随机数并映射到区间[from,to]
+	//Generate a relatively random 0-1 random number and map it to the interval [from,to]
 	double len = to - from;
 	long long x = (long long)rand() * ((long long)RAND_MAX + 1) + (long long)rand();
 	long long field = (long long)RAND_MAX * (long long)RAND_MAX + 2 * (long long)RAND_MAX;
@@ -158,8 +158,10 @@ class View
 public:
 	int space_id;
 	int id;
-	Eigen::Vector3d init_pos;	//初始位置
-	Eigen::Matrix4d pose;		//view_i到view_i+1旋转矩阵
+        // Initial position
+	Eigen::Vector3d init_pos;
+        // view_i to view_i+1 rotation matrix
+	Eigen::Matrix4d pose;
 	double information_gain;
 	int voxel_num;
 	double robot_cost;
@@ -232,16 +234,18 @@ public:
 	}
 
 	void get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vector3d object_center_world) {
-		//归一化乘法
+		//Normalized multiplication
 		Eigen::Vector4d object_center_now_camera;
 		object_center_now_camera = now_camera_pose_world.inverse() * Eigen::Vector4d(object_center_world(0), object_center_world(1), object_center_world(2), 1);
 		Eigen::Vector4d view_now_camera;
 		view_now_camera = now_camera_pose_world.inverse() * Eigen::Vector4d(init_pos(0), init_pos(1), init_pos(2), 1);
-		//定义指向物体为Z+，从上一个相机位置发出射线至当前为X+，计算两个相机坐标系之间的变换矩阵，object与view为上一个相机坐标系下的坐标
+		//Define the pointing object as Z+ and the ray from the previous camera position to the current X+,
+                // calculate the transformation matrix between the two camera coordinate systems, object and view are
+                // the coordinates under the previous camera coordinate system
 		Eigen::Vector3d object(object_center_now_camera(0), object_center_now_camera(1), object_center_now_camera(2));
 		Eigen::Vector3d view(view_now_camera(0), view_now_camera(1), view_now_camera(2));
 		Eigen::Vector3d Z;	 Z = object - view;	 Z = Z.normalized();
-		//注意左右手系，不要弄反了
+		//Be careful with the left and right hand ties, don't get them reversed
 		Eigen::Vector3d X;	 X = Z.cross(view);	 X = X.normalized();
 		Eigen::Vector3d Y;	 Y = Z.cross(X);	 Y = Y.normalized();
 		Eigen::Matrix4d T(4, 4);
@@ -254,7 +258,7 @@ public:
 		R(1, 0) = X(1); R(1, 1) = Y(1); R(1, 2) = Z(1); R(1, 3) = 0;
 		R(2, 0) = X(2); R(2, 1) = Y(2); R(2, 2) = Z(2); R(2, 3) = 0;
 		R(3, 0) = 0;	R(3, 1) = 0;	R(3, 2) = 0;	R(3, 3) = 1;
-		//绕Z轴旋转，使得与上一次旋转计算x轴与y轴夹角最小
+		//Rotate around the z-axis so that the angle between the x-axis and the y-axis is minimised in relation to the previous rotation
 		Eigen::Matrix3d Rz_min(Eigen::Matrix3d::Identity(3, 3));
 		Eigen::Vector4d x(1, 0, 0, 1);
 		Eigen::Vector4d y(0, 1, 0, 1);
@@ -332,12 +336,18 @@ bool view_utility_compare(View& a, View& b) {
 class View_Space
 {
 public:
-	int num_of_views;						//视点个数
-	vector<View> views;							//空间的采样视点
-	Eigen::Vector3d object_center_world;		//物体中心
-	double predicted_size;						//物体BBX半径
-	int id;										//第几次nbv迭代
-	Eigen::Matrix4d now_camera_pose_world;		//这次nbv迭代的相机位置
+        //Number of viewpoints
+	int num_of_views;
+        // Sampling viewpoints in space
+	vector<View> views;
+        // Object centre
+	Eigen::Vector3d object_center_world;
+        // Object BBX radius
+	double predicted_size;
+        // The first few nbv iterations
+	int id;
+        // Camera positions for this nbv iteration
+	Eigen::Matrix4d now_camera_pose_world;
 	int occupied_voxels;						
 	double map_entropy;	
 	bool object_changed;
@@ -356,13 +366,13 @@ public:
 		double y = view.init_pos(1);
 		double z = view.init_pos(2);
 		bool vaild = true;
-		//物体bbx扩大2倍内不生成视点
+		//Object bbx does not create a point of view within 2 times expansion
 		if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size
 		&&  y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size
 		&&  z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size) vaild = false;
-		//在半径为4倍BBX大小的球内
+		//In a ball of radius 4 times the size of BBX
 		if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z- object_center_world(2)) - pow2(4* predicted_size) > 0 ) vaild = false;
-		//八叉树索引中存在且hash表中没有
+		//Exists in the octree index and not in the hash table
 		octomap::OcTreeKey key;	bool key_have = octo_model->coordToKeyChecked(x,y,z, key); 
 		if (!key_have) vaild = false;
 		if (key_have && views_key_set->find(key) != views_key_set->end())vaild = false;
@@ -383,7 +393,7 @@ public:
 	void get_view_space(vector<Eigen::Vector3d>& points) {
 		double now_time = clock();
 		object_center_world = Eigen::Vector3d(0, 0, 0);
-		//计算点云质心
+		//Calculating point cloud center of mass
 		for (auto& ptr : points) {
 			object_center_world(0) += ptr(0);
 			object_center_world(1) += ptr(1);
@@ -392,7 +402,7 @@ public:
 		object_center_world(0) /= points.size();
 		object_center_world(1) /= points.size();
 		object_center_world(2) /= points.size();
-		//二分查找BBX半径，以BBX内点的个数比率达到0.90-0.95为终止条件
+		//Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching 0.90 - 0.95
 		double l = 0, r = 0, mid;
 		for (auto& ptr : points) {
 			r = max(r, (object_center_world - ptr).norm());
@@ -417,21 +427,21 @@ public:
 		cout << "object's pos is ("<< object_center_world(0) << "," << object_center_world(1) << "," << object_center_world(2) << ") and size is " << predicted_size << endl;
 		int sample_num = 0;
 		int viewnum = 0;
-		//第一个视点固定为模型中心
+		//The first point of view is fixed to the centre of the model
 		View view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
 		if (!vaild_view(view)) cout << "check init view." << endl;
 		views.push_back(view);
 		views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
 		viewnum++;
 		while (viewnum != num_of_views) {
-			//3倍BBX的一个采样区域
+			//3x BBX for one sample area
 			double x = get_random_coordinate(object_center_world(0) - predicted_size * 4, object_center_world(0) + predicted_size * 4);
 			double y = get_random_coordinate(object_center_world(1) - predicted_size * 4, object_center_world(1) + predicted_size * 4);
 			double z = get_random_coordinate(object_center_world(2) - predicted_size * 4, object_center_world(2) + predicted_size * 4);
 			View view(Eigen::Vector3d(x, y, z));
 			view.id = viewnum;
 			//cout << x<<" " << y << " " << z << endl;
-			//符合条件的视点保留
+			//Eligible viewpoint reservations
 			if (vaild_view(view)) {
 				view.space_id = id;
 				view.dis_to_obejct = (object_center_world - view.init_pos).norm();
@@ -462,9 +472,10 @@ public:
 		voxel_information = _voxel_information;
 		viewer = share_data->viewer;
 		views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
-		//检测viewspace是否已经生成
+		//Check if viewspace has been generated
 		ifstream fin(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
-		if (fin.is_open()) { //存在文件就读视点集合
+		if (fin.is_open()) {
+                    //Presence of a collection of read-on viewpoints for documents
 			int num;
 			fin >> num;
 			if (num != num_of_views) cout << "viewspace read error. check input viewspace size." << endl;
@@ -487,14 +498,14 @@ public:
 			}
 			cout << "viewspace readed." << endl;
 		}
-		else { //不存在就生成视点集合
-			//获取点云BBX
+		else { //Generate a viewpoint collection if it does not exist
+			//Get Point Cloud BBX
 			vector<Eigen::Vector3d> points;
 			for (auto& ptr : cloud->points) {
 				Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
 				points.push_back(pt);
 			}
-			//视点生成器
+			//Viewpoint Generator
 			get_view_space(points);
 			share_data->access_directory(share_data->pcd_file_path);
 			ofstream fout(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
@@ -505,12 +516,12 @@ public:
 				fout << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
 			cout << "viewspace getted." << endl;
 		}
-		//更新一下数据区数据
+		//Update the data area data
 		share_data->object_center_world = object_center_world;
 		share_data->predicted_size = predicted_size;
 		double map_size = predicted_size + 3.0 * octomap_resolution;
 		share_data->map_size = map_size;
-		//第一次的数据，根据BBX初始化地图
+		//Data for the first time, based on BBX initialization map
 		double now_time = clock();
 		for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size; x += octomap_resolution)
 			for (double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size; y += octomap_resolution)
@@ -537,12 +548,12 @@ public:
 		object_changed = false;
 		id = _id;
 		now_camera_pose_world = share_data->now_camera_pose_world;
-		//更新视点标记
+		//Update viewpoint markers
 		for (int i = 0; i < views.size(); i++) {
 			views[i].space_id = id;
 			views[i].robot_cost = (Eigen::Vector3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3)).eval() - views[i].init_pos).norm();
 		}
-		//插入点云至中间数据结构
+		//Insert point cloud to intermediate data structure
 		double now_time = clock();
 		double map_size = predicted_size + 3.0 * octomap_resolution;
 		share_data->map_size = map_size;
@@ -556,7 +567,7 @@ public:
 		}
 		octo_model->updateInnerOccupancy();
 		cout << "Octomap updated via cloud with executed time " << clock() - now_time << " ms." << endl;
-		//在地图上，统计信息熵
+		//On the map, statistical information entropy
 		map_entropy = 0;
 		occupied_voxels = 0;
 		for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs(); it != end; ++it){
@@ -569,7 +580,7 @@ public:
 				if (voxel_information->is_occupied(occupancy)) occupied_voxels++;
 			}
 		}
-		/*//在点云上，统计重建体素个数
+		/*//On the point cloud, count the number of reconstructed voxels
 		share_data->cloud_model->insertPointCloud(cloud_octo, octomap::point3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3)), -1, true, false);
 		for (auto p : update_cloud->points) {
 			share_data->cloud_model->updateNode(p.x, p.y, p.z, true, true);
