@@ -44,7 +44,8 @@ public:
 		stop = _stop;
 	}
 
-	bool operator ==(const Ray& other) const {//用于查询 		
+	bool operator ==(const Ray& other) const {
+            //For enquiries
 		return (origin == other.origin) && (end == other.end); 	
 	}
 };
@@ -52,7 +53,8 @@ public:
 class Ray_Hash
 {
 public:
-	size_t operator() (const Ray& ray) const {//利用6个点的double来hash
+	size_t operator() (const Ray& ray) const {
+            //Using a 6-point double to hash
 		return octomap::OcTreeKey::KeyHash()(ray.origin) ^ octomap::OcTreeKey::KeyHash()(ray.end);
 	}
 };
@@ -126,7 +128,7 @@ public:
 
 	Views_Information(Share_Data* share_data, Voxel_Information* _voxel_information , View_Space* view_space,int iterations)
 	{
-		//更新内部数据
+		//Update internal data
 		voxel_information = _voxel_information;
 		cost_weight = share_data->cost_weight;
 		color_intrinsics = share_data->color_intrinsics;
@@ -136,7 +138,7 @@ public:
 		voxel_information->octomap_resolution = octomap_resolution;
 		alpha = 0.1 / octomap_resolution;
 		voxel_information->skip_coefficient = share_data->skip_coefficient;
-		//注意视点需要按照id排序来建立映射
+		//Note that the viewpoints need to be sorted by id to create the mapping
 		sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
 		double now_time = clock();
 		views_to_rays_map = new unordered_map<int, vector<int>>();
@@ -144,15 +146,15 @@ public:
 		rays_map = new unordered_map<Ray, int, Ray_Hash>();
 		object_weight = new unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
 		occupancy_map = new unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
-		//定义frontier
+		//Define frontier
 		vector<octomap::point3d> points;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
 		double map_size = view_space->predicted_size;
-		//查找地图中的edge
+		//Find edges in the map
 		for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs(); it != end; ++it)
 		{
 			double occupancy = (*it).getOccupancy();
-			//记录bbx中key到occ率的映射，用于重复查询
+			//Record the mapping of key to occ rate in bbx for repeated queries
 			(*occupancy_map)[it.getKey()] = occupancy;
 			if (voxel_information->is_unknown(occupancy)) {
 				auto coordinate = it.getCoordinate();
@@ -167,7 +169,7 @@ public:
 		}
 		pre_edge_cnt = 0x3f3f3f3f;
 		edge_cnt = edge->points.size();
-		//根据最邻近frontier，计算地图中该点的是物体表面的可能性
+		//Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
 		if (edge->points.size() != 0) {
 			pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 			kdtree.setInputCloud(edge);
@@ -192,14 +194,15 @@ public:
 		cout << "occupancy_map is " << occupancy_map->size() << endl;
 		cout << "edge is " << edge->points.size() << endl;
 		cout << "object_map is " << object_weight->size() << endl;
-		//根据BBX计算最多有多少射线，射线个数最多为表面积大小*体积，用于分配指针内存
+		//Calculate the maximum number of rays according to BBX, the maximum number of rays is the size of the
+                // surface area * volume, used to allocate pointer memory
 		double pre_line_point = 2.0 * map_size / octomap_resolution;
 		long long superficial = ceil(5.0 * pre_line_point * pre_line_point);
 		long long volume = ceil(pre_line_point * pre_line_point * pre_line_point);
 		max_num_of_rays = superficial* volume;
 		rays_info = new Ray_Information * [max_num_of_rays];
 		cout << "full rays num is " << max_num_of_rays << endl;
-		//计算BBX的八个顶点，用于划定射线范围
+		//Calculate the eight vertices of BBX for delineating the ray range
 		vector<Eigen::Vector4d> convex_3d;
 		double x1 = view_space->object_center_world(0) - map_size;
 		double x2 = view_space->object_center_world(0) + map_size;
@@ -216,27 +219,27 @@ public:
 		convex_3d.emplace_back(x2, y1, z2, 1);
 		convex_3d.emplace_back(x2, y2, z2, 1);
 		voxel_information->convex = convex_3d;
-		//分配视点的射线生成器
+		//Ray generators for assigning viewpoints
 		thread** ray_caster = new thread *[view_space->views.size()];
-		//射线初始下标从0开始
+		//Initial subscripts for rays start from 0
 		ray_num = 0;
 		for (int i = 0; i < view_space->views.size(); i++) {
-			//对该视点分发生成射线的线程
+			//Threads that divide into rays for this viewpoint
 			ray_caster[i] = new thread(ray_cast_thread_process, &ray_num, rays_info, rays_map, views_to_rays_map, rays_to_viwes_map, octo_model, voxel_information, view_space, &color_intrinsics, i);
 		}
-		//等待每个视点射线生成器计算完成
+		//Wait for each viewpoint ray generator to complete its calculation
 		for (int i = 0; i < view_space->views.size(); i++) {
 			(*ray_caster[i]).join();
 		}
 		cout << "ray_num is " << ray_num << endl;
 		cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Startring compution." << endl;
-		//为每条射线分配一个线程
+		//Allocate a thread to each ray
 		now_time = clock();
 		thread** rays_process = new thread* [ray_num];
 		for (int i = 0; i < ray_num; i++) {
 			rays_process[i] = new thread(ray_information_thread_process, i, rays_info, rays_map, occupancy_map, object_weight, octo_model, voxel_information, view_space, method);
 		}
-		//等待射线计算完成
+		//Waiting for the ray calculation to be completed
 		for (int i = 0; i < ray_num; i++) {
 			(*rays_process[i]).join();	
 		}
@@ -245,14 +248,14 @@ public:
 		share_data->access_directory(share_data->save_path + "/run_time");
 		ofstream fout(share_data->save_path + "/run_time/IG" + to_string(view_space->id) + ".txt");
 		fout << cost_time << endl;
-		//分配视点的信息统计器
+		//Information counters for assigning viewpoints
 		now_time = clock();
 		thread** view_gain = new thread * [view_space->views.size()];
 		for (int i = 0; i < view_space->views.size(); i++) {
-			//对该视点分发信息统计的线程
+			//Threads that distribute information statistics for this viewpoint
 			view_gain[i] = new thread(information_gain_thread_process, rays_info, views_to_rays_map, view_space, i);
 		}
-		//等待每个视点信息统计完成
+		//Wait for the information on each viewpoint to be counted
 		for (int i = 0; i < view_space->views.size(); i++) {
 			(*view_gain[i]).join();
 		}
@@ -260,28 +263,28 @@ public:
 	}
 	
 	void update(Share_Data* share_data, View_Space* view_space,int iterations) {
-		//更新内部数据
+		//Update internal data
 		double now_time = clock();
 		double map_size = view_space->predicted_size;
-		//注意视点需要按照id排序来建立映射
+		//Note that the viewpoints need to be sorted by id to create the mapping
 		sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
-		//重新记录八叉树
+		//Re-recording the octree
 		octo_model = share_data->octo_model;
 		octomap_resolution = share_data->octomap_resolution;
 		alpha = 0.1 / octomap_resolution;
 		voxel_information->octomap_resolution = octomap_resolution;
 		voxel_information->skip_coefficient = share_data->skip_coefficient;
-		//清空视点信息
+		//Clear viewpoint information
 		for (int i = 0; i < view_space->views.size(); i++) {
 			view_space->views[i].information_gain = 0;
 			view_space->views[i].voxel_num = 0;
 		}
-		//避免重复search
+		//Avoid duplicate searches
 		delete occupancy_map;
 		occupancy_map = new unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
 		delete object_weight;
 		object_weight = new unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
-		//更新frontier
+		//Update frontier
 		vector<octomap::point3d> points;
 		pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
 		for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs(); it != end; ++it)
@@ -302,7 +305,7 @@ public:
 		edge_cnt = edge->points.size();
 		if (edge_cnt > pre_edge_cnt) pre_edge_cnt = 0x3f3f3f3f;
 		if (edge->points.size() != 0) {
-			//计算frontier
+			//Calculating frontier
 			pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 			kdtree.setInputCloud(edge);
 			std::vector<int> pointIdxNKNSearch(K);
@@ -327,15 +330,15 @@ public:
 		cout << "object_map is " << object_weight->size() << endl;
 		cout << "occupancy_map is " << occupancy_map->size() << endl;
 		cout << "frontier updated with executed time " << clock() - now_time << " ms." << endl;
-		//检测是否重生成
+		//Detects if re-generation
 		now_time = clock();
 		bool regenerate = false;
 		if (view_space->object_changed) {
 			regenerate = true;
 		}
-		//如果重生成，则更新数据结构
+		//Update data structure if regenerated
 		if (regenerate) {
-			//重计算最大射线数量，从0开始
+			//Recalculation of the maximum number of rays, starting from 0
 			double pre_line_point = 2.0 * map_size / octomap_resolution;
 			long long superficial = ceil(5.0 * pre_line_point * pre_line_point);
 			long long volume = ceil(pre_line_point * pre_line_point * pre_line_point);
@@ -351,7 +354,7 @@ public:
 			delete rays_map;
 			rays_map = new unordered_map<Ray, int, Ray_Hash>();
 
-			//计算BBX的八个顶点，用于划定射线范围
+			//Calculate the eight vertices of BBX for delineating the ray range
 			vector<Eigen::Vector4d> convex_3d;
 			double x1 = view_space->object_center_world(0) - map_size;
 			double x2 = view_space->object_center_world(0) + map_size;
@@ -368,27 +371,27 @@ public:
 			convex_3d.emplace_back(x2, y1, z2, 1);
 			convex_3d.emplace_back(x2, y2, z2, 1);
 			voxel_information->convex = convex_3d;
-			//分配视点的射线生成器
+			//Ray generators for assigning viewpoints
 			thread** ray_caster = new thread * [view_space->views.size()];
 			for (int i = 0; i < view_space->views.size(); i++) {
-				//对该视点分发生成射线的线程
+				//Threads that divide into rays for this viewpoint
 				ray_caster[i] = new thread(ray_cast_thread_process, &ray_num, rays_info, rays_map, views_to_rays_map, rays_to_viwes_map, octo_model, voxel_information, view_space, &color_intrinsics, i);
 			}
-			//等待每个视点射线生成器计算完成
+			//Wait for each viewpoint ray generator to complete its calculation
 			for (int i = 0; i < view_space->views.size(); i++) {
 				(*ray_caster[i]).join();
 			}
 			cout << "ray_num is " << ray_num << endl;
 			cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Startring compution." << endl;
 		}
-		//为每条射线分配一个线程
+		//Allocate a thread to each ray
 		now_time = clock();
 		thread** rays_process = new thread * [ray_num];
 		for (int i = 0; i < ray_num; i++) {
 			rays_info[i]->clear();
 			rays_process[i] = new thread(ray_information_thread_process, i, rays_info, rays_map, occupancy_map, object_weight, octo_model, voxel_information, view_space, method);
 		}
-		//等待射线计算完成
+		//Waiting for the ray calculation to be completed
 		for (int i = 0; i < ray_num; i++) {
 			(*rays_process[i]).join();
 		}
@@ -400,10 +403,10 @@ public:
 		now_time = clock();
 		thread** view_gain = new thread * [view_space->views.size()];
 		for (int i = 0; i < view_space->views.size(); i++) {
-			//对该视点分发信息统计的线程
+			//Threads that distribute information statistics for this viewpoint
 			view_gain[i] = new thread(information_gain_thread_process, rays_info, views_to_rays_map, view_space, i);
 		}
-		//等待每个视点信息统计完成
+		//Wait for the information on each viewpoint to be counted
 		for (int i = 0; i < view_space->views.size(); i++) {
 			(*view_gain[i]).join();
 		}
@@ -412,7 +415,7 @@ public:
 };
 
 void information_gain_thread_process(Ray_Information** rays_info, unordered_map<int, vector<int>>* views_to_rays_map, View_Space* view_space, int pos) {
-	//视点的每个相关射线信息加入视点
+	//Information about each relevant ray of the viewpoint is added to the viewpoint
 	for (auto it = (*views_to_rays_map)[pos].begin(); it != (*views_to_rays_map)[pos].end(); it++) {
 		view_space->views[pos].information_gain += rays_info[*it]->information_gain;
 		view_space->views[pos].voxel_num += rays_info[*it]->voxel_num;
@@ -420,18 +423,18 @@ void information_gain_thread_process(Ray_Information** rays_info, unordered_map<
 }
 
 void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordered_map<Ray, int, Ray_Hash>* rays_map, unordered_map<int, vector<int>>* views_to_rays_map, unordered_map<int, vector<int>>* rays_to_viwes_map, octomap::ColorOcTree* octo_model, Voxel_Information* voxel_information, View_Space* view_space, rs2_intrinsics* color_intrinsics, int pos) {
-	//获取视点位姿
+	//Get a viewpoint pose
 	view_space->views[pos].get_next_camera_pos(view_space->now_camera_pose_world, view_space->object_center_world);
 	Eigen::Matrix4d view_pose_world = (view_space->now_camera_pose_world * view_space->views[pos].pose.inverse()).eval();
-	//将三维物体BBX根据视点位姿，投影至图片凸包区域
+	//Projection of the 3D object BBX onto the convex pack area of the picture according to the viewpoint pose
 	double skip_coefficient = voxel_information->skip_coefficient;
-	//根据能访问的体素来控制射线遍历，注意间隔跳跃参数
+	//Control the ray traversal according to the accessible voxels, noting the interval jump parameter
 	int pixel_interval = color_intrinsics->width;
 	double max_range = 6.0 * view_space->predicted_size;
 	vector<cv::Point2f> hull;
 	hull = get_convex_on_image(voxel_information->convex, view_pose_world, *color_intrinsics, pixel_interval, max_range, voxel_information->octomap_resolution);
 	//if (hull.size() != 4 && hull.size() != 5 && hull.size() != 6) cout << "hull wrong with size " << hull.size() << endl;
-	//计算凸包的包围盒
+	//Calculating the enclosing box of a convex pack
 	vector<int> boundary;
 	boundary = get_xmax_xmin_ymax_ymin_in_hull(hull, *color_intrinsics);
 	int xmax = boundary[0];
@@ -439,15 +442,15 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 	int ymax = boundary[2];
 	int ymin = boundary[3];
 	//cout << xmax << " " << xmin << " " << ymax << " " << ymin << " ," << pixel_interval <<endl;
-	//中间数据结构
+	//Intermediate data structures
 	vector<Ray*> rays;
 	//int num = 0;
-	//检查视点的key
+	//Check the key of the viewpoint
 	octomap::OcTreeKey key_origin;
 	bool key_origin_have = octo_model->coordToKeyChecked(view_space->views[pos].init_pos(0), view_space->views[pos].init_pos(1), view_space->views[pos].init_pos(2), key_origin);
 	if (key_origin_have) {
 		octomap::point3d origin = octo_model->keyToCoord(key_origin);
-		//遍历包围盒
+		//Traversing the wrap-around box
 		//srand(pos);
 		//int rr = rand() % 256, gg = rand() % 256, bb = rand() % 256;
 		for (int x = xmin; x <= xmax; x += (int)(pixel_interval * skip_coefficient))
@@ -455,36 +458,37 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 			{
 				//num++;
 				cv::Point2f pixel(x, y);
-				//检查是否在凸包区域内部
+				//Check if it is inside the convex bale area
 				if (!is_pixel_in_convex(hull, pixel)) continue;
-				//反向投影找到终点
+				//Reverse projection to find the end point
 				octomap::point3d end = project_pixel_to_ray_end(x, y, *color_intrinsics, view_pose_world, max_range);
-				//显示一下
+				//Show it
 				//view_space->viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(origin(0), origin(1), origin(2)), pcl::PointXYZ(end(0), end(1), end(2)), rr, gg, bb, "line" + to_string(pos) + "-" + to_string(x) + "-" + to_string(y));
 				octomap::OcTreeKey key_end;
 				octomap::point3d direction = end - origin;
 				octomap::point3d end_point;
-				//越过未知区域，找到终点
+				//Crossing unknown areas and finding the end
 				bool found_end_point = octo_model->castRay(origin, direction, end_point, true, max_range);
-				if (!found_end_point) {//未找到终点，设置终点为最大距离
+				if (!found_end_point) {
+                                    //End point not found, set end point as maximum distance
 					end_point = origin + direction.normalized() * max_range; // use max range instead of stopping at the unknown       found_endpoint = true;     
 				}
-				//检查一下末端是否在地图限制范围内，且命中BBX
+				//Check that the end is within the map limits and hits BBX
 				bool key_end_have = octo_model->coordToKeyChecked(end_point, key_end);
 				if (key_end_have) {
-					//生成射线
+					//Generation of rays
 					octomap::KeyRay* ray_set = new octomap::KeyRay();
-					//获取射线数组，不包含末节点
+					//Get the ray array, without the end node
 					bool point_on_ray_getted = octo_model->computeRayKeys(origin, end_point, *ray_set);
 					if (!point_on_ray_getted) cout << "Warning. ray cast with wrong max_range." << endl;
 					if (ray_set->size() > 950) cout << ray_set->size() << " rewrite the vector size in octreekey.h." << endl;
-					//把终点放入射线组
+					//Putting the end point into the ray group
 					ray_set->addKey(key_end);
-					//第一个非空节点作为射线起点，尾巴开始最后一个非空元素作为射线终点
+					//The first non-empty node is used as the start of the ray and the last non-empty element from the tail is used as the end of the ray
 					auto last = ray_set->end();
 					last--;
 					while (last != ray_set->begin() && (octo_model->search(*last) == NULL)) last--;
-					//二分第一个非空元素
+					//Dichotomous first non-empty element
 					auto l = ray_set->begin();
 					auto r = last;
 					auto mid = l + (r - l) / 2;
@@ -499,21 +503,21 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 					while (first  != ray_set->end() && (octo_model->keyToCoord(*first).x() < view_space->object_center_world(0) - view_space->predicted_size || octo_model->keyToCoord(*first).x() > view_space->object_center_world(0) + view_space->predicted_size
 						|| octo_model->keyToCoord(*first).y() < view_space->object_center_world(1) - view_space->predicted_size || octo_model->keyToCoord(*first).y() > view_space->object_center_world(1) + view_space->predicted_size
 						|| octo_model->keyToCoord(*first).z() < view_space->object_center_world(2) - view_space->predicted_size || octo_model->keyToCoord(*first).z() > view_space->object_center_world(2) + view_space->predicted_size)) first++;
-					//如果没有非空元素，直接丢弃射线
+					//If there are no non-empty elements, just discard the ray
 					if (last - first < 0) {
 						delete ray_set;
 						continue;
 					}
 					auto stop = last;
 					stop++;
-					//显示一下
+					//Show it
 					//while (octo_model->keyToCoord(*first).x() < view_space->object_center_world(0) - view_space->predicted_size || octo_model->keyToCoord(*first).x() > view_space->object_center_world(0) + view_space->predicted_size
 					//	|| octo_model->keyToCoord(*first).y() < view_space->object_center_world(1) - view_space->predicted_size || octo_model->keyToCoord(*first).y() > view_space->object_center_world(1) + view_space->predicted_size
 					//	|| octo_model->keyToCoord(*first).z() < min(view_space->height_of_ground, view_space->object_center_world(2) - view_space->predicted_size) || octo_model->keyToCoord(*first).z() > view_space->object_center_world(2) + view_space->predicted_size) first++;
 					//octomap::point3d ss = octo_model->keyToCoord(*first);
 					//octomap::point3d ee = octo_model->keyToCoord(*last);
 					//view_space->viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)), pcl::PointXYZ(ee(0), ee(1), ee(2)), rr, gg, bb, "line" + to_string(pos) + "-" + to_string(x) + "-" + to_string(y));
-					//将射线加入视点的集合，第一个元素与最后一个元素key+数组+头+尾
+					//Add the ray to the set of viewpoints, the first element with the last element key+array+head+tail
 					Ray* ray = new Ray(*first, *last, ray_set, first, stop);
 					rays.push_back(ray);
 				}
@@ -523,42 +527,42 @@ void ray_cast_thread_process(int* ray_num, Ray_Information** rays_info, unordere
 		cout << pos << "th view out of map.check." << endl;
 	}
 	//cout << "rays " << rays.size() <<" num "<<num<< endl;
-	//该视点射线下标的数组
+	//Array of subscripts for this viewpoint ray
 	vector<int> ray_ids;
 	ray_ids.resize(rays.size());
-	//注意公用的数据结构要加锁
+	//Note that common data structures should be locked
 	voxel_information->mutex_rays.lock();
-	//获取当前射线的位置
+	//Get the position of the current ray
 	int ray_id = (*ray_num);
 	for (int i = 0; i < rays.size(); i++) {
-		//对于这些射线，hash查询一下是否有重复的
+		//For these rays, hash queries to see if there are duplicates
 		auto hash_this_ray = rays_map->find(*rays[i]);
-		//如果没有重复的，就保存该射线
+		//If there are no duplicates, save the ray
 		if (hash_this_ray == rays_map->end()) {
 			(*rays_map)[*rays[i]] = ray_id;
 			ray_ids[i] = ray_id;
-			//创造射线计算类
+			//Creation ray calculation class
 			rays_info[ray_id] = new Ray_Information(rays[i]);
 			vector<int> view_ids;
 			view_ids.push_back(pos);
 			(*rays_to_viwes_map)[ray_id] = view_ids;
 			ray_id++;
 		}
-		//如果有重复的，说明其他视点也算到了该射线，就把相应的id放入下标数组
+		//If there is a duplicate, it means that other viewpoints are also counted to that ray, so put the corresponding id into the subscript array
 		else {
 			ray_ids[i] = hash_this_ray->second;
 			delete rays[i]->ray_set;
-			//其他视点已经记录的射线，把本视点的记录放进去
+			//Rays already recorded in other viewpoints, put in the record of this viewpoint
 			vector<int> view_ids = (*rays_to_viwes_map)[ray_ids[i]];
 			view_ids.push_back(pos);
 			(*rays_to_viwes_map)[ray_ids[i]] = view_ids;
 		}
 	}
-	//更新射线数目
+	//Updating the number of rays
 	(*ray_num) = ray_id;
-	//更新视点映射的射线数组
+	//Update the ray array for the viewpoint mapping
 	(*views_to_rays_map)[pos] = ray_ids;
-	//释放锁
+	//Release the lock
 	voxel_information->mutex_rays.unlock();
 }
 
@@ -584,7 +588,7 @@ inline bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel) {
 }
 
 inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d, Eigen::Matrix4d& now_camera_pose_world, rs2_intrinsics& color_intrinsics,int& pixel_interval,double& max_range,double& octomap_resolution) {
-	//投影立方体顶点至图像坐标系
+	//Projection of the cube vertices to the image coordinate system
 	double now_range = 0;
 	vector<cv::Point2f> contours;
 	for (int i = 0; i < convex_3d.size(); i++) {
@@ -594,19 +598,19 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
 		rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
 		contours.emplace_back(pixel[0], pixel[1]);
 		//cout << pixel[0] << " " << pixel[1] << endl;
-		//计算一下最远点离开视点距离
+		//Calculate the distance of the furthest point from the viewpoint
 		Eigen::Vector4d view_pos(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
 		now_range = max(now_range, (view_pos - convex_3d[i]).norm());
 	}
 	max_range = min(max_range, now_range);
-	//计算凸包
+	//Calculating convex packages
 	vector<cv::Point2f> hull;
 	convexHull(contours, hull, false, true);
 	if (!cv::isContourConvex(hull)) {
 		cout << "no convex. check BBX." << endl;
 		return contours;
 	}
-	//计算空间最远两点距离，计算像素最远两点距离，根据地图分辨率得到像素偏移
+	//Calculate the distance between the furthest two points in space, calculate the distance between the furthest two points of a pixel and get the pixel offset according to the map resolution
 	double pixel_dis = 0;
 	double space_dis = 0;
 	for (int i = 0; i < hull.size(); i++)
@@ -631,46 +635,46 @@ inline octomap::point3d project_pixel_to_ray_end(int x,int y, rs2_intrinsics& co
 
 void ray_information_thread_process(int ray_id, Ray_Information** rays_info, unordered_map<Ray, int, Ray_Hash>* rays_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* occupancy_map, unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* object_weight, octomap::ColorOcTree* octo_model, Voxel_Information* voxel_information, View_Space* view_space, short method )
 {
-	//由于检查过，所以第一个节点就是非空节点
+	//Since it is checked, the first node is a non-empty node
 	auto first = rays_info[ray_id]->ray->start;
 	auto last = rays_info[ray_id]->ray->stop;
 	last--;
 	for (auto it = rays_info[ray_id]->ray->start; it != rays_info[ray_id]->ray->stop; ++it) {
-		//从hash表里查询该key
+		//Look up the key from the hash table
 		auto hash_this_key = (*occupancy_map).find(*it);
-		//找不到节点就下一个
+		//Next if you can't find a node
 		if (hash_this_key== (*occupancy_map).end()) {
 			if (method == RSE && it == last) rays_info[ray_id]->information_gain = 0;
 			continue;
 		}
-		//读取节点概率值
+		//Read node probability values
 		double occupancy = hash_this_key->second;
-		//检查一下当前节点是否被占据
+		//Check to see if the current node is occupied
 		bool voxel_occupied = voxel_information->is_occupied(occupancy);
-		//检查一下节点是否未知
+		//Check to see if the node is unknown
 		bool voxel_unknown = voxel_information->is_unknown(occupancy);
-		//读取一下节点为物体表面率
+		//Read the node for the surface rate of the object
 		double on_object = voxel_information->voxel_object(*it, object_weight);
-		//如果被占据，那就是最后一个节点了
+		//If it is occupied, it is the last node
 		if (voxel_occupied) last = it;
-		//如果free，则初始节点要更新
+		//If free, the initial node is to be updated
 		if (it==first && (!voxel_unknown&&!voxel_occupied)) first = it;
-		//判断是否最后一个节点
+		//Determine if it is the last node
 		bool is_end = (it == last);
-		//统计信息熵
+		//Statistical information entropy
 		rays_info[ray_id]->information_gain = information_function(method, rays_info[ray_id]->information_gain, voxel_information->entropy(occupancy), rays_info[ray_id]->visible, voxel_unknown, rays_info[ray_id]->previous_voxel_unknown, is_end, voxel_occupied, on_object, rays_info[ray_id]->object_visible);
 		rays_info[ray_id]->object_visible *= (1 - on_object);
 		if(method == OursIG) rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
 		else rays_info[ray_id]->visible *= occupancy;
 		rays_info[ray_id]->voxel_num++;
-		//如果是最后了就退出
+		//Exit if it's the end
 		if (is_end) break;
 	}
 	while (last - first < -1) first--;
 	last++;
-	//更新stop为最后一个节点后一个迭代器
+	//Update stop to one iterator after the last node
 	rays_info[ray_id]->ray->stop = last;
-	//更新start为第一个迭代器
+	//Update start to the first iterator
 	rays_info[ray_id]->ray->start = first;
 }
 
@@ -745,7 +749,7 @@ inline int frontier_check(octomap::point3d node, octomap::ColorOcTree* octo_mode
 				octomap::OcTreeKey neighbour_key;  bool neighbour_key_have = octo_model->coordToKeyChecked(neighbour, neighbour_key);
 				if (neighbour_key_have) {
 					octomap::ColorOcTreeNode* neighbour_voxel = octo_model->search(neighbour_key);
-					if (neighbour_voxel != NULL) {
+					if (neighbour_voxel != nullptr) {
 						free_cnt += voxel_information->voxel_free(neighbour_voxel) == true ? 1 : 0;
 						occupied_cnt += voxel_information->voxel_occupied(neighbour_voxel) == true ? 1 : 0;
 					}
@@ -753,9 +757,9 @@ inline int frontier_check(octomap::point3d node, octomap::ColorOcTree* octo_mode
 			}
 	//edge
 	if (free_cnt >= 1 && occupied_cnt >= 1) return 2;
-	//边界
+	//Boundaries
 	if (free_cnt >= 1) return 1;
-	//啥也不是
+	//Nothing
 	return 0;
 }
 
@@ -832,7 +836,8 @@ public:
 				}
 			}
 		}
-		if (d[t] == INF) return false;  // 当没有可增广的路时退出
+                //Exit when there are no more roads to expand
+		if (d[t] == INF) return false;
 		flow += a[t];
 		cost += d[t] * a[t];
 		for (int u = t; u != s; u = edges[p[u]].from) {
@@ -897,13 +902,16 @@ void adjacency_list_thread_process(int ray_id, int* ny, int ray_index_shift, int
 
 class views_voxels_MF {
 public:
-	int nx, ny, nz;										//三边的点数，视点数nx，射线数ny,体素数nz
-	vector<vector<pair<int, double>>>* bipartite_list;	//邻接表
+        // Number of points on three sides, number of viewpoints nx, number of rays ny,number of voxels nz
+	int nx, ny, nz;
+        //Adjacency table
+	vector<vector<pair<int, double>>>* bipartite_list;
 	View_Space* view_space;
 	Views_Information* views_information;
 	Voxel_Information* voxel_information;
 	Share_Data* share_data;
-	unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash>* voxel_id_map;	//体素下标
+        // Voxel subscript
+	unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash>* voxel_id_map;
 	MCMF* mcmf;
 	vector<int> view_id_set;
 
@@ -928,15 +936,15 @@ public:
 		views_information = _views_information;
 		voxel_information = _voxel_information;
 		share_data = _share_data;
-		//视点按照id排序，并建立三分图邻接表
+		//Viewpoints are sorted by id and a trilateration adjacency table is created
 		sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
 		nx = _nx;
 		ny = views_information->ray_num;
 		bipartite_list = new vector<vector<pair<int, double>>>;
 		bipartite_list->resize(nx + ny + share_data->voxels_in_BBX);
-		//建立体素的id表
+		//Create a table of ids for voxels
 		voxel_id_map = new unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash>;
-		//并行遍历每条射线上的体素累加至对应视点
+		//Parallel traversal of the voxels on each ray to the corresponding viewpoint
 		nz = 0;
 		thread** adjacency_list_process = new thread * [views_information->ray_num];
 		for (int i = 0; i < views_information->ray_num; i++) {
@@ -945,7 +953,7 @@ public:
 		for (int i = 0; i < views_information->ray_num; i++) {
 			(*adjacency_list_process[i]).join();
 		}
-		//输出一下具体的图大小
+		//Output the exact figure size
 		if (nz != voxel_id_map->size()) cout << "node_z wrong." << endl;
 		int num_of_all_edge = 0;
 		int num_of_view_edge = 0;
@@ -966,24 +974,24 @@ public:
 };
 
 void adjacency_list_thread_process(int ray_id, int* nz, int ray_index_shift, int voxel_index_shift, unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash>* voxel_id_map, vector<vector<pair<int, double>>>* bipartite_list, View_Space* view_space, Views_Information* views_information, Voxel_Information* voxel_information, Share_Data* share_data) {
-	//该射线被哪些视点看到，加入图中
+	//Which viewpoints the ray is seen by, added to the diagram
 	vector<int> views_id = (*views_information->rays_to_viwes_map)[ray_id];
 	for (int i = 0; i < views_id.size(); i++)
 		(*bipartite_list)[ray_id + ray_index_shift].push_back(make_pair(views_id[i], 0.0));
-	//仅保留感兴趣体素
+	//Retain only voxels of interest
 	double visible = 1.0;
 	auto first = views_information->rays_info[ray_id]->ray->start;
 	auto last = views_information->rays_info[ray_id]->ray->stop;
 	for (auto it = views_information->rays_info[ray_id]->ray->start; it != views_information->rays_info[ray_id]->ray->stop; ++it) {
-		//从hash表里查询该key
+		//Look up the key from the hash table
 		auto hash_this_key = (*views_information->occupancy_map).find(*it);
-		//找不到节点就下一个
+		//Next if you can't find a node
 		if (hash_this_key == (*views_information->occupancy_map).end()) continue;
-		//读取节点概率值
+		//Read node probability values
 		double occupancy = hash_this_key->second;
-		//读取一下节点为物体表面率
+		//Read the node for the surface rate of the object
 		double on_object = voxel_information->voxel_object(*it, views_information->object_weight);
-		//统计信息熵
+		//Statistical information entropy
 		double information_gain = on_object * visible * voxel_information->entropy(occupancy);
 		visible *= voxel_information->get_voxel_visible(occupancy);
 		if (information_gain > share_data->interesting_threshold) {
@@ -991,7 +999,7 @@ void adjacency_list_thread_process(int ray_id, int* nz, int ray_index_shift, int
 			int voxel_id;
 			voxel_information->mutex_rays.lock();
 			auto hash_this_node = voxel_id_map->find(node_y);
-			//如果没有记录，就视为新的体素
+			//If not recorded, it is considered a new voxel
 			if (hash_this_node == voxel_id_map->end()) {
 				voxel_id = (*nz) + voxel_index_shift;
 				(*voxel_id_map)[node_y] = voxel_id;
@@ -1001,7 +1009,7 @@ void adjacency_list_thread_process(int ray_id, int* nz, int ray_index_shift, int
 				voxel_id = hash_this_node->second;
 			}
 			voxel_information->mutex_rays.unlock();
-			//对于每个视点，统计该体素的id与价值
+			//For each viewpoint, count the id and value of the voxel
 			for (int i = 0; i < views_id.size(); i++)
 			{
 				(*voxel_information->mutex_voxels[voxel_id - voxel_index_shift]).lock();
