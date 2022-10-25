@@ -31,15 +31,15 @@ public:
 
 	bool precept(View* now_best_view) { 
 		double now_time = clock();
-		//创建当前成像点云
+		// Create the current imaging point cloud
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_parallel(new pcl::PointCloud<pcl::PointXYZRGB>);
 		cloud_parallel->is_dense = false;
 		cloud_parallel->points.resize(share_data->color_intrinsics.width * share_data->color_intrinsics.height);
-		//获取视点位姿
+		// Get a viewpoint pose
 		Eigen::Matrix4d view_pose_world;
 		now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
 		view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-		//检查视点的key
+		// Check the key of the viewpoint
 		octomap::OcTreeKey key_origin;
 		bool key_origin_have = ground_truth_model->coordToKeyChecked(now_best_view->init_pos(0), now_best_view->init_pos(1), now_best_view->init_pos(2), key_origin);
 		if (key_origin_have) {
@@ -82,13 +82,14 @@ public:
 		cloud->width = vaild_point;
 		cloud->height = 1;
 		cloud->points.resize(vaild_point);
-		//记录当前采集点云
+		// Record the current collection point cloud
 		share_data->vaild_clouds++;
 		share_data->clouds.push_back(cloud);
-		//旋转至世界坐标系
+		// Rotate to the world coordinate system
 		*share_data->cloud_final += *cloud;
 		cout << "virtual cloud get with executed time " << clock() - now_time << " ms." << endl;
-		if (share_data->show) { //显示成像点云
+		if (share_data->show) {
+                        //Display imaging point clouds
 			pcl::visualization::PCLVisualizer::Ptr viewer1(new pcl::visualization::PCLVisualizer("Camera"));
 			viewer1->setBackgroundColor(0, 0, 0);
 			viewer1->addCoordinateSystem(0.1);
@@ -121,9 +122,9 @@ void precept_thread_process(int x, int y, pcl::PointCloud<pcl::PointXYZRGB>::Ptr
 	octomap::point3d origin = *_origin;
 	Eigen::Matrix4d view_pose_world = *_view_pose_world;
 	cv::Point2f pixel(x, y);
-	//反向投影找到终点
+	// Reverse projection to find the end point
 	octomap::point3d end = project_pixel_to_ray_end(x, y, share_data->color_intrinsics, view_pose_world, 1.0);
-	//显示一下
+	// Show it
 	octomap::OcTreeKey key_end;
 	octomap::point3d direction = end - origin;
 	octomap::point3d end_point;
@@ -134,9 +135,10 @@ void precept_thread_process(int x, int y, pcl::PointCloud<pcl::PointXYZRGB>::Ptr
 	point.b = 0;
 	point.g = 0;
 	point.r = 0;
-	//越过未知区域，找到终点
+	// Crossing unknown areas and finding the end
 	bool found_end_point = share_data->ground_truth_model->castRay(origin, direction, end_point, true, 6.0 * share_data->predicted_size);
-	if (!found_end_point) {//未找到终点，无观测数据
+	if (!found_end_point) {
+          // Endpoint not found, no observations available
 		cloud->points[x * share_data->color_intrinsics.height + y] = point;
 		return;
 	}
@@ -145,7 +147,7 @@ void precept_thread_process(int x, int y, pcl::PointCloud<pcl::PointXYZRGB>::Ptr
 		cloud->points[x * share_data->color_intrinsics.height + y] = point;
 		return;
 	}
-	//检查一下末端是否在地图限制范围内
+	// Check to see if the end is within the map limits
 	bool key_end_have = share_data->ground_truth_model->coordToKeyChecked(end_point, key_end);
 	if (key_end_have) {
 		octomap::ColorOcTreeNode* node = share_data->ground_truth_model->search(key_end);
@@ -207,7 +209,7 @@ public:
 		share_data->now_views_infromation_processed = false;
 		share_data->move_on = false;
 		voxel_information = new Voxel_Information(share_data->p_unknown_lower_bound, share_data->p_unknown_upper_bound);
-		//初始化GT
+		// Initializing GT
 		share_data->access_directory(share_data->save_path);
 		//GT cloud
 		share_data->cloud_ground_truth->is_dense = false;
@@ -224,14 +226,14 @@ public:
 				break;
 			}
 		}
-		//检查物体大小，统一缩放为0.15m左右
+		// Check the size of the object and scale it uniformly to about 0.15m
 		vector<Eigen::Vector3d> points;
 		for (auto& ptr : share_data->cloud_pcd->points) {
 			Eigen::Vector3d pt(ptr.x * unit, ptr.y * unit, ptr.z * unit);
 			points.push_back(pt);
 		}
 		Eigen::Vector3d object_center_world = Eigen::Vector3d(0, 0, 0);
-		//计算点云质心
+		// Calculating point cloud center of mass
 		for (auto& ptr : points) {
 			object_center_world(0) += ptr(0);
 			object_center_world(1) += ptr(1);
@@ -240,7 +242,7 @@ public:
 		object_center_world(0) /= points.size();
 		object_center_world(1) /= points.size();
 		object_center_world(2) /= points.size();
-		//二分查找BBX半径，以BBX内点的个数比率达到0.90-0.95为终止条件
+		// Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching 0.90 - 0.95
 		double l = 0, r = 0, mid;
 		for (auto& ptr : points) {
 			r = max(r, (object_center_world - ptr).norm());
@@ -266,7 +268,7 @@ public:
 			scale = 0.1 / predicted_size;
 			cout << "object large. change scale to about 0.1 m." << endl;
 		}
-		//转换点云
+		// Convert point clouds
 		for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++)
 		{
 			(*ptr).x = (*p).x * scale * unit;
@@ -275,7 +277,7 @@ public:
 			(*ptr).b = 168;
 			(*ptr).g = 168;
 			(*ptr).r = 168;
-			//GT插入点云
+			// GT Insertion Point Cloud
 			octomap::OcTreeKey key;  bool key_have = share_data->ground_truth_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
 			if (key_have) {
 				octomap::ColorOcTreeNode* voxel = share_data->ground_truth_model->search(key);
@@ -284,7 +286,7 @@ public:
 					share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
 				}
 			}
-			//GT_sample插入点云
+			// GT_sample insert point cloud
 			octomap::OcTreeKey key_sp;  bool key_have_sp = share_data->GT_sample->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key_sp);
 			if (key_have_sp) {
 				octomap::ColorOcTreeNode* voxel_sp = share_data->GT_sample->search(key_sp);
@@ -307,21 +309,22 @@ public:
 		cout << "Map_GT_sample has voxels " << share_data->init_voxels << endl;
 		ofstream fout(share_data->save_path + "/GT_sample_voxels.txt");
 		fout << share_data->init_voxels << endl;
-		//初始化viewspace
+		// Initialize viewspace
 		now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
-		//设置初始视点为统一的位置
+		// Set the initial viewpoint to a uniform position
 		now_view_space->views[0].vis++;
 		now_best_view = new View(now_view_space->views[0]);
 		now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
 		Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-		//相机类初始化
+		// Camera class initialization
 		percept = new Perception_3D(share_data);
-		if (share_data->show) { //显示BBX、相机位置、GT
+		if (share_data->show) {
+                  // Show BBX, camera position, GT
 			pcl::visualization::PCLVisualizer::Ptr viewer = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer("Iteration"));
 			viewer->setBackgroundColor(0, 0, 0);
 			viewer->addCoordinateSystem(0.1);
 			viewer->initCameraParameters();
-			//第一帧相机位置
+			// First frame camera position
 			Eigen::Vector4d X(0.05, 0, 0, 1);
 			Eigen::Vector4d Y(0, 0.05, 0, 1);
 			Eigen::Vector4d Z(0, 0, 0.05, 1);
@@ -342,7 +345,7 @@ public:
 				(*pt).x = now_view_space->views[i].init_pos(0);
 				(*pt).y = now_view_space->views[i].init_pos(1);
 				(*pt).z = now_view_space->views[i].init_pos(2);
-				//第一次显示所有点为白色
+				// First display of all dots in white
 				(*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
 			}
 			viewer->addPointCloud<pcl::PointXYZRGB>(test_viewspace, "test_viewspace");
@@ -405,8 +408,9 @@ public:
 					int removed = remove((share_data->nbv_net_path + "/log/ready.txt").c_str());
 					if (removed!=0) cout << "cannot remove ready.txt." << endl;
 				}
-				else{//搜索算法
-					//对视点排序
+				else{
+                                  // Search algorithms
+					// Sorting of viewpoints
 					sort(now_view_space->views.begin(), now_view_space->views.end(), view_utility_compare);
 					/*if (share_data->sum_local_information == 0) {
 						cout << "randomly choose a view" << endl;
@@ -414,7 +418,8 @@ public:
 						random_shuffle(now_view_space->views.begin(), now_view_space->views.end());
 					}*/
 					//informed_viewspace
-					if (share_data->show) { //显示BBX与相机位置
+					if (share_data->show) {
+                                          // Show BBX with camera position
 						pcl::visualization::PCLVisualizer::Ptr viewer = pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer("Iteration" + to_string(iterations)));
 						viewer->setBackgroundColor(0, 0, 0);
 						viewer->addCoordinateSystem(0.1);
@@ -429,15 +434,15 @@ public:
 							(*ptr).x = now_view_space->views[i].init_pos(0);
 							(*ptr).y = now_view_space->views[i].init_pos(1);
 							(*ptr).z = now_view_space->views[i].init_pos(2);
-							//访问过的点记录为蓝色
+							// Visited points are recorded in blue
 							if (now_view_space->views[i].vis) (*ptr).r = 0, (*ptr).g = 0, (*ptr).b = 255;
-							//在网络流内的设置为黄色
+							// The setting within the network stream is yellow
 							else if (now_view_space->views[i].in_coverage[iterations] && i < now_view_space->views.size() / 10) (*ptr).r = 255, (*ptr).g = 255, (*ptr).b = 0;
-							//在网络流内的设置为绿色
-							else if (now_view_space->views[i].in_coverage[iterations]) (*ptr).r = 255, (*ptr).g = 0, (*ptr).b = 0;
-							//前10%的权重的点设置为蓝绿色
+				                        // The setting within the network stream is green
+                                                        else if (now_view_space->views[i].in_coverage[iterations]) (*ptr).r = 255, (*ptr).g = 0, (*ptr).b = 0;
+							// The top 10% of the weighted points are set to blue-green
 							else if (i < now_view_space->views.size() / 10) (*ptr).r = 0, (*ptr).g = 255, (*ptr).b = 255;
-							//其余点不要了
+							// Don't want the rest of the points
 							else continue;
 							ptr++;
 							needed++;
@@ -553,27 +558,27 @@ public:
 	}
 };
 
-atomic<bool> stop = false;		//控制程序结束
-Share_Data* share_data;			//共享数据区指针
+atomic<bool> stop{false};		//End of control program
+Share_Data* share_data;			//Shared data area pointer
 NBV_Planner* nbv_plan;
 
 void save_cloud_mid(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string name) {
-	//保存中间的点云的线程，目前不检查是否保存完毕
+	// Thread for saving intermediate point clouds, currently not checking if the save is complete
 	share_data->save_cloud_to_disk(cloud, "/clouds", name);
 	cout << name << " saved" << endl;
 }
 
 void create_view_space(View_Space** now_view_space, View* now_best_view, Share_Data* share_data, int iterations) {
-	//计算关键帧相机位姿
+	// Calculating keyframe camera poses
 	share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();;
-	//处理viewspace
+	// Handling viewspace
 	(*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
-	//保存中间迭代结果
+	// Save the results of intermediate iterations
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_mid(new pcl::PointCloud<pcl::PointXYZRGB>);
 	*cloud_mid = *share_data->cloud_final;
 	thread save_mid(save_cloud_mid, cloud_mid, "pointcloud" + to_string(iterations));
 	save_mid.detach();
-	//更新标志位
+	// Update flag bit
 	share_data->now_view_space_processed = true;
 }
 
@@ -611,19 +616,19 @@ void create_views_information(Views_Information** now_views_infromation, View* n
 			}
 		}
 	}
-	else { //搜索方法
-		//处理views_informaiton
+	else { // Search by
+		// Processing views_information
 		if (iterations == 0) (*now_views_infromation) = new Views_Information(share_data, nbv_plan->voxel_information, now_view_space, iterations);
 		else (*now_views_infromation)->update(share_data, now_view_space, iterations);
 		if (share_data->method_of_IG == OursIG) {
-			//处理网络流，获取全局优化函数
+			// Handling network streams and obtaining global optimisation functions
 			views_voxels_MF* set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node, now_view_space, *now_views_infromation, nbv_plan->voxel_information, share_data);
 			set_cover_solver->solve();
 			vector<int> coverage_view_id_set = set_cover_solver->get_view_id_set();
 			for (int i = 0; i < coverage_view_id_set.size(); i++)
 				now_view_space->views[coverage_view_id_set[i]].in_coverage[iterations] = 1;
 		}
-		//综合计算局部贪心与全局优化，产生视点信息熵
+		// Combined calculation of local greed and global optimization to produce viewpoint information entropy
 		share_data->sum_local_information = 0;
 		share_data->sum_global_information = 0;
 		share_data->sum_robot_cost = 0;
@@ -639,7 +644,7 @@ void create_views_information(Views_Information** now_views_infromation, View* n
 			else now_view_space->views[i].final_utility = 0.7 * (share_data->sum_local_information == 0 ? 0 : now_view_space->views[i].information_gain / share_data->sum_local_information) + 0.3 * (share_data->robot_cost_negtive == true ? -1 : 1) * now_view_space->views[i].robot_cost / share_data->sum_robot_cost;
 		}
 	}
-	//更新标志位
+	// Update flag bit
 	share_data->now_views_infromation_processed = true;
 }
 
@@ -649,7 +654,7 @@ void move_robot(View* now_best_view, View_Space* now_view_space, Share_Data* sha
 }
 
 void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer) {
-	//pcl显示点云
+	//pcl display point cloud
 	while (!viewer->wasStopped())
 	{
 		viewer->spinOnce(100);
@@ -658,7 +663,7 @@ void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer) {
 }
 
 void get_command()
-{	//从控制台读取指令字符串
+{	//Read command strings from the console
 	string cmd;
 	while (!stop && !share_data->over)
 	{
@@ -674,13 +679,13 @@ void get_command()
 
 void get_run()
 {
-	//NBV规划期初始化
+	//NBV planning period initialisation
 	nbv_plan = new NBV_Planner(share_data);
-	//主控循环
+	//Master Control Cycle
 	string status="";
-	//实时读取与规划
+	//Real-time reading and planning
 	while (!stop && nbv_plan->plan()) {
-		//如果状态有变化就输出
+		//Output if there is a change in status
 		if (status != nbv_plan->out_status()) {
 			status = nbv_plan->out_status();
 			cout << "NBV_Planner's status is " << status << endl;
@@ -688,17 +693,18 @@ void get_run()
 	}
 }
 
-int main()
+int main(int argc, char** argv)
 {
+        const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
 	//Init
 	ios::sync_with_stdio(false);
-	//数据区初始化
-	share_data = new Share_Data("../DefaultConfiguration.yaml");
-	//控制台读取指令线程
+	//Data area initialisation
+	share_data = new Share_Data(config_file);
+	//Console read command threads
 	thread cmd(get_command);
-	//NBV系统运行线程
+	//NBV system run threads
 	thread runner(get_run);
-	//等待线程结束
+	//Waiting for the thread to finish
 	cmd.join();
 	runner.join();
 	cout << "System over." << endl;
