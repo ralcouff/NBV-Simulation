@@ -713,5 +713,5 @@ int main(int argc, char** argv)
 	cmd.join();
 	runner.join();
 	cout << "System over." << endl;
-	return 0;
+	return EXIT_SUCCESS;
 }
