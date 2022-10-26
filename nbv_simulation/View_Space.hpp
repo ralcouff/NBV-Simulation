@@ -517,7 +517,7 @@ class View_Space
 
     void get_view_space(vector<Eigen::Vector3d>& points)
     {
-        double now_time = clock();
+        auto now_time = clock();
         object_center_world = Eigen::Vector3d(0, 0, 0);
         // Calculating point cloud center of mass
         for(auto& ptr : points)
@@ -683,7 +683,7 @@ class View_Space
         double map_size = predicted_size + 3.0 * octomap_resolution;
         share_data->map_size = map_size;
         // Data for the first time, based on BBX initialization map
-        double now_time = clock();
+        auto now_time = clock();
         for(double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
             x += octomap_resolution)
             for(double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size;
@@ -730,7 +730,7 @@ class View_Space
                 .norm();
         }
         // Insert point cloud to intermediate data structure
-        double now_time = clock();
+        auto now_time = clock();
         double map_size = predicted_size + 3.0 * octomap_resolution;
         share_data->map_size = map_size;
         octomap::Pointcloud cloud_octo;

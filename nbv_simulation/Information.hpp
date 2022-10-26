@@ -198,7 +198,7 @@ class Views_Information
         voxel_information->skip_coefficient = share_data->skip_coefficient;
         // Note that the viewpoints need to be sorted by id to create the mapping
         sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
-        double now_time = clock();
+        auto now_time = clock();
         views_to_rays_map = new unordered_map<int, vector<int>>();
         rays_to_viwes_map = new unordered_map<int, vector<int>>();
         rays_map = new unordered_map<Ray, int, Ray_Hash>();
@@ -361,7 +361,7 @@ class Views_Information
     void update(Share_Data* share_data, View_Space* view_space, int iterations)
     {
         // Update internal data
-        double now_time = clock();
+        auto now_time = clock();
         double map_size = view_space->predicted_size;
         // Note that the viewpoints need to be sorted by id to create the mapping
         sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
@@ -1235,7 +1235,7 @@ class views_voxels_MF
 
     void solve()
     {
-        double now_time = clock();
+        auto now_time = clock();
         view_id_set = mcmf->work(*bipartite_list);
         double cost_time = clock() - now_time;
         cout << "flow network solved with executed time " << cost_time << " ms." << endl;
@@ -1253,7 +1253,7 @@ class views_voxels_MF
                     Voxel_Information* _voxel_information,
                     Share_Data* _share_data)
     {
-        double now_time = clock();
+        auto now_time = clock();
         view_space = _view_space;
         views_information = _views_information;
         voxel_information = _voxel_information;

@@ -38,7 +38,7 @@ class Perception_3D
 
     bool precept(View* now_best_view)
     {
-        double now_time = clock();
+        auto now_time = clock();
         // Create the current imaging point cloud
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_parallel(new pcl::PointCloud<pcl::PointXYZRGB>);
         cloud_parallel->is_dense = false;
