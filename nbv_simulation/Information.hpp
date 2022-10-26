@@ -179,7 +179,7 @@ class Views_Information
     double octomap_resolution;
     int method;
     int pre_edge_cnt;
-    int edge_cnt;
+    std::size_t edge_cnt;
 
     Views_Information(Share_Data* share_data,
                       Voxel_Information* _voxel_information,
@@ -805,7 +805,7 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
     for(int i = 0; i < convex_3d.size(); i++)
     {
         Eigen::Vector4d vertex = now_camera_pose_world.inverse() * convex_3d[i];
-        float point[3] = {vertex(0), vertex(1), vertex(2)};
+        float point[3] = {static_cast<float>(vertex(0)), static_cast<float>(vertex(1)), static_cast<float>(vertex(2))};
         float pixel[2];
         rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
         contours.emplace_back(pixel[0], pixel[1]);
@@ -844,12 +844,12 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
 inline octomap::point3d project_pixel_to_ray_end(
   int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range)
 {
-    float pixel[2] = {x, y};
+    float pixel[2] = {static_cast<float>(x), static_cast<float>(y)};
     float point[3];
     rs2_deproject_pixel_to_point(point, &color_intrinsics, pixel, max_range);
     Eigen::Vector4d point_world(point[0], point[1], point[2], 1);
     point_world = now_camera_pose_world * point_world;
-    return {point_world(0), point_world(1), point_world(2)};
+    return {static_cast<float>(point_world(0)), static_cast<float>(point_world(1)), static_cast<float>(point_world(2))};
 }
 
 void ray_information_thread_process(
@@ -1290,8 +1290,8 @@ class views_voxels_MF
         // Output the exact figure size
         if(nz != voxel_id_map->size())
             cout << "node_z wrong." << endl;
-        int num_of_all_edge = 0;
-        int num_of_view_edge = 0;
+        std::size_t num_of_all_edge = 0;
+        std::size_t num_of_view_edge = 0;
         for(int i = 0; i < bipartite_list->size(); i++)
         {
             num_of_all_edge += (*bipartite_list)[i].size();
