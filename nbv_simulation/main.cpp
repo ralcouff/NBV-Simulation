@@ -29,7 +29,7 @@ class Perception_3D
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud;
     int iterations;
 
-    Perception_3D(Share_Data* _share_data)
+    explicit Perception_3D(Share_Data* _share_data)
     {
         share_data = _share_data;
         ground_truth_model = share_data->ground_truth_model;
