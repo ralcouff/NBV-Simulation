@@ -342,7 +342,7 @@ class NBV_Planner
             if(key_have)
             {
                 octomap::ColorOcTreeNode* voxel = share_data->ground_truth_model->search(key);
-                if(voxel == NULL)
+                if(voxel == nullptr)
                 {
                     share_data->ground_truth_model->setNodeValue(
                       key, share_data->ground_truth_model->getProbHitLog(), true);
@@ -356,7 +356,7 @@ class NBV_Planner
             if(key_have_sp)
             {
                 octomap::ColorOcTreeNode* voxel_sp = share_data->GT_sample->search(key_sp);
-                if(voxel_sp == NULL)
+                if(voxel_sp == nullptr)
                 {
                     share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
                     share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
