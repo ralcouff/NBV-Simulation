@@ -337,7 +337,7 @@ class Views_Information
         {
             (*rays_process[i]).join();
         }
-        double cost_time = clock() - now_time;
+        auto cost_time = clock() - now_time;
         cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
         share_data->access_directory(share_data->save_path + "/run_time");
         ofstream fout(share_data->save_path + "/run_time/IG" + to_string(view_space->id) + ".txt");
