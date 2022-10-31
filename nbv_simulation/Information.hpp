@@ -662,7 +662,7 @@ void ray_cast_thread_process(int* ray_num,
                     // tail is used as the end of the ray
                     auto last = ray_set->end();
                     last--;
-                    while(last != ray_set->begin() && (octo_model->search(*last) == NULL))
+                    while(last != ray_set->begin() && (octo_model->search(*last) == nullptr))
                         last--;
                     // Dichotomous first non-empty element
                     auto l = ray_set->begin();
@@ -670,7 +670,7 @@ void ray_cast_thread_process(int* ray_num,
                     auto mid = l + (r - l) / 2;
                     while(mid != r)
                     {
-                        if(octo_model->search(*mid) != NULL)
+                        if(octo_model->search(*mid) != nullptr)
                             r = mid;
                         else
                             l = mid + 1;
