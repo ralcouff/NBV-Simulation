@@ -134,7 +134,7 @@ vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
 octomap::point3d project_pixel_to_ray_end(
   int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range = 1.0);
 double information_function(short& method,
-                            double& ray_informaiton,
+                            double& ray_information,
                             double voxel_information,
                             double& visible,
                             bool& is_unknown,
@@ -925,7 +925,7 @@ void ray_information_thread_process(
 }
 
 inline double information_function(short& method,
-                                   double& ray_informaiton,
+                                   double& ray_information,
                                    double voxel_information,
                                    double& visible,
                                    bool& is_unknown,
@@ -941,19 +941,19 @@ inline double information_function(short& method,
         case OursIG:
             if(is_unknown)
             {
-                final_information = ray_informaiton + object * visible * voxel_information;
+                final_information = ray_information + object * visible * voxel_information;
             }
             else
             {
-                final_information = ray_informaiton;
+                final_information = ray_information;
             }
             break;
-        case OA: final_information = ray_informaiton + visible * voxel_information; break;
+        case OA: final_information = ray_information + visible * voxel_information; break;
         case UV:
             if(is_unknown)
-                final_information = ray_informaiton + visible * voxel_information;
+                final_information = ray_information + visible * voxel_information;
             else
-                final_information = ray_informaiton;
+                final_information = ray_information;
             break;
         case RSE:
             if(is_endpoint)
@@ -961,7 +961,7 @@ inline double information_function(short& method,
                 if(previous_voxel_unknown)
                 {
                     if(is_occupied)
-                        final_information = ray_informaiton + visible * voxel_information;
+                        final_information = ray_information + visible * voxel_information;
                     else
                         final_information = 0;
                 }
@@ -973,7 +973,7 @@ inline double information_function(short& method,
                 if(is_unknown)
                 {
                     previous_voxel_unknown = true;
-                    final_information = ray_informaiton + visible * voxel_information;
+                    final_information = ray_information + visible * voxel_information;
                 }
                 else
                 {
@@ -985,23 +985,23 @@ inline double information_function(short& method,
         case APORA:
             if(is_unknown)
             {
-                final_information = ray_informaiton + object * object_visible * voxel_information;
+                final_information = ray_information + object * object_visible * voxel_information;
             }
             else
             {
-                final_information = ray_informaiton;
+                final_information = ray_information;
             }
             break;
         case Kr:
             if(is_endpoint)
             {
                 if(is_occupied)
-                    final_information = ray_informaiton + voxel_information;
+                    final_information = ray_information + voxel_information;
                 else
                     final_information = 0;
             }
             else
-                final_information = ray_informaiton + voxel_information;
+                final_information = ray_information + voxel_information;
             break;
     }
     return final_information;
