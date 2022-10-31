@@ -226,7 +226,7 @@ class NBV_Planner
     Perception_3D* percept;
     Voxel_Information* voxel_information;
     View_Space* now_view_space;
-    Views_Information* now_views_infromation;
+    Views_Information* now_views_infromation{nullptr};
     View* now_best_view;
     Share_Data* share_data;
     pcl::visualization::PCLVisualizer::Ptr viewer;
