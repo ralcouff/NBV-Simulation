@@ -303,6 +303,7 @@ class NBV_Planner
         mid = (l + r) / 2;
         double precent = check_size(mid, object_center_world, points);
         double pre_precent = precent;
+        // @FIXME condition always true, maybe it's a AND condition?
         while(precent > 0.92 || precent < 1.0)
         {
             if(precent > 0.92)
