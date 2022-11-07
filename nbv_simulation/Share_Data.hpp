@@ -51,7 +51,8 @@ typedef enum rs2_distortion
     RS2_DISTORTION_FTHETA,                 /**< F-Theta fish-eye distortion model */
     RS2_DISTORTION_BROWN_CONRADY,          /**< Unmodified Brown-Conrady distortion model */
     RS2_DISTORTION_KANNALA_BRANDT4,        /**< Four parameter Kannala Brandt distortion model */
-    RS2_DISTORTION_COUNT /**< Number of enumeration values. Not a valid input: intended to be used in for-loops. */
+    RS2_DISTORTION_COUNT                   /**< Number of enumeration values. Not a valid input: intended to be used
+                                              in for-loops. */
 } rs2_distortion;
 
 /** \brief Video stream intrinsics. */
@@ -67,8 +68,14 @@ typedef struct rs2_intrinsics
     float coeffs[5];      /**< Distortion coefficients */
 } rs2_intrinsics;
 
-/* Given a point in 3D space, compute the corresponding pixel coordinates in an image with no distortion or forward
- * distortion coefficients produced by the same camera */
+/**
+ * Given a point in 3D space, compute the corresponding pixel coordinates in an image with no distortion or forward
+ * distortion coefficients produced by the same camera
+ *
+ * @param pixel
+ * @param intrin
+ * @param point
+ */
 static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsics* intrin, const float point[3])
 {
     float x = point[0] / point[2], y = point[1] / point[2];
@@ -117,8 +124,15 @@ static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsi
     pixel[1] = y * intrin->fy + intrin->ppy;
 }
 
-/* Given pixel coordinates and depth in an image with no distortion or inverse distortion coefficients, compute the
- * corresponding point in 3D space relative to the same camera */
+/**
+ * Given pixel coordinates and depth in an image with no distortion or inverse distortion coefficients, compute the
+ * corresponding point in 3D space relative to the same camera
+ *
+ * @param point
+ * @param intrin
+ * @param pixel
+ * @param depth
+ */
 static void rs2_deproject_pixel_to_point(float point[3],
                                          const struct rs2_intrinsics* intrin,
                                          const float pixel[2],
@@ -193,7 +207,11 @@ static void rs2_deproject_pixel_to_point(float point[3],
 #define Kr 5
 #define NBVNET 6
 #define PCNBV 7
+#define NewOurs 8
 
+/**
+ * The class that contains all the data needed for the NBV algorithm.
+ */
 class Share_Data
 {
   public:
@@ -357,25 +375,37 @@ class Share_Data
         save_path = "../" + name_of_pcd + '_' + to_string(method_of_IG);
         if(method_of_IG == 0)
             save_path += '_' + to_string(cost_weight);
-        cout << "pcd and yaml files readed." << endl;
+        cout << "pcd and yaml files read." << endl;
         cout << "save_path is: " << save_path << endl;
         srand(clock());
     }
 
+    /**
+     * Destructor of the object Share_Data
+     */
     ~Share_Data() {}
 
+    /**
+     * Return the time used and update the clock
+     *
+     * @return elapsed_time : the time elapsed since the latest update
+     */
     double out_clock()
     {
-        // Return the time used and update the clock
         double now_clock = clock();
-        double time_len = now_clock - pre_clock;
+        double elapsed_time = now_clock - pre_clock;
         pre_clock = now_clock;
-        return time_len;
+        return elapsed_time;
     }
 
+    /**
+     * Check for the existence of folders in multi-level directories and create them if they do not exist
+     * TODO : Change this function to simplify it
+     *
+     * @param cd The folder path
+     */
     void access_directory(string cd)
     {
-        // Check for the existence of folders in multi-level directories and create them if they do not exist
         string temp;
         for(int i = 0; i < cd.length(); i++)
             if(cd[i] == '/')
@@ -390,9 +420,17 @@ class Share_Data
             fs::create_directory(temp);
     }
 
+    /**
+     * Storage of rotation matrix data to disk
+     * TODO : Function never used
+     *
+     * @param T The rotation matrix to save
+     * @param cd The path to save the file
+     * @param name The name of the file
+     * @param frames_cnt The frame number
+     */
     void save_posetrans_to_disk(Eigen::Matrix4d& T, string cd, string name, int frames_cnt)
     {
-        // Storage of rotation matrix data to disk
         std::stringstream pose_stream, path_stream;
         std::string pose_file, path;
         path_stream << "../data"
@@ -406,6 +444,16 @@ class Share_Data
         fout << T;
     }
 
+    /**
+     * Save the octomap logs to the disk
+     * TODO : Function never used
+     *
+     * @param voxels
+     * @param entropy
+     * @param cd
+     * @param name
+     * @param iterations
+     */
     void save_octomap_log_to_disk(int voxels, double entropy, string cd, string name, int iterations)
     {
         std::stringstream log_stream, path_stream;
@@ -421,9 +469,15 @@ class Share_Data
         fout << voxels << " " << entropy << endl;
     }
 
+    /**
+     * Store point cloud data to disk, very slow, rarely used
+     *
+     * @param cloud The point cloud to save
+     * @param cd The path to save the point cloud
+     * @param name The name of the point cloud to save
+     */
     void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string cd, string name)
     {
-        // Store point cloud data to disk, very slow, rarely used
         std::stringstream cloud_stream, path_stream;
         std::string cloud_file, path;
         path_stream << save_path << cd;
@@ -434,9 +488,17 @@ class Share_Data
         pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
     }
 
+    /**
+     * Store point cloud data to disk, very slow, rarely used
+     * TODO : Function never used
+     *
+     * @param cloud The point cloud to save
+     * @param cd The path to save the point cloud
+     * @param name The name of the point cloud to save
+     * @param frames_cnt The number of frames
+     */
     void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string cd, string name, int frames_cnt)
     {
-        // Store point cloud data to disk, very slow, rarely used
         std::stringstream cloud_stream, path_stream;
         std::string cloud_file, path;
         path_stream << "../data"
@@ -449,9 +511,17 @@ class Share_Data
         pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
     }
 
+    /**
+     * Store point cloud data to disk, very slow, rarely used
+     * TODO : Function never used
+     *
+     * @param octo_model The octree to save
+     * @param cd The path to save the octree
+     * @param name The name of the octree to save
+     */
     void save_octomap_to_disk(octomap::ColorOcTree* octo_model, string cd, string name)
     {
-        // Store point cloud data to disk, very slow, rarely used
+
         std::stringstream octomap_stream, path_stream;
         std::string octomap_file, path;
         path_stream << "../data"
@@ -465,4 +535,9 @@ class Share_Data
     }
 };
 
+/**
+ * Compute the square of a number
+ * @param x The number to compute the square
+ * @return The square of the number
+ */
 inline double pow2(double x) { return x * x; }
