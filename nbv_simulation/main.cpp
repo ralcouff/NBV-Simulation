@@ -864,7 +864,7 @@ void get_command()
     string cmd;
     while(!stop && !share_data->over)
     {
-        cout << "Input command 1.stop 2.over 3.next_itreation :" << endl;
+        cout << "Input command 1.stop 2.over 3.next_iteration :" << endl;
         cin >> cmd;
         if(cmd == "1")
             stop = true;

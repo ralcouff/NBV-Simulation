@@ -24,6 +24,11 @@
 
 using namespace std;
 
+/**
+ * Implementation of a Ray in our octree.
+ *
+ * The Ray is categorised by its start, its end, and the voxels it is passing through.
+ */
 class Ray
 {
   public:
@@ -33,6 +38,14 @@ class Ray
     octomap::KeyRay::iterator start;
     octomap::KeyRay::iterator stop;
 
+    /**
+     * Constructor of a Ray
+     * @param _origin The key to the origin voxel
+     * @param _end The key to the end voxel
+     * @param _ray_set A pointer to the set containing all the voxels traversed by the Ray - TODO : To check
+     * @param _start An iterator on the first element - TODO : To check
+     * @param _stop An iterator on the last element - TODO : To check
+     */
     Ray(octomap::OcTreeKey _origin,
         octomap::OcTreeKey _end,
         octomap::KeyRay* _ray_set,
@@ -46,13 +59,23 @@ class Ray
         stop = _stop;
     }
 
+    /**
+     * Check the equality of two rays
+     * Two rays are considered equals if they have the same origin and the same end
+     *
+     * @param other A pointer to the other Ray
+     * @return TRUE if they are equal, FALSE if they're not
+     */
     bool operator==(const Ray& other) const
     {
-        // For enquiries
         return (origin == other.origin) && (end == other.end);
     }
 };
 
+/**
+ * Creates a Hash for the Ray
+ * It will be used to create unordered maps
+ */
 class Ray_Hash
 {
   public:
@@ -63,6 +86,9 @@ class Ray_Hash
     }
 };
 
+/**
+ * An implementation of the Information contained by a Ray
+ */
 class Ray_Information
 {
   public:
@@ -73,6 +99,11 @@ class Ray_Information
     int voxel_num;
     bool previous_voxel_unknown;
 
+    /**
+     * Constructor of the Ray_Information class
+     *
+     * @param _ray A pointer to the concerned Ray
+     */
     explicit Ray_Information(Ray* _ray)
     {
         ray = _ray;
@@ -83,8 +114,14 @@ class Ray_Information
         voxel_num = 0;
     }
 
+    /**
+     * Destructor of the Ray_Information
+     */
     ~Ray_Information() { delete ray; }
 
+    /**
+     * Clearing the Ray_Information object, setting the default values
+     */
     void clear()
     {
         information_gain = 0;
@@ -102,6 +139,7 @@ void information_gain_thread_process(Ray_Information** rays_info,
                                      unordered_map<int, vector<int>>* views_to_rays_map,
                                      View_Space* view_space,
                                      int pos);
+
 void ray_expand_thread_process(int* ray_num,
                                Ray_Information** rays_info,
                                unordered_map<Ray, int, Ray_Hash>* rays_map,
@@ -113,6 +151,7 @@ void ray_expand_thread_process(int* ray_num,
                                rs2_intrinsics* color_intrinsics,
                                pcl::PointCloud<pcl::PointXYZ>::Ptr frontier,
                                int pos);
+
 void ray_cast_thread_process(int* ray_num,
                              Ray_Information** rays_info,
                              unordered_map<Ray, int, Ray_Hash>* rays_map,
@@ -123,16 +162,24 @@ void ray_cast_thread_process(int* ray_num,
                              View_Space* view_space,
                              rs2_intrinsics* color_intrinsics,
                              int pos);
+
 vector<int> get_xmax_xmin_ymax_ymin_in_hull(vector<cv::Point2f>& hull, rs2_intrinsics& color_intrinsics);
+
 bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel);
+
 vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
                                         Eigen::Matrix4d& now_camera_pose_world,
                                         rs2_intrinsics& color_intrinsics,
                                         int& pixel_interval,
                                         double& max_range,
                                         double& octomap_resolution);
-octomap::point3d project_pixel_to_ray_end(
-  int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range = 1.0);
+
+octomap::point3d project_pixel_to_ray_end(int x,
+                                          int y,
+                                          rs2_intrinsics& color_intrinsics,
+                                          Eigen::Matrix4d& now_camera_pose_world,
+                                          float max_range = 1.0);
+
 double information_function(short& method,
                             double& ray_information,
                             double voxel_information,
@@ -143,6 +190,7 @@ double information_function(short& method,
                             bool& is_occupied,
                             double& object,
                             double& object_visible);
+
 void ray_information_thread_process(
   int ray_id,
   Ray_Information** rays_info,
@@ -153,10 +201,12 @@ void ray_information_thread_process(
   Voxel_Information* voxel_information,
   View_Space* view_space,
   short method);
+
 int frontier_check(octomap::point3d node,
                    octomap::ColorOcTree* octo_model,
                    Voxel_Information* voxel_information,
                    double octomap_resolution);
+
 double distance_function(double distance, double alpha);
 
 class Views_Information
@@ -507,7 +557,7 @@ class Views_Information
                 (*ray_caster[i]).join();
             }
             cout << "ray_num is " << ray_num << endl;
-            cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Startring compution."
+            cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Starting computation."
                  << endl;
         }
         // Allocate a thread to each ray
@@ -1048,7 +1098,9 @@ inline int frontier_check(octomap::point3d node,
 
 inline double distance_function(double distance, double alpha) { return exp(-pow2(alpha) * distance); }
 
-// Max Flow
+/**
+ * Class implementing the Max Flow Graph and Algorithm
+ */
 class MCMF
 {
   public:
@@ -1239,7 +1291,7 @@ class views_voxels_MF
         view_id_set = mcmf->work(*bipartite_list);
         double cost_time = clock() - now_time;
         cout << "flow network solved with executed time " << cost_time << " ms." << endl;
-        cout << view_id_set.size() << " views getted by max flow." << endl;
+        cout << view_id_set.size() << " views got by max flow." << endl;
         share_data->access_directory(share_data->save_path + "/run_time");
         ofstream fout(share_data->save_path + "/run_time/MF" + to_string(view_space->id) + ".txt");
         fout << cost_time << '\t' << view_id_set.size() << endl;
@@ -1299,8 +1351,8 @@ class views_voxels_MF
                 num_of_view_edge += (*bipartite_list)[i].size();
         }
         cout << "Full edge is " << num_of_all_edge << ". View edge(in) is " << num_of_view_edge
-             << ". Voexl edge(out) is " << num_of_all_edge - num_of_view_edge << "." << endl;
-        cout << "adjacency list with interested voxels num " << ny << " getted with executed time "
+             << ". Voxel edge(out) is " << num_of_all_edge - num_of_view_edge << "." << endl;
+        cout << "adjacency list with interested voxels num " << ny << " got with executed time "
              << clock() - now_time << " ms." << endl;
         mcmf = new MCMF();
     }
