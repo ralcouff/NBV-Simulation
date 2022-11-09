@@ -27,7 +27,7 @@
 - [ ] `adjacency_list_thread_process`
 - [ ] `information_function`
 - [ ] class `views_voxels_MF` &rarr; Missing `adjacency_list_thread_process`
-- [ ] class `MCMF` &rarr; `MCMF.hpp/.cpp`
+- [x] class `MCMF` &rarr; `MCMF.hpp/.cpp`
 
 ## View_Space.hpp
 - [ ] class `Voxel_Information` &rarr; `Voxel_Information.hpp/.cpp`
