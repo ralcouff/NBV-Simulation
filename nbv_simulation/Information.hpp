@@ -711,17 +711,6 @@ void ray_cast_thread_process(int* ray_num,
     voxel_information->mutex_rays.unlock();
 }
 
-inline octomap::point3d project_pixel_to_ray_end(
-  int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range)
-{
-    float pixel[2] = {static_cast<float>(x), static_cast<float>(y)};
-    float point[3];
-    rs2_deproject_pixel_to_point(point, &color_intrinsics, pixel, max_range);
-    Eigen::Vector4d point_world(point[0], point[1], point[2], 1);
-    point_world = now_camera_pose_world * point_world;
-    return {static_cast<float>(point_world(0)), static_cast<float>(point_world(1)), static_cast<float>(point_world(2))};
-}
-
 void ray_information_thread_process(
   int ray_id,
   Ray_Information** rays_info,

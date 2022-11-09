@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <octomap/ColorOcTree.h>
 
 using namespace std;
 
@@ -208,6 +209,16 @@ inline bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel)
     return hull_value >= 0;
 }
 
+/**
+ * Compute the projection of the 3D convex hull onto the image plane
+ * @param convex_3d The 3D convex hull of the object
+ * @param now_camera_pose_world The current camera pose
+ * @param color_intrinsics TODO
+ * @param pixel_interval TODO
+ * @param max_range TODO
+ * @param octomap_resolution The resolution of the current octomap
+ * @return Pixel coordinates of the projection of the 3D convex hull
+ */
 inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
                                                Eigen::Matrix4d& now_camera_pose_world,
                                                rs2_intrinsics& color_intrinsics,
@@ -237,7 +248,7 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
     convexHull(contours, hull, false, true);
     if(!cv::isContourConvex(hull))
     {
-        cout << "no convex. check BBX." << endl;
+        cout << "No convex Hull found. Check BBX." << endl;
         return contours;
     }
     // Calculate the distance between the furthest two points in space, calculate the distance between the furthest two
@@ -255,4 +266,24 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
             }
     pixel_interval = (int)(pixel_dis / space_dis * octomap_resolution);
     return hull;
+}
+
+/**
+ * TODO
+ * @param x The coordinate x of the pixel
+ * @param y The coordinate y of the pixel
+ * @param color_intrinsics TODO
+ * @param now_camera_pose_world The current camera position
+ * @param max_range TODO
+ * @return TODO
+ */
+inline octomap::point3d project_pixel_to_ray_end(
+        int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range)
+{
+    float pixel[2] = {static_cast<float>(x), static_cast<float>(y)};
+    float point[3];
+    rs2_deproject_pixel_to_point(point, &color_intrinsics, pixel, max_range);
+    Eigen::Vector4d point_world(point[0], point[1], point[2], 1);
+    point_world = now_camera_pose_world * point_world;
+    return {static_cast<float>(point_world(0)), static_cast<float>(point_world(1)), static_cast<float>(point_world(2))};
 }
