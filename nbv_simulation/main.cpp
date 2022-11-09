@@ -134,7 +134,7 @@ class Perception_3D
               pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Z(0), Z(1), Z(2)), 0, 0, 255, "Z" + to_string(-1));
             while(!viewer1->wasStopped())
             {
-                viewer1->spinOnce(100);
+                viewer1->spin();
                 boost::this_thread::sleep(boost::posix_time::microseconds(100000));
             }
         }
@@ -431,7 +431,7 @@ class NBV_Planner
             viewer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
             while(!viewer->wasStopped())
             {
-                viewer->spinOnce(100);
+                viewer->spin();
                 boost::this_thread::sleep(boost::posix_time::microseconds(100000));
             }
         }
@@ -638,7 +638,7 @@ class NBV_Planner
                             viewer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_itreation");
                             while(!viewer->wasStopped())
                             {
-                                viewer->spinOnce(100);
+                                viewer->spin();
                                 boost::this_thread::sleep(boost::posix_time::microseconds(100000));
                             }
                         }
@@ -854,7 +854,7 @@ void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer)
     // pcl display point cloud
     while(!viewer->wasStopped())
     {
-        viewer->spinOnce(100);
+        viewer->spin();
         boost::this_thread::sleep(boost::posix_time::microseconds(100000));
     }
 }
@@ -873,7 +873,7 @@ void get_command()
         else if(cmd == "3")
             share_data->move_on = true;
         else
-            cout << "Wrong command.Retry :" << endl;
+            cout << "Wrong command. Retry :" << endl;
     }
     cout << "get_command over." << endl;
 }
