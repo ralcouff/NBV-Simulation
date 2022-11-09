@@ -5,8 +5,8 @@
 - [x] struct `rs2_intrinsics` &rarr; `utils.cpp`
 - [x] `rs2_project_point_to_pixel` &rarr; `utils.cpp`
 - [x] `rs2_deproject_pixel_to_point` &rarr; `utils.cpp`
-- [ ] class `Share_Data` &rarr; `Share_Data.hpp/.cpp`
-- [ ] `pow2` &rarr; `utils.cpp`
+- [x] class `Share_Data` &rarr; `Share_Data.hpp/.cpp`
+- [x] `pow2` &rarr; `utils.cpp`
 
 ## Information.hpp
 - [x] class `Ray` &rarr; `Ray.hpp/.cpp`
