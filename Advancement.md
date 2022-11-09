@@ -10,8 +10,8 @@
 
 ## Information.hpp
 - [x] class `Ray` &rarr; `Ray.hpp/.cpp`
-- [ ] class `Ray_Hash` &rarr; `Ray_Hash.hpp/.cpp`
-- [ ] class `Ray_Information` &rarr; `Ray_Information.hpp/.cpp`
+- [x] class `Ray_Hash` &rarr; `Ray_Hash.hpp/.cpp`
+- [x] class `Ray_Information` &rarr; `Ray_Information.hpp/.cpp`
 - [ ] `get_xmax_xmin_ymax_ymin_in_hull` &rarr; `utils.cpp`
 - [ ] `is_pixel_in_convex` &rarr; `utils.cpp`
 - [ ] `get_convex_on_image` &rarr; `utils.cpp`

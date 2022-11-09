@@ -2,6 +2,7 @@
 
 #include "View_Space.hpp"
 #include "Ray_Hash.h"
+#include "Ray_Information.h"
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -24,52 +25,6 @@
 #include <vector>
 
 using namespace std;
-
-/**
- * An implementation of the Information contained by a Ray
- */
-class Ray_Information
-{
-  public:
-    Ray* ray;
-    double information_gain;
-    double visible;
-    double object_visible;
-    int voxel_num;
-    bool previous_voxel_unknown;
-
-    /**
-     * Constructor of the Ray_Information class
-     *
-     * @param _ray A pointer to the concerned Ray
-     */
-    explicit Ray_Information(Ray* _ray)
-    {
-        ray = _ray;
-        information_gain = 0;
-        visible = 1;
-        object_visible = 1;
-        previous_voxel_unknown = false;
-        voxel_num = 0;
-    }
-
-    /**
-     * Destructor of the Ray_Information
-     */
-    ~Ray_Information() { delete ray; }
-
-    /**
-     * Clearing the Ray_Information object, setting the default values
-     */
-    void clear()
-    {
-        information_gain = 0;
-        visible = 1;
-        object_visible = 1;
-        previous_voxel_unknown = false;
-        voxel_num = 0;
-    }
-};
 
 // void ray_graph_thread_process(int ray_id,Ray_Information** rays_info, unordered_map<int, vector<int>>*
 // rays_to_viwes_map, unordered_map<octomap::OcTreeKey, unordered_set<int>, octomap::OcTreeKey::KeyHash>* end_id_map,
