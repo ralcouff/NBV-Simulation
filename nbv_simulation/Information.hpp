@@ -1,6 +1,6 @@
 #pragma once
 
-#include "View_Space.hpp"
+#include "View_Space.h"
 #include "Ray_Hash.h"
 #include "Ray_Information.h"
 #include "MCMF.h"

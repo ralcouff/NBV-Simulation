@@ -10,7 +10,7 @@ using namespace std;
 
 #include "Share_Data.h"
 #include "Information.hpp"
-#include "View_Space.hpp"
+//#include "View_Space.cpp"
 
 // Virtual_Perception_3D.hpp
 void precept_thread_process(int x,
