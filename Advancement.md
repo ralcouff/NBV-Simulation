@@ -1,8 +1,8 @@
 # Remaining functions
 
 ## Share_Data.hpp
-- [ ] enum `rs2_distortion` &rarr; `utils.cpp`
-- [ ] struct `rs2_intrinsics` &rarr; `utils.cpp`
+- [x] enum `rs2_distortion` &rarr; `utils.cpp`
+- [x] struct `rs2_intrinsics` &rarr; `utils.cpp`
 - [ ] `rs2_project_point_to_pixel` &rarr; `utils.cpp`
 - [ ] `rs2_deproject_pixel_to_point` &rarr; `utils.cpp`
 - [ ] class `Share_Data` &rarr; `Share_Data.hpp/.cpp`
