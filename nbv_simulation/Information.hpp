@@ -711,61 +711,6 @@ void ray_cast_thread_process(int* ray_num,
     voxel_information->mutex_rays.unlock();
 }
 
-inline bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel)
-{
-    double hull_value = pointPolygonTest(hull, pixel, false);
-    return hull_value >= 0;
-}
-
-inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
-                                               Eigen::Matrix4d& now_camera_pose_world,
-                                               rs2_intrinsics& color_intrinsics,
-                                               int& pixel_interval,
-                                               double& max_range,
-                                               double& octomap_resolution)
-{
-    // Projection of the cube vertices to the image coordinate system
-    double now_range = 0;
-    vector<cv::Point2f> contours;
-    for(int i = 0; i < convex_3d.size(); i++)
-    {
-        Eigen::Vector4d vertex = now_camera_pose_world.inverse() * convex_3d[i];
-        float point[3] = {static_cast<float>(vertex(0)), static_cast<float>(vertex(1)), static_cast<float>(vertex(2))};
-        float pixel[2];
-        rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
-        contours.emplace_back(pixel[0], pixel[1]);
-        // cout << pixel[0] << " " << pixel[1] << endl;
-        // Calculate the distance of the furthest point from the viewpoint
-        Eigen::Vector4d view_pos(
-          now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
-        now_range = max(now_range, (view_pos - convex_3d[i]).norm());
-    }
-    max_range = min(max_range, now_range);
-    // Calculating convex packages
-    vector<cv::Point2f> hull;
-    convexHull(contours, hull, false, true);
-    if(!cv::isContourConvex(hull))
-    {
-        cout << "no convex. check BBX." << endl;
-        return contours;
-    }
-    // Calculate the distance between the furthest two points in space, calculate the distance between the furthest two
-    // points of a pixel and get the pixel offset according to the map resolution
-    double pixel_dis = 0;
-    double space_dis = 0;
-    for(int i = 0; i < hull.size(); i++)
-        for(int j = 0; j < hull.size(); j++)
-            if(i != j)
-            {
-                Eigen::Vector2d pixel_start(hull[i].x, hull[i].y);
-                Eigen::Vector2d pixel_end(hull[j].x, hull[j].y);
-                pixel_dis = max(pixel_dis, (pixel_start - pixel_end).norm());
-                space_dis = max(space_dis, (convex_3d[i] - convex_3d[j]).norm());
-            }
-    pixel_interval = (int)(pixel_dis / space_dis * octomap_resolution);
-    return hull;
-}
-
 inline octomap::point3d project_pixel_to_ray_end(
   int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range)
 {
