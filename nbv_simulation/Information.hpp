@@ -1,7 +1,7 @@
 #pragma once
 
 #include "View_Space.hpp"
-#include "Ray.h"
+#include "Ray_Hash.h"
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -24,20 +24,6 @@
 #include <vector>
 
 using namespace std;
-
-/**
- * Creates a Hash for the Ray
- * It will be used to create unordered maps
- */
-class Ray_Hash
-{
-  public:
-    size_t operator()(const Ray& ray) const
-    {
-        // Using a 6-point double to hash
-        return octomap::OcTreeKey::KeyHash()(ray.origin) ^ octomap::OcTreeKey::KeyHash()(ray.end);
-    }
-};
 
 /**
  * An implementation of the Information contained by a Ray
