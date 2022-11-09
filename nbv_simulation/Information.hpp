@@ -1,6 +1,7 @@
 #pragma once
 
 #include "View_Space.hpp"
+#include "Ray.h"
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -23,54 +24,6 @@
 #include <vector>
 
 using namespace std;
-
-/**
- * Implementation of a Ray in our octree.
- *
- * The Ray is categorised by its start, its end, and the voxels it is passing through.
- */
-class Ray
-{
-  public:
-    octomap::OcTreeKey origin;
-    octomap::OcTreeKey end;
-    octomap::KeyRay* ray_set;
-    octomap::KeyRay::iterator start;
-    octomap::KeyRay::iterator stop;
-
-    /**
-     * Constructor of a Ray
-     * @param _origin The key to the origin voxel
-     * @param _end The key to the end voxel
-     * @param _ray_set A pointer to the set containing all the voxels traversed by the Ray - TODO : To check
-     * @param _start An iterator on the first element - TODO : To check
-     * @param _stop An iterator on the last element - TODO : To check
-     */
-    Ray(octomap::OcTreeKey _origin,
-        octomap::OcTreeKey _end,
-        octomap::KeyRay* _ray_set,
-        octomap::KeyRay::iterator _start,
-        octomap::KeyRay::iterator _stop)
-    {
-        origin = _origin;
-        end = _end;
-        ray_set = _ray_set;
-        start = _start;
-        stop = _stop;
-    }
-
-    /**
-     * Check the equality of two rays
-     * Two rays are considered equals if they have the same origin and the same end
-     *
-     * @param other A pointer to the other Ray
-     * @return TRUE if they are equal, FALSE if they're not
-     */
-    bool operator==(const Ray& other) const
-    {
-        return (origin == other.origin) && (end == other.end);
-    }
-};
 
 /**
  * Creates a Hash for the Ray
