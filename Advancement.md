@@ -34,7 +34,7 @@
 - [ ] `get_random_coordinates` &rarr; `utils.cpp`
 - [ ] `add_trajectory_to_cloud`
 - [ ] `delete_trajectory_in_cloud`
-- [ ] class `View` &rarr; `View.hpp/.cpp`
+- [x] class `View` &rarr; `View.hpp/.cpp`
 - [ ] `view_id_compare` &rarr; `View.cpp`
 - [ ] `view_utility_compare` &rarr; `View.cpp`
 - [ ] class `View_Space` &rarr; `View_Space.hpp/.cpp`
