@@ -162,3 +162,10 @@ static void rs2_deproject_pixel_to_point(float point[3],
     point[1] = depth * y;
     point[2] = depth;
 }
+
+/**
+ * Compute the square of a number
+ * @param x The number to compute the square
+ * @return The square of the number
+ */
+inline double pow2(double x) { return x * x; }

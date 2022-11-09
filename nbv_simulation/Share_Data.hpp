@@ -377,10 +377,3 @@ class Share_Data
         octo_model->write(octomap_file);
     }
 };
-
-/**
- * Compute the square of a number
- * @param x The number to compute the square
- * @return The square of the number
- */
-inline double pow2(double x) { return x * x; }
