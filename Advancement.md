@@ -32,12 +32,12 @@
 ## View_Space.hpp
 - [x] class `Voxel_Information` &rarr; `Voxel_Information.hpp/.cpp`
 - [x] `get_random_coordinates` &rarr; `utils.cpp`
-- [ ] `add_trajectory_to_cloud`
-- [ ] `delete_trajectory_in_cloud`
+- [x] `add_trajectory_to_cloud`&rarr; `View_Space.hpp/.cpp`
+- [x] `delete_trajectory_in_cloud`&rarr; `View_Space.hpp/.cpp`
 - [x] class `View` &rarr; `View.hpp/.cpp`
 - [x] `view_id_compare` &rarr; `View.cpp`
 - [x] `view_utility_compare` &rarr; `View.cpp`
-- [ ] class `View_Space` &rarr; `View_Space.hpp/.cpp`
+- [x] class `View_Space` &rarr; `View_Space.hpp/.cpp`
 
 ## Main.cpp
 - [ ] `precept_thread_process` &rarr; `Perception_3D.hpp`
