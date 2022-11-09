@@ -58,21 +58,6 @@ void ray_cast_thread_process(int* ray_num,
                              rs2_intrinsics* color_intrinsics,
                              int pos);
 
-bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel);
-
-vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
-                                        Eigen::Matrix4d& now_camera_pose_world,
-                                        rs2_intrinsics& color_intrinsics,
-                                        int& pixel_interval,
-                                        double& max_range,
-                                        double& octomap_resolution);
-
-octomap::point3d project_pixel_to_ray_end(int x,
-                                          int y,
-                                          rs2_intrinsics& color_intrinsics,
-                                          Eigen::Matrix4d& now_camera_pose_world,
-                                          float max_range = 1.0);
-
 double information_function(short& method,
                             double& ray_information,
                             double voxel_information,
@@ -99,8 +84,6 @@ int frontier_check(octomap::point3d node,
                    octomap::ColorOcTree* octo_model,
                    Voxel_Information* voxel_information,
                    double octomap_resolution);
-
-double distance_function(double distance, double alpha);
 
 class Views_Information
 {
