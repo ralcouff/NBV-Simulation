@@ -905,8 +905,6 @@ inline int frontier_check(octomap::point3d node,
     return 0;
 }
 
-inline double distance_function(double distance, double alpha) { return exp(-pow2(alpha) * distance); }
-
 /*
 solving by Max Flow
 */

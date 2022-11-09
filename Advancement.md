@@ -17,7 +17,7 @@
 - [x] `get_convex_on_image` &rarr; `utils.cpp`
 - [x] `project_pixel_to_ray_end` &rarr; `utils.cpp`
 - [ ] `frontier_check` &rarr; `utils.cpp`
-- [ ] `distance_function` &rarr; `utils.cpp`
+- [x] `distance_function` &rarr; `utils.cpp`
 - [ ] class `Views_Information` &rarr; `Views_Information.hpp/.cpp` Missing `ray_cast_thread_process`, `ray_information_thread_process`, `information_gain_thread_process`
 - [ ] `information_gain_thread_process`
 - [ ] `ray_expand_thread_process`
