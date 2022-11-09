@@ -32,15 +32,6 @@
 
 using namespace std;
 
-inline double get_random_coordinate(double from, double to)
-{
-    // Generate a relatively random 0-1 random number and map it to the interval [from,to]
-    double len = to - from;
-    long long x = (long long)rand() * ((long long)RAND_MAX + 1) + (long long)rand();
-    long long field = (long long)RAND_MAX * (long long)RAND_MAX + 2 * (long long)RAND_MAX;
-    return (double)x / (double)field * len + from;
-}
-
 void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
                              vector<Eigen::Vector3d>& points,
                              pcl::visualization::PCLVisualizer::Ptr viewer)

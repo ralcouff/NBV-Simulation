@@ -295,3 +295,17 @@ inline octomap::point3d project_pixel_to_ray_end(
  * @return
  */
 inline double distance_function(double distance, double alpha) { return exp(-pow2(alpha) * distance); }
+
+/**
+ * Generate a relatively random 0-1 random number and map it to the interval [from,to]
+ * @param from
+ * @param to
+ * @return
+ */
+inline double get_random_coordinate(double from, double to)
+{
+    double len = to - from;
+    long long x = (long long)rand() * ((long long)RAND_MAX + 1) + (long long)rand();
+    long long field = (long long)RAND_MAX * (long long)RAND_MAX + 2 * (long long)RAND_MAX;
+    return (double)x / (double)field * len + from;
+}

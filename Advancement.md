@@ -31,7 +31,7 @@
 
 ## View_Space.hpp
 - [x] class `Voxel_Information` &rarr; `Voxel_Information.hpp/.cpp`
-- [ ] `get_random_coordinates` &rarr; `utils.cpp`
+- [x] `get_random_coordinates` &rarr; `utils.cpp`
 - [ ] `add_trajectory_to_cloud`
 - [ ] `delete_trajectory_in_cloud`
 - [x] class `View` &rarr; `View.hpp/.cpp`
