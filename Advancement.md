@@ -3,8 +3,8 @@
 ## Share_Data.hpp
 - [x] enum `rs2_distortion` &rarr; `utils.cpp`
 - [x] struct `rs2_intrinsics` &rarr; `utils.cpp`
-- [ ] `rs2_project_point_to_pixel` &rarr; `utils.cpp`
-- [ ] `rs2_deproject_pixel_to_point` &rarr; `utils.cpp`
+- [x] `rs2_project_point_to_pixel` &rarr; `utils.cpp`
+- [x] `rs2_deproject_pixel_to_point` &rarr; `utils.cpp`
 - [ ] class `Share_Data` &rarr; `Share_Data.hpp/.cpp`
 - [ ] `pow2` &rarr; `utils.cpp`
 
