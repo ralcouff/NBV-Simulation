@@ -34,7 +34,7 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/Voxel_Information.cpp
         nbv_simulation/Voxel_Information.h
         nbv_simulation/View_Space.h
-        nbv_simulation/View_Space.cpp)
+        nbv_simulation/View_Space.cpp nbv_simulation/Perception_3D.cpp nbv_simulation/Perception_3D.h)
 #set(NBV_SIMULATION_HEADERS
 #        nbv_simulation/Information.hpp
 #        nbv_simulation/Share_Data.cpp

@@ -40,8 +40,8 @@
 - [x] class `View_Space` &rarr; `View_Space.hpp/.cpp`
 
 ## Main.cpp
-- [ ] `precept_thread_process` &rarr; `Perception_3D.hpp`
-- [ ] class `Perception_3D` &rarr; `Perception_3D.hpp/.cpp`
+- [x] `precept_thread_process` &rarr; `Perception_3D.hpp`
+- [x] class `Perception_3D` &rarr; `Perception_3D.hpp/.cpp`
 - [ ] `save_cloud_mid` &rarr; `main.cpp`
 - [ ] `create_view_space`
 - [ ] `create_views_information`
