@@ -2,6 +2,7 @@
 
 #include "Share_Data.cpp"
 #include "View.h"
+#include "Voxel_Information.h"
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -30,120 +31,6 @@
 #include <vector>
 
 using namespace std;
-
-class Voxel_Information
-{
-  public:
-    double p_unknown_upper_bound;
-    double p_unknown_lower_bound;
-    double k_vis;
-    double b_vis;
-    mutex mutex_rays;
-    vector<mutex*> mutex_voxels;
-    vector<Eigen::Vector4d> convex;
-    double skip_coefficient;
-    double octomap_resolution;
-
-    Voxel_Information(double _p_unknown_lower_bound, double _p_unknown_upper_bound)
-    {
-        p_unknown_upper_bound = _p_unknown_upper_bound;
-        p_unknown_lower_bound = _p_unknown_lower_bound;
-        k_vis = (0.0 - 1.0) / (p_unknown_upper_bound - p_unknown_lower_bound);
-        b_vis = -k_vis * p_unknown_upper_bound;
-    }
-
-    void init_mutex_voxels(int init_voxels)
-    {
-        mutex_voxels.resize(init_voxels);
-        for(int i = 0; i < mutex_voxels.size(); i++)
-            mutex_voxels[i] = new mutex;
-    }
-
-    double entropy(double& occupancy)
-    {
-        double p_free = 1 - occupancy;
-        if(occupancy == 0 || p_free == 0)
-            return 0;
-        double vox_ig = -occupancy * log(occupancy) - p_free * log(p_free);
-        return vox_ig;
-    }
-
-    bool is_known(double& occupancy)
-    {
-        return occupancy >= p_unknown_upper_bound || occupancy <= p_unknown_lower_bound;
-    }
-
-    bool is_unknown(double& occupancy)
-    {
-        return occupancy < p_unknown_upper_bound && occupancy > p_unknown_lower_bound;
-    }
-
-    bool is_free(double& occupancy) { return occupancy < p_unknown_lower_bound; }
-
-    bool is_occupied(double& occupancy) { return occupancy > p_unknown_upper_bound; }
-
-    bool voxel_unknown(octomap::ColorOcTreeNode* traversed_voxel)
-    {
-        double occupancy = traversed_voxel->getOccupancy();
-        return is_unknown(occupancy);
-    }
-
-    bool voxel_free(octomap::ColorOcTreeNode* traversed_voxel)
-    {
-        double occupancy = traversed_voxel->getOccupancy();
-        return is_free(occupancy);
-    }
-
-    bool voxel_occupied(octomap::ColorOcTreeNode* traversed_voxel)
-    {
-        double occupancy = traversed_voxel->getOccupancy();
-        return is_occupied(occupancy);
-    }
-
-    double get_voxel_visible(double occupancy)
-    {
-        if(occupancy > p_unknown_upper_bound)
-            return 0.0;
-        if(occupancy < p_unknown_lower_bound)
-            return 1.0;
-        return k_vis * occupancy + b_vis;
-    }
-
-    double get_voxel_visible(octomap::ColorOcTreeNode* traversed_voxel)
-    {
-        double occupancy = traversed_voxel->getOccupancy();
-        if(occupancy > p_unknown_upper_bound)
-            return 1.0;
-        if(occupancy < p_unknown_lower_bound)
-            return 0.0;
-        return k_vis * occupancy + b_vis;
-    }
-
-    double get_voxel_information(octomap::ColorOcTreeNode* traversed_voxel)
-    {
-        double occupancy = traversed_voxel->getOccupancy();
-        double information = entropy(occupancy);
-        return information;
-    }
-
-    double voxel_object(octomap::OcTreeKey& voxel_key,
-                        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* object_weight)
-    {
-        auto key = object_weight->find(voxel_key);
-        if(key == object_weight->end())
-            return 0;
-        return key->second;
-    }
-
-    double get_voxel_object_visible(
-      octomap::OcTreeKey& voxel_key,
-      unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>* object_weight)
-    {
-        double object = voxel_object(voxel_key, object_weight);
-        double p_vis = 1 - object;
-        return p_vis;
-    }
-};
 
 inline double get_random_coordinate(double from, double to)
 {
