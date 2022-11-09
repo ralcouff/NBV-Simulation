@@ -1,6 +1,8 @@
 #include <cmath>
 #include <cfloat>
 #include <cassert>
+#include <vector>
+#include <opencv2/core/types.hpp>
 
 using namespace std;
 
@@ -169,3 +171,27 @@ static void rs2_deproject_pixel_to_point(float point[3],
  * @return The square of the number
  */
 inline double pow2(double x) { return x * x; }
+
+/**
+ *
+ * @param hull
+ * @param color_intrinsics
+ * @return
+ */
+inline vector<int> get_xmax_xmin_ymax_ymin_in_hull(vector<cv::Point2f>& hull, rs2_intrinsics& color_intrinsics)
+{
+    float x_max = 0, x_min = color_intrinsics.width - 1, y_max = 0, y_min = color_intrinsics.height - 1;
+    for(int i = 0; i < hull.size(); i++)
+    {
+        x_max = std::max(x_max, hull[i].x);
+        x_min = std::min(x_min, hull[i].x);
+        y_max = std::max(y_max, hull[i].y);
+        y_min = std::min(y_min, hull[i].y);
+    }
+    std::vector<int> boundary;
+    boundary.push_back((int)floor(x_max));
+    boundary.push_back((int)floor(x_min));
+    boundary.push_back((int)floor(y_max));
+    boundary.push_back((int)floor(y_min));
+    return boundary;
+}

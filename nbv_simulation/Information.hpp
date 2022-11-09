@@ -58,8 +58,6 @@ void ray_cast_thread_process(int* ray_num,
                              rs2_intrinsics* color_intrinsics,
                              int pos);
 
-vector<int> get_xmax_xmin_ymax_ymin_in_hull(vector<cv::Point2f>& hull, rs2_intrinsics& color_intrinsics);
-
 bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel);
 
 vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3d,
@@ -711,24 +709,6 @@ void ray_cast_thread_process(int* ray_num,
     (*views_to_rays_map)[pos] = ray_ids;
     // Release the lock
     voxel_information->mutex_rays.unlock();
-}
-
-inline vector<int> get_xmax_xmin_ymax_ymin_in_hull(vector<cv::Point2f>& hull, rs2_intrinsics& color_intrinsics)
-{
-    float xmax = 0, xmin = color_intrinsics.width - 1, ymax = 0, ymin = color_intrinsics.height - 1;
-    for(int i = 0; i < hull.size(); i++)
-    {
-        xmax = max(xmax, hull[i].x);
-        xmin = min(xmin, hull[i].x);
-        ymax = max(ymax, hull[i].y);
-        ymin = min(ymin, hull[i].y);
-    }
-    vector<int> boundary;
-    boundary.push_back((int)floor(xmax));
-    boundary.push_back((int)floor(xmin));
-    boundary.push_back((int)floor(ymax));
-    boundary.push_back((int)floor(ymin));
-    return boundary;
 }
 
 inline bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel)
