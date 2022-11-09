@@ -22,7 +22,7 @@ public:
 
 };
 
-void precept_thCreread_process(int x,
+void precept_thread_process(int x,
                             int y,
                             pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                             octomap::point3d* _origin,
