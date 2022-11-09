@@ -1,4 +1,3 @@
-
 #include <atomic>
 #include <chrono>
 #include <iostream>
@@ -9,8 +8,8 @@ typedef unsigned long long pop_t;
 
 using namespace std;
 
+#include "Share_Data.h"
 #include "Information.hpp"
-#include "Share_Data.hpp"
 #include "View_Space.hpp"
 
 // Virtual_Perception_3D.hpp

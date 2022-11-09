@@ -16,10 +16,10 @@ find_package(PCL 1.9.1 REQUIRED)
 find_package(octomap 1.9.1 REQUIRED)
 
 
-set(NBV_SIMULATION_SOURCES nbv_simulation/main.cpp nbv_simulation/Ray.cpp nbv_simulation/Ray.h nbv_simulation/Ray_Hash.cpp nbv_simulation/Ray_Hash.h nbv_simulation/Ray_Information.cpp nbv_simulation/Ray_Information.h nbv_simulation/MCMF.cpp nbv_simulation/MCMF.h nbv_simulation/utils.cpp)
+set(NBV_SIMULATION_SOURCES nbv_simulation/main.cpp nbv_simulation/Ray.cpp nbv_simulation/Ray.h nbv_simulation/Ray_Hash.cpp nbv_simulation/Ray_Hash.h nbv_simulation/Ray_Information.cpp nbv_simulation/Ray_Information.h nbv_simulation/MCMF.cpp nbv_simulation/MCMF.h nbv_simulation/utils.cpp nbv_simulation/Share_Data.h)
 set(NBV_SIMULATION_HEADERS
         nbv_simulation/Information.hpp
-        nbv_simulation/Share_Data.hpp
+        nbv_simulation/Share_Data.cpp
         nbv_simulation/View_Space.hpp)
 
 add_executable(nbv_simulation ${NBV_SIMULATION_SOURCES})

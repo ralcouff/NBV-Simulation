@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Share_Data.hpp"
+#include "Share_Data.cpp"
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -690,7 +690,7 @@ class View_Space
                 y += octomap_resolution)
                 for(double z = object_center_world(2) - predicted_size; z <= object_center_world(2) + predicted_size;
                     z += octomap_resolution)
-                    octo_model->setNodeValue(x, y, z, (float)0, true); // ³õÊ¼»¯¸ÅÂÊ0.5£¬¼´logoddsÎª0
+                    octo_model->setNodeValue(x, y, z, (float)0, true); // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½0.5ï¿½ï¿½ï¿½ï¿½logoddsÎª0
         octo_model->updateInnerOccupancy();
         share_data->init_entropy = 0;
         share_data->voxels_in_BBX = 0;
