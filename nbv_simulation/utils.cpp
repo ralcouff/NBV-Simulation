@@ -292,15 +292,15 @@ inline octomap::point3d project_pixel_to_ray_end(
  * Compute the distance described in eq (2)
  * @param distance The Euclidean distance
  * @param alpha variable related to the octomap resolution
- * @return
+ * @return the distance of eq (2)
  */
 inline double distance_function(double distance, double alpha) { return exp(-pow2(alpha) * distance); }
 
 /**
  * Generate a relatively random 0-1 random number and map it to the interval [from,to]
- * @param from
- * @param to
- * @return
+ * @param from Beginning of the interval
+ * @param to End of the interval
+ * @return A random number between from and to
  */
 inline double get_random_coordinate(double from, double to)
 {
