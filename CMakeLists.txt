@@ -18,6 +18,7 @@ find_package(octomap 1.9.1 REQUIRED)
 
 set(NBV_SIMULATION_SOURCES
         nbv_simulation/main.cpp
+        nbv_simulation/utils.cpp
         nbv_simulation/Ray.cpp
         nbv_simulation/Ray.h
         nbv_simulation/Ray_Hash.cpp
@@ -26,15 +27,23 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/Ray_Information.h
         nbv_simulation/MCMF.cpp
         nbv_simulation/MCMF.h
-        nbv_simulation/utils.cpp
-        nbv_simulation/Share_Data.h
         nbv_simulation/Share_Data.cpp
+        nbv_simulation/Share_Data.h
         nbv_simulation/View.cpp
         nbv_simulation/View.h
         nbv_simulation/Voxel_Information.cpp
         nbv_simulation/Voxel_Information.h
+        nbv_simulation/View_Space.cpp
         nbv_simulation/View_Space.h
-        nbv_simulation/View_Space.cpp nbv_simulation/Perception_3D.cpp nbv_simulation/Perception_3D.h)
+        nbv_simulation/Perception_3D.cpp
+        nbv_simulation/Perception_3D.h
+        nbv_simulation/Views_Information.cpp
+        nbv_simulation/Views_Information.h
+        nbv_simulation/views_voxels_MF.cpp
+        nbv_simulation/views_voxels_MF.h
+        nbv_simulation/Information.cpp
+        nbv_simulation/Information.h)
+
 #set(NBV_SIMULATION_HEADERS
 #        nbv_simulation/Information.hpp
 #        nbv_simulation/Share_Data.cpp

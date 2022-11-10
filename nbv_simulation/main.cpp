@@ -8,9 +8,10 @@ typedef unsigned long long pop_t;
 
 using namespace std;
 
-#include "Information.hpp"
+#include "Views_Information.h"
 #include "Share_Data.h"
 #include "Perception_3D.h"
+#include "views_voxels_MF.h"
 
 #define Over 0
 #define WaitData 1
