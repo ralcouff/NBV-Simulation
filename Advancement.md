@@ -16,16 +16,16 @@
 - [x] `is_pixel_in_convex` &rarr; `utils.cpp`
 - [x] `get_convex_on_image` &rarr; `utils.cpp`
 - [x] `project_pixel_to_ray_end` &rarr; `utils.cpp`
-- [ ] `frontier_check` &rarr; `utils.cpp`
+- [x] `frontier_check` &rarr; `Information.h/.cpp`
 - [x] `distance_function` &rarr; `utils.cpp`
 - [x] class `Views_Information` &rarr; `Views_Information.hpp/.cpp`
-- [ ] `information_gain_thread_process`
-- [ ] `ray_expand_thread_process`
-- [ ] `ray_cast_thread_process`
-- [ ] `ray_information_thread_process`
-- [ ] `adjacency_thread_process`
-- [ ] `adjacency_list_thread_process`
-- [ ] `information_function`
+- [x] `information_gain_thread_process` &rarr; `Information.h/.cpp`
+- [x] `ray_expand_thread_process` &rarr; `Information.h/.cpp`
+- [x] `ray_cast_thread_process` &rarr; `Information.h/.cpp`
+- [x] `ray_information_thread_process` &rarr; `Information.h/.cpp`
+- [x] `adjacency_thread_process` &rarr; `Information.h/.cpp`
+- [x] `adjacency_list_thread_process` &rarr; `Information.h/.cpp`
+- [x] `information_function` &rarr; `Information.h/.cpp`
 - [x] class `views_voxels_MF` &rarr; `views_voxels_MF.hpp/.cpp`
 - [x] class `MCMF` &rarr; `MCMF.hpp/.cpp`
 
@@ -42,12 +42,12 @@
 ## Main.cpp
 - [x] `precept_thread_process` &rarr; `Perception_3D.hpp`
 - [x] class `Perception_3D` &rarr; `Perception_3D.hpp/.cpp`
-- [ ] `save_cloud_mid` &rarr; `main.cpp`
-- [ ] `create_view_space`
-- [ ] `create_views_information`
-- [ ] `move_robot`
-- [ ] `show_cloud`
-- [ ] class `NBV_Planner` &rarr; `NBV_Planner.hpp/.cpp` Missing `move_robot`, `create_view_space`, `create_views_information`
-- [ ] `get_command` &rarr; `main.cpp`
-- [ ] `get_run` &rarr; `main.cpp`
-- [ ] `main`
+- [x] `save_cloud_mid` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] `create_view_space` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] `create_views_information` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] `move_robot` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] `show_cloud` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] class `NBV_Planner` &rarr; `NBV_Planner.hpp/.cpp`
+- [x] `get_command` &rarr; `main.cpp`
+- [x] `get_run` &rarr; `main.cpp`
+- [x] `main`

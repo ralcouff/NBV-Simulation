@@ -42,7 +42,9 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/views_voxels_MF.cpp
         nbv_simulation/views_voxels_MF.h
         nbv_simulation/Information.cpp
-        nbv_simulation/Information.h)
+        nbv_simulation/Information.h
+        nbv_simulation/NBV_Planner.cpp
+        nbv_simulation/NBV_Planner.h)
 
 #set(NBV_SIMULATION_HEADERS
 #        nbv_simulation/Information.hpp
