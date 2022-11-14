@@ -9,13 +9,13 @@ Voxel_Information::Voxel_Information(double _p_unknown_lower_bound, double _p_un
 
 void Voxel_Information::init_mutex_voxels(int init_voxels) {
     mutex_voxels.resize(init_voxels);
-    for(int i = 0; i < mutex_voxels.size(); i++)
+    for (int i = 0; i < mutex_voxels.size(); i++)
         mutex_voxels[i] = new std::mutex;
 }
 
 double Voxel_Information::entropy(double &occupancy) {
     double p_free = 1 - occupancy;
-    if(occupancy == 0 || p_free == 0)
+    if (occupancy == 0 || p_free == 0)
         return 0;
     double vox_ig = -occupancy * log(occupancy) - p_free * log(p_free);
     return vox_ig;
@@ -53,18 +53,18 @@ bool Voxel_Information::voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel
 }
 
 double Voxel_Information::get_voxel_visible(double occupancy) {
-    if(occupancy > p_unknown_upper_bound)
+    if (occupancy > p_unknown_upper_bound)
         return 0.0;
-    if(occupancy < p_unknown_lower_bound)
+    if (occupancy < p_unknown_lower_bound)
         return 1.0;
     return k_vis * occupancy + b_vis;
 }
 
 double Voxel_Information::get_voxel_visible(octomap::ColorOcTreeNode *traversed_voxel) {
     double occupancy = traversed_voxel->getOccupancy();
-    if(occupancy > p_unknown_upper_bound)
+    if (occupancy > p_unknown_upper_bound)
         return 1.0;
-    if(occupancy < p_unknown_lower_bound)
+    if (occupancy < p_unknown_lower_bound)
         return 0.0;
     return k_vis * occupancy + b_vis;
 }
@@ -78,7 +78,7 @@ double Voxel_Information::get_voxel_information(octomap::ColorOcTreeNode *traver
 double Voxel_Information::voxel_object(octomap::OcTreeKey &voxel_key,
                                        std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight) {
     auto key = object_weight->find(voxel_key);
-    if(key == object_weight->end())
+    if (key == object_weight->end())
         return 0;
     return key->second;
 }
