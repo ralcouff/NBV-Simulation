@@ -22,8 +22,17 @@ public:
     double skip_coefficient{};
     double octomap_resolution{};
 
+    /**
+     * Constructor of the Voxel_Information object
+     * @param _p_unknown_lower_bound The lower boundary to determine if the voxel is unknown
+     * @param _p_unknown_upper_bound The upper boundary to determine if the voxel is unknown
+     */
     Voxel_Information(double _p_unknown_lower_bound, double _p_unknown_upper_bound);
 
+    /**
+     * Initialize the vector mutex_voxels with empty mutex
+     * @param init_voxels The number of initial voxels
+     */
     void init_mutex_voxels(int init_voxels);
 
     static double entropy(double &occupancy);
