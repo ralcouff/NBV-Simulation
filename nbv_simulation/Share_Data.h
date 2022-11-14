@@ -146,7 +146,7 @@ public:
      * Check for the existence of folders in multi-level directories and create them if they do not exist
      * @param cd The folder path
      */
-    void access_directory(std::string cd);
+    static void access_directory(std::string cd);
 
     /**
      * Storage of rotation matrix data to disk
@@ -178,7 +178,7 @@ public:
      * @param cd The path to save the point cloud
      * @param name The name of the point cloud to save
      */
-    void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name);
+    void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name) const;
 
     /**
      * Store point cloud data to disk, very slow, rarely used

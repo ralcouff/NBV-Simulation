@@ -12,7 +12,7 @@ p_unknown_upper_bound: 0.65
 p_unknown_lower_bound: 0.45
 num_of_views : 5000
 cost_weight: 0.5 
-robot_cost_negtive: 0
+robot_cost_negative: 0
 skip_coefficient : 10.0
 num_of_max_flow_node : -1
 interesting_threshold : 0.3

@@ -70,7 +70,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
 Share_Data::~Share_Data() = default;
 
 double Share_Data::out_clock() {
-    double now_clock = clock();
+    auto now_clock = (double) clock();
     double elapsed_time = now_clock - pre_clock;
     pre_clock = now_clock;
     return elapsed_time;
@@ -80,15 +80,15 @@ double Share_Data::out_clock() {
  */
 void Share_Data::access_directory(std::string cd) {
     std::string temp;
-    for(int i = 0; i < cd.length(); i++)
-        if(cd[i] == '/')
+    for(char i : cd)
+        if(i == '/')
         {
             if(access(temp.c_str(), 0) != 0)
                 fs::create_directory(temp);
-            temp += cd[i];
+            temp += i;
         }
         else
-            temp += cd[i];
+            temp += i;
     if(access(temp.c_str(), 0) != 0)
         fs::create_directory(temp);
 }
@@ -122,7 +122,7 @@ Share_Data::save_octomap_log_to_disk(int voxels, double entropy, std::string cd,
     fout << voxels << " " << entropy << endl;
 }
 
-void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name) {
+void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name) const {
     std::stringstream cloud_stream, path_stream;
     std::string cloud_file, path;
     path_stream << save_path << cd;
