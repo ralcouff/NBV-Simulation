@@ -74,7 +74,7 @@ bool Perception_3D::precept(View *now_best_view) {
     cloud->height = 1;
     cloud->points.resize(vaild_point);
     // Record the current collection point cloud
-    share_data->vaild_clouds++;
+    share_data->valid_clouds++;
     share_data->clouds.push_back(cloud);
     // Rotate to the world coordinate system
     *share_data->cloud_final += *cloud;

@@ -22,30 +22,37 @@ class NBV_Planner {
 public:
     atomic<int> status;
     int iterations;
-    Perception_3D* percept;
-    Voxel_Information* voxel_information;
-    View_Space* now_view_space;
-    Views_Information* now_views_infromation{nullptr};
-    View* now_best_view;
-    Share_Data* share_data;
+    Perception_3D *percept;
+    Voxel_Information *voxel_information;
+    View_Space *now_view_space;
+    Views_Information *now_views_information{nullptr};
+    View *now_best_view;
+    Share_Data *share_data;
     pcl::visualization::PCLVisualizer::Ptr viewer;
 
-    NBV_Planner(Share_Data* _share_data, int _status = WaitData);
-    double check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d>& points);
+    explicit NBV_Planner(Share_Data *_share_data, int _status = WaitData);
+
+    double check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
+
     int plan();
+
     string out_status();
 
 };
 
-void save_cloud_mid_thread_process(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string name, Share_Data* share_data);
-void create_view_space(View_Space** now_view_space, View* now_best_view, Share_Data* share_data, int iterations);
-void create_views_information(Views_Information** now_views_infromation,
-                              View* now_best_view,
-                              View_Space* now_view_space,
-                              Share_Data* share_data,
-                              NBV_Planner* nbv_plan,
+void save_cloud_mid_thread_process(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string name, Share_Data *share_data);
+
+void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations);
+
+void create_views_information(Views_Information **now_views_information,
+                              View *now_best_view,
+                              View_Space *now_view_space,
+                              Share_Data *share_data,
+                              NBV_Planner *nbv_plan,
                               int iterations);
-void move_robot(View* now_best_view, View_Space* now_view_space, Share_Data* share_data, NBV_Planner* nbv_plan);
+
+void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
+
 void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer);
 
 

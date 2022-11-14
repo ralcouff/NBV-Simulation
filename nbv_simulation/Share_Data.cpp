@@ -20,7 +20,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["p_unknown_lower_bound"] >> p_unknown_lower_bound;
     fs["num_of_views"] >> num_of_views;
     fs["cost_weight"] >> cost_weight;
-    fs["robot_cost_negtive"] >> robot_cost_negtive;
+    fs["robot_cost_negative"] >> robot_cost_negative;
     fs["skip_coefficient"] >> skip_coefficient;
     fs["num_of_max_flow_node"] >> num_of_max_flow_node;
     fs["interesting_threshold"] >> interesting_threshold;
@@ -54,7 +54,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
     over = false;
     pre_clock = (double)clock();
-    vaild_clouds = 0;
+    valid_clouds = 0;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_final = temp;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);

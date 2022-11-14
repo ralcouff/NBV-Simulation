@@ -67,7 +67,7 @@ public:
     int num_of_max_iteration;
 
     // Point cloud data
-    std::atomic<int> vaild_clouds;
+    std::atomic<int> valid_clouds;
     // Point cloud group
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clouds;
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_pcd;
@@ -76,10 +76,10 @@ public:
     bool move_wait;
 
     // Eight Forks Map
-    octomap::ColorOcTree* octo_model;
+    octomap::ColorOcTree *octo_model;
     // octomap::ColorOcTree* cloud_model;
-    octomap::ColorOcTree* ground_truth_model;
-    octomap::ColorOcTree* GT_sample;
+    octomap::ColorOcTree *ground_truth_model;
+    octomap::ColorOcTree *GT_sample;
     double octomap_resolution;
     double ground_truth_resolution;
     double map_size;
@@ -88,7 +88,7 @@ public:
 
     // Workspace and viewpoint space
     std::atomic<bool> now_view_space_processed;
-    std::atomic<bool> now_views_infromation_processed;
+    std::atomic<bool> now_views_information_processed;
     std::atomic<bool> move_on;
 
     Eigen::Matrix4d now_camera_pose_world;
@@ -110,7 +110,7 @@ public:
 
     double sum_robot_cost;
     double camera_to_object_dis;
-    bool robot_cost_negtive;
+    bool robot_cost_negative;
 
     int num_of_max_flow_node;
     double interesting_threshold;
@@ -157,7 +157,7 @@ public:
      * @param name The name of the file
      * @param frames_cnt The frame number
      */
-    void save_posetrans_to_disk(Eigen::Matrix4d& T, std::string cd, std::string name, int frames_cnt);
+    void save_posetrans_to_disk(Eigen::Matrix4d &T, std::string cd, std::string name, int frames_cnt);
 
     /**
      * Save the octomap logs to the disk
@@ -189,7 +189,8 @@ public:
      * @param name The name of the point cloud to save
      * @param frames_cnt The number of frames
      */
-    void save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name, int frames_cnt);
+    void
+    save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name, int frames_cnt);
 
     /**
      * Store point cloud data to disk, very slow, rarely used
@@ -199,7 +200,7 @@ public:
      * @param cd The path to save the octree
      * @param name The name of the octree to save
      */
-    void save_octomap_to_disk(octomap::ColorOcTree* octo_model, std::string cd, std::string name);
+    void save_octomap_to_disk(octomap::ColorOcTree *octo_model, std::string cd, std::string name);
 };
 
 #endif //NBV_SIMULATION_SHARE_DATA_H
