@@ -1,17 +1,12 @@
 #include <atomic>
-#include <chrono>
 #include <iostream>
 #include <thread>
 typedef unsigned long long pop_t;
 
-#include <boost/thread/thread.hpp>
 
 using namespace std;
 
-#include "Views_Information.h"
 #include "Share_Data.h"
-#include "Perception_3D.h"
-#include "views_voxels_MF.h"
 #include "NBV_Planner.h"
 
 atomic<bool> stop{false}; // End of control program
