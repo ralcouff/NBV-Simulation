@@ -3,10 +3,12 @@
 
 #pragma once
 
+#include <Eigen/Core>
+
+#include <mutex>
+
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
-#include <Eigen/Core>
-#include <mutex>
 
 class Voxel_Information {
 public:
@@ -14,43 +16,42 @@ public:
     double p_unknown_lower_bound;
     double k_vis;
     double b_vis;
-    double quality;
     std::mutex mutex_rays;
     std::vector<std::mutex *> mutex_voxels;
     std::vector<Eigen::Vector4d> convex;
-    double skip_coefficient;
-    double octomap_resolution;
+    double skip_coefficient{};
+    double octomap_resolution{};
 
     Voxel_Information(double _p_unknown_lower_bound, double _p_unknown_upper_bound);
 
     void init_mutex_voxels(int init_voxels);
 
-    double entropy(double &occupancy);
+    static double entropy(double &occupancy);
 
-    bool is_known(double &occupancy);
+    [[maybe_unused]] bool is_known(double &occupancy) const;
 
-    bool is_unknown(double &occupancy);
+    bool is_unknown(double &occupancy) const;
 
-    bool is_free(double &occupancy);
+    bool is_free(double &occupancy) const;
 
-    bool is_occupied(double &occupancy);
+    bool is_occupied(double &occupancy) const;
 
-    bool voxel_unknown(octomap::ColorOcTreeNode *traversed_voxel);
+    [[maybe_unused]] bool voxel_unknown(octomap::ColorOcTreeNode *traversed_voxel) const;
 
-    bool voxel_free(octomap::ColorOcTreeNode *traversed_voxel);
+    bool voxel_free(octomap::ColorOcTreeNode *traversed_voxel) const;
 
-    bool voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel);
+    bool voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel) const;
 
-    double get_voxel_visible(double occupancy);
+    [[nodiscard]] double get_voxel_visible(double occupancy) const;
 
-    double get_voxel_visible(octomap::ColorOcTreeNode *traversed_voxel);
+    [[maybe_unused]] double get_voxel_visible(octomap::ColorOcTreeNode *traversed_voxel) const;
 
-    double get_voxel_information(octomap::ColorOcTreeNode *traversed_voxel);
+    [[maybe_unused]] static double get_voxel_information(octomap::ColorOcTreeNode *traversed_voxel);
 
-    double voxel_object(octomap::OcTreeKey &voxel_key,
-                        std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight);
+    static double voxel_object(octomap::OcTreeKey &voxel_key,
+                               std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight);
 
-    double get_voxel_object_visible(
+    [[maybe_unused]] static double get_voxel_object_visible(
             octomap::OcTreeKey &voxel_key,
             std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight);
 };
