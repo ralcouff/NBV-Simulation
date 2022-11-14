@@ -10,17 +10,12 @@
 class MCMF {
 
 public:
-    struct Edge
-    {
+    struct Edge {
         int from, to, cap, flow;
         double cost;
+
         Edge(int u, int v, int c, int f, double w)
-                : from(u)
-                , to(v)
-                , cap(c)
-                , flow(f)
-                , cost(w)
-        {}
+                : from(u), to(v), cap(c), flow(f), cost(w) {}
     };
 
     const int INF = 0x3f3f3f3f;
@@ -30,11 +25,16 @@ public:
     std::vector<int> inq, p, a;
     std::vector<double> d;
     double eps = 1e-3;
-    [[nodiscard]] bool isZero(const double& val) const;
+
+    [[nodiscard]] bool isZero(const double &val) const;
+
     void init(int _n);
+
     void AddEdge(int from, int to, int cap, double cost);
-    bool BellmanFord(int s, int t, int& flow, double& cost);
-    std::vector<int> work(const std::vector<std::vector<std::pair<int, double>>>& vec);
+
+    bool BellmanFord(int s, int t, int &flow, double &cost);
+
+    std::vector<int> work(const std::vector<std::vector<std::pair<int, double>>> &vec);
 
 };
 
