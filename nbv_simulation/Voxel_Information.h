@@ -35,6 +35,11 @@ public:
      */
     void init_mutex_voxels(int init_voxels);
 
+    /**
+     * Computes the Shannon entropy of the voxel, based on its occupancy
+     * @param occupancy Occupancy probability of a voxel
+     * @return
+     */
     static double entropy(double &occupancy);
 
     [[maybe_unused]] bool is_known(double &occupancy) const;
