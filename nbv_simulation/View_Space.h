@@ -37,15 +37,26 @@ public:
     double camera_to_object_dis{};
     Share_Data *share_data;
 
+    /**
+     * Creates a set of potential viewpoints for the algorithm
+     * @param _id The id of the View Space
+     * @param _share_data The data shared by the project
+     * @param _voxel_information The voxel information associated to the octree
+     * @param cloud The original point cloud
+     */
     View_Space(int _id,
                Share_Data *_share_data,
                Voxel_Information *_voxel_information,
-               const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud);
+               const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
 
     bool valid_view(View &view);
 
     double check_size(double predicted_size, std::vector<Eigen::Vector3d> &points);
 
+    /**
+     * Generate a set of viewpoints (views_key_set)
+     * @param points The 3D points of the point cloud
+     */
     void get_view_space(std::vector<Eigen::Vector3d> &points);
 
     void update(int _id,

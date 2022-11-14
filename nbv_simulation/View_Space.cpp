@@ -3,7 +3,7 @@
 View_Space::View_Space(int _id,
                        Share_Data *_share_data,
                        Voxel_Information *_voxel_information,
-                       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud) {
+                       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud) {
     share_data = _share_data;
     object_changed = false;
     id = _id;
@@ -14,14 +14,15 @@ View_Space::View_Space(int _id,
     voxel_information = _voxel_information;
     viewer = share_data->viewer;
     views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
-    // Check if viewspace has been generated
+    /* Check if the View Space has already been generated */
     ifstream fin(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
+    /* If it has been generated, we read the View Space file*/
     if (fin.is_open()) {
-        // Presence of a collection of read-on viewpoints for documents
+        /* Presence of a collection of read-on viewpoints for documents. */
         int num;
         fin >> num;
         if (num != num_of_views)
-            cout << "viewspace read error. check input viewspace size." << endl;
+            cout << "View Space read error. Check input View Space size." << endl;
         double object_center[3];
         fin >> object_center[0] >> object_center[1] >> object_center[2];
         object_center_world(0) = object_center[0];
@@ -45,16 +46,19 @@ View_Space::View_Space(int _id,
             views_key_set->insert(octo_model->coordToKey(init_pos[0], init_pos[1], init_pos[2]));
         }
         cout << "View Space read." << endl;
-    } else { // Generate a viewpoint collection if it does not exist
-        // Get Point Cloud BBX
+    } else {
+        /* The View Space file hasn't been generated, we generate it. */
+        /* Get Point Cloud BBOX. */
+        /* Generate a point vector containing the points of the input cloud. */
         vector<Eigen::Vector3d> points;
         for (auto &ptr: cloud->points) {
             Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
             points.push_back(pt);
         }
-        // Viewpoint Generator
+        /* Viewpoint Generator. */
         get_view_space(points);
-        share_data->access_directory(share_data->pcd_file_path);
+        /* Writing in file the generated View Space. */
+        Share_Data::access_directory(share_data->pcd_file_path);
         ofstream fout(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
         fout << num_of_views << '\n';
         fout << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
@@ -68,7 +72,7 @@ View_Space::View_Space(int _id,
     share_data->predicted_size = predicted_size;
     double map_size = predicted_size + 3.0 * octomap_resolution;
     share_data->map_size = map_size;
-    // Data for the first time, based on BBX initialization map
+    /* Filling the octo_model with empty nodes based on the BBOX of the model*/
     auto now_time = clock();
     for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
          x += octomap_resolution)
@@ -80,17 +84,18 @@ View_Space::View_Space(int _id,
     octo_model->updateInnerOccupancy();
     share_data->init_entropy = 0;
     share_data->voxels_in_BBX = 0;
+    /* Update the entropy of the model */
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
         double occupancy = (*it).getOccupancy();
-        share_data->init_entropy += voxel_information->entropy(occupancy);
+        share_data->init_entropy += Voxel_Information::entropy(occupancy);
         share_data->voxels_in_BBX++;
     }
     voxel_information->init_mutex_voxels(share_data->voxels_in_BBX);
     cout << "Map_init has " << share_data->voxels_in_BBX << " voxels(in BBX), and "
          << share_data->init_entropy << " entropy" << endl;
-    share_data->access_directory(share_data->save_path + "/quantitative");
+    Share_Data::access_directory(share_data->save_path + "/quantitative");
     ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(-1) + ".txt");
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
 }
@@ -121,7 +126,7 @@ bool View_Space::valid_view(View &view) {
 }
 
 double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
-    int vaild_points = 0;
+    int valid_points = 0;
     for (auto &ptr: points) {
         if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
             continue;
@@ -129,13 +134,14 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &po
             continue;
         if (ptr(2) < object_center_world(2) - predicted_size || ptr(2) > object_center_world(2) + predicted_size)
             continue;
-        vaild_points++;
+        valid_points++;
     }
-    return (double) vaild_points / (double) points.size();
+    return (double) valid_points / (double) points.size();
 }
 
 void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     auto now_time = clock();
+    /* FIXME Redundant with NBV_Planner */
     object_center_world = Eigen::Vector3d(0, 0, 0);
     // Calculating point cloud center of mass
     for (auto &ptr: points) {
@@ -143,9 +149,9 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
         object_center_world(1) += ptr(1);
         object_center_world(2) += ptr(2);
     }
-    object_center_world(0) /= points.size();
-    object_center_world(1) /= points.size();
-    object_center_world(2) /= points.size();
+    object_center_world(0) /= (double) points.size();
+    object_center_world(1) /= (double) points.size();
+    object_center_world(2) /= (double) points.size();
     // Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching
     // 0.90 - 0.95
     double l = 0, r = 0, mid;
@@ -153,22 +159,22 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
         r = max(r, (object_center_world - ptr).norm());
     }
     mid = (l + r) / 2;
-    double precent = check_size(mid, points);
-    double pre_precent = precent;
-    while (precent > 0.95 || precent < 1.0) {
-        if (precent > 0.95) {
+    double percent = check_size(mid, points);
+    double pre_percent = percent;
+    while (true) {
+        if (percent > 0.95) {
             r = mid;
-        } else if (precent < 1.0) {
+        } else if (percent < 1.0) {
             l = mid;
         }
         mid = (l + r) / 2;
-        precent = check_size(mid, points);
-        if (fabs(pre_precent - precent) < 0.001)
+        percent = check_size(mid, points);
+        if (fabs(pre_percent - percent) < 0.001)
             break;
-        pre_precent = precent;
+        pre_percent = percent;
     }
     predicted_size = 1.2 * mid;
-    cout << "object's bbx solved within precentage " << precent << " with executed time " << clock() - now_time
+    cout << "object's bbx solved within percentage " << percent << " with executed time " << clock() - now_time
          << " ms." << endl;
     cout << "object's pos is (" << object_center_world(0) << "," << object_center_world(1) << ","
          << object_center_world(2) << ") and size is " << predicted_size << endl;
