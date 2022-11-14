@@ -27,15 +27,11 @@
 
 using namespace std;
 
-// void ray_graph_thread_process(int ray_id,Ray_Information** rays_info, unordered_map<int, vector<int>>*
-// rays_to_viwes_map, unordered_map<octomap::OcTreeKey, unordered_set<int>, octomap::OcTreeKey::KeyHash>* end_id_map,
-// Voxel_Information* voxel_information);
-
 void ray_expand_thread_process(int* ray_num,
                                Ray_Information** rays_info,
                                unordered_map<Ray, int, Ray_Hash>* rays_map,
                                unordered_map<int, vector<int>>* views_to_rays_map,
-                               unordered_map<int, vector<int>>* rays_to_viwes_map,
+                               unordered_map<int, vector<int>>* rays_to_views_map,
                                octomap::ColorOcTree* octo_model,
                                Voxel_Information* voxel_information,
                                View_Space* view_space,
@@ -47,7 +43,7 @@ void ray_cast_thread_process(int* ray_num,
                              Ray_Information** rays_info,
                              unordered_map<Ray, int, Ray_Hash>* rays_map,
                              unordered_map<int, vector<int>>* views_to_rays_map,
-                             unordered_map<int, vector<int>>* rays_to_viwes_map,
+                             unordered_map<int, vector<int>>* rays_to_views_map,
                              octomap::ColorOcTree* octo_model,
                              Voxel_Information* voxel_information,
                              View_Space* view_space,

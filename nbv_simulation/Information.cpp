@@ -17,7 +17,7 @@ void ray_cast_thread_process(int* ray_num,
                              Ray_Information** rays_info,
                              unordered_map<Ray, int, Ray_Hash>* rays_map,
                              unordered_map<int, vector<int>>* views_to_rays_map,
-                             unordered_map<int, vector<int>>* rays_to_viwes_map,
+                             unordered_map<int, vector<int>>* rays_to_views_map,
                              octomap::ColorOcTree* octo_model,
                              Voxel_Information* voxel_information,
                              View_Space* view_space,
@@ -192,7 +192,7 @@ void ray_cast_thread_process(int* ray_num,
             rays_info[ray_id] = new Ray_Information(rays[i]);
             vector<int> view_ids;
             view_ids.push_back(pos);
-            (*rays_to_viwes_map)[ray_id] = view_ids;
+            (*rays_to_views_map)[ray_id] = view_ids;
             ray_id++;
         }
         // If there is a duplicate, it means that other viewpoints are also counted to that ray, so put the
@@ -202,9 +202,9 @@ void ray_cast_thread_process(int* ray_num,
             ray_ids[i] = hash_this_ray->second;
             delete rays[i]->ray_set;
             // Rays already recorded in other viewpoints, put in the record of this viewpoint
-            vector<int> view_ids = (*rays_to_viwes_map)[ray_ids[i]];
+            vector<int> view_ids = (*rays_to_views_map)[ray_ids[i]];
             view_ids.push_back(pos);
-            (*rays_to_viwes_map)[ray_ids[i]] = view_ids;
+            (*rays_to_views_map)[ray_ids[i]] = view_ids;
         }
     }
     // Updating the number of rays
