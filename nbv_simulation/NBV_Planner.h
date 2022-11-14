@@ -20,7 +20,7 @@
 class NBV_Planner {
 
 public:
-    atomic<int> status;
+    atomic<int> status{};
     int iterations;
     Perception_3D *percept;
     Voxel_Information *voxel_information;
@@ -30,9 +30,21 @@ public:
     Share_Data *share_data;
     pcl::visualization::PCLVisualizer::Ptr viewer;
 
+    /**
+     * Constructor of the NBV_Planner object.
+     * @param _share_data The pointer to the data needed for the project
+     * @param _status The initial status of the NBV_Planner (default=WaitData)
+     */
     explicit NBV_Planner(Share_Data *_share_data, int _status = WaitData);
 
-    double check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
+    /**
+     * Give the percentage of points within a given radius around a 3D point.
+     * @param predicted_size The estimated given radius
+     * @param object_center_world The gravity center of the point cloud.
+     * @param points The points of the point cloud.
+     * @return The percentage of points of the point cloud within the given radius.
+     */
+    static double check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
 
     int plan();
 
