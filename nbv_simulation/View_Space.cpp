@@ -3,7 +3,7 @@
 View_Space::View_Space(int _id,
                        Share_Data *_share_data,
                        Voxel_Information *_voxel_information,
-                       pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
+                       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud) {
     share_data = _share_data;
     object_changed = false;
     id = _id;
@@ -44,7 +44,7 @@ View_Space::View_Space(int _id,
             views.push_back(view);
             views_key_set->insert(octo_model->coordToKey(init_pos[0], init_pos[1], init_pos[2]));
         }
-        cout << "viewspace readed." << endl;
+        cout << "View Space read." << endl;
     } else { // Generate a viewpoint collection if it does not exist
         // Get Point Cloud BBX
         vector<Eigen::Vector3d> points;
@@ -61,7 +61,7 @@ View_Space::View_Space(int _id,
         fout << predicted_size << '\n';
         for (int i = 0; i < num_of_views; i++)
             fout << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
-        cout << "viewspace getted." << endl;
+        cout << "View Space acquired." << endl;
     }
     // Update the data area data
     share_data->object_center_world = object_center_world;
@@ -76,7 +76,7 @@ View_Space::View_Space(int _id,
              y += octomap_resolution)
             for (double z = object_center_world(2) - predicted_size; z <= object_center_world(2) + predicted_size;
                  z += octomap_resolution)
-                octo_model->setNodeValue(x, y, z, (float) 0, true); // ��ʼ������0.5����logoddsΪ0
+                octo_model->setNodeValue(x, y, z, (float) 0, true);
     octo_model->updateInnerOccupancy();
     share_data->init_entropy = 0;
     share_data->voxels_in_BBX = 0;
@@ -88,15 +88,14 @@ View_Space::View_Space(int _id,
         share_data->voxels_in_BBX++;
     }
     voxel_information->init_mutex_voxels(share_data->voxels_in_BBX);
-    cout << "Map_init has voxels(in BBX) " << share_data->voxels_in_BBX << " and entropy "
-         << share_data->init_entropy << endl;
+    cout << "Map_init has " << share_data->voxels_in_BBX << " voxels(in BBX), and "
+         << share_data->init_entropy << " entropy" << endl;
     share_data->access_directory(share_data->save_path + "/quantitative");
     ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(-1) + ".txt");
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
 }
 
-bool View_Space::vaild_view(View& view)
-{
+bool View_Space::vaild_view(View &view) {
     double x = view.init_pos(0);
     double y = view.init_pos(1);
     double z = view.init_pos(2);
@@ -121,8 +120,7 @@ bool View_Space::vaild_view(View& view)
     return vaild;
 }
 
-double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d>& points)
-{
+double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
     int vaild_points = 0;
     for (auto &ptr: points) {
         if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
@@ -136,8 +134,7 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d>& po
     return (double) vaild_points / (double) points.size();
 }
 
-void View_Space::get_view_space(vector<Eigen::Vector3d>& points)
-{
+void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     auto now_time = clock();
     object_center_world = Eigen::Vector3d(0, 0, 0);
     // Calculating point cloud center of mass
@@ -221,10 +218,9 @@ void View_Space::get_view_space(vector<Eigen::Vector3d>& points)
 }
 
 void View_Space::update(int _id,
-                        Share_Data* _share_data,
+                        Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr update_cloud)
-{
+                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr update_cloud) {
     share_data = _share_data;
     object_changed = false;
     id = _id;
@@ -306,8 +302,7 @@ void View_Space::update(int _id,
          << '\t' << map_entropy / share_data->init_entropy << endl;
 }
 
-void View_Space::add_bbx_to_cloud(pcl::visualization::PCLVisualizer::Ptr viewer)
-{
+void View_Space::add_bbx_to_cloud(pcl::visualization::PCLVisualizer::Ptr viewer) {
     double x1 = object_center_world(0) - predicted_size;
     double x2 = object_center_world(0) + predicted_size;
     double y1 = object_center_world(1) - predicted_size;
