@@ -2,7 +2,7 @@
 
 Share_Data::Share_Data(std::string _config_file_path) {
     process_cnt = -1;
-    yaml_file_path = _config_file_path;
+    yaml_file_path = std::move(_config_file_path);
     cout << yaml_file_path << endl;
     // Reading yaml files
     cv::FileStorage fs;
@@ -42,25 +42,24 @@ Share_Data::Share_Data(std::string _config_file_path) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
     cloud_pcd = temp_pcd;
     cout << pcd_file_path + name_of_pcd + ".pcd" << endl;
-    if(pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1)
-    {
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1) {
         cout << "Can not read 3d model file. Check." << endl;
     }
     octo_model = new octomap::ColorOcTree(octomap_resolution);
     ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
     GT_sample = new octomap::ColorOcTree(octomap_resolution);
-    if(num_of_max_flow_node == -1)
+    if (num_of_max_flow_node == -1)
         num_of_max_flow_node = num_of_views;
     now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
     over = false;
-    pre_clock = (double)clock();
+    pre_clock = (double) clock();
     valid_clouds = 0;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_final = temp;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_ground_truth = temp_gt;
     save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
-    if(method_of_IG == 0)
+    if (method_of_IG == 0)
         save_path += '_' + std::to_string(cost_weight);
     cout << "pcd and yaml files read." << endl;
     cout << "save_path is: " << save_path << endl;
@@ -69,31 +68,32 @@ Share_Data::Share_Data(std::string _config_file_path) {
 
 Share_Data::~Share_Data() = default;
 
-double Share_Data::out_clock() {
+[[maybe_unused]] double Share_Data::out_clock() {
     auto now_clock = (double) clock();
     double elapsed_time = now_clock - pre_clock;
     pre_clock = now_clock;
     return elapsed_time;
 }
+
 /**
  * FIXME : Simplify this function
  */
-void Share_Data::access_directory(std::string cd) {
+void Share_Data::access_directory(const std::string &cd) {
     std::string temp;
-    for(char i : cd)
-        if(i == '/')
-        {
-            if(access(temp.c_str(), 0) != 0)
+    for (char i: cd)
+        if (i == '/') {
+            if (access(temp.c_str(), 0) != 0)
                 fs::create_directory(temp);
             temp += i;
-        }
-        else
+        } else
             temp += i;
-    if(access(temp.c_str(), 0) != 0)
+    if (access(temp.c_str(), 0) != 0)
         fs::create_directory(temp);
 }
 
-void Share_Data::save_posetrans_to_disk(Eigen::Matrix4d &T, std::string cd, std::string name, int frames_cnt) {
+[[maybe_unused]] void
+Share_Data::save_posetrans_to_disk(Eigen::Matrix4d &T, const std::string &cd, const std::string &name,
+                                   int frames_cnt) const {
     std::stringstream pose_stream, path_stream;
     std::string pose_file, path;
     path_stream << "../data"
@@ -107,8 +107,9 @@ void Share_Data::save_posetrans_to_disk(Eigen::Matrix4d &T, std::string cd, std:
     fout << T;
 }
 
-void
-Share_Data::save_octomap_log_to_disk(int voxels, double entropy, std::string cd, std::string name, int iterations) {
+[[maybe_unused]] void
+Share_Data::save_octomap_log_to_disk(int voxels, double entropy, const std::string &cd, const std::string &name,
+                                     int iterations) const {
     std::stringstream log_stream, path_stream;
     std::string log_file, path;
     path_stream << "../data"
@@ -122,7 +123,8 @@ Share_Data::save_octomap_log_to_disk(int voxels, double entropy, std::string cd,
     fout << voxels << " " << entropy << endl;
 }
 
-void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name) const {
+void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const std::string &cd,
+                                    const std::string &name) const {
     std::stringstream cloud_stream, path_stream;
     std::string cloud_file, path;
     path_stream << save_path << cd;
@@ -133,8 +135,10 @@ void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
 }
 
-void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string cd, std::string name,
-                                    int frames_cnt) {
+[[maybe_unused]] void
+Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const std::string &cd,
+                               const std::string &name,
+                               int frames_cnt) const {
     std::stringstream cloud_stream, path_stream;
     std::string cloud_file, path;
     path_stream << "../data"
@@ -147,7 +151,8 @@ void Share_Data::save_cloud_to_disk(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
 }
 
-void Share_Data::save_octomap_to_disk(octomap::ColorOcTree *octo_model, std::string cd, std::string name) {
+[[maybe_unused]] void Share_Data::save_octomap_to_disk(octomap::ColorOcTree *_octo_model, const std::string &cd,
+                                                       const std::string &name) const {
     std::stringstream octomap_stream, path_stream;
     std::string octomap_file, path;
     path_stream << "../data"
@@ -157,5 +162,5 @@ void Share_Data::save_octomap_to_disk(octomap::ColorOcTree *octo_model, std::str
     octomap_stream << "../data"
                    << "_" << process_cnt << cd << "/" << name << ".ot";
     octomap_stream >> octomap_file;
-    octo_model->write(octomap_file);
+    _octo_model->write(octomap_file);
 }
