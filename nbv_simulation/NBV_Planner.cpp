@@ -8,8 +8,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data->now_views_information_processed = false;
     share_data->move_on = false;
     voxel_information = new Voxel_Information(share_data->p_unknown_lower_bound, share_data->p_unknown_upper_bound);
-/*    Initializing GT
-    Making sure the save_path exists. */
+    /* Initializing GT */
+    /* Making sure the save_path exists. */
     Share_Data::access_directory(share_data->save_path);
     /* GT cloud */
     share_data->cloud_ground_truth->is_dense = false;
@@ -28,7 +28,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
             break;
         }
     }
-    /* Check the size of the object and scale it uniformly to about 0.15m */
+    /* Check the size of the object and scale it uniformly to about 0.15m. */
     vector<Eigen::Vector3d> points;
     for (auto &point: share_data->cloud_pcd->points) {
         Eigen::Vector3d pt(point.x * unit, point.y * unit, point.z * unit);
@@ -45,8 +45,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     object_center_world(0) /= (double) points.size();
     object_center_world(1) /= (double) points.size();
     object_center_world(2) /= (double) points.size();
-    // Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching
-    // 0.90 - 0.95
+    /* Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching
+     * 0.92 and more */
     double l = 0, r = 0, mid;
     for (auto &point: points) {
         r = max(r, (object_center_world - point).norm());
@@ -66,13 +66,14 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
             break;
         pre_percent = percent;
     }
+    /* If the radius of the BBOX is too large, we scale the object to about 0.1m. */
     double predicted_size = 1.2 * mid;
     float scale = 1.0;
     if (predicted_size > 0.1) {
-        scale = 0.1 / predicted_size;
-        cout << "object large. change scale to about 0.1 m." << endl;
+        scale = (float) (0.1 / predicted_size);
+        cout << "Object large. Change scale to about 0.1 m." << endl;
     }
-    // Convert point clouds
+    /* Converting the Point*/
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
@@ -80,7 +81,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         (*ptr).b = 168;
         (*ptr).g = 168;
         (*ptr).r = 168;
-        // GT Insertion Point Cloud
+        /* Filling the GT octree. */
         octomap::OcTreeKey key;
         bool key_have =
                 share_data->ground_truth_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
@@ -92,7 +93,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
             }
         }
-        // GT_sample insert point cloud
+        /* Filling the GT_Sample octree. */
         octomap::OcTreeKey key_sp;
         bool key_have_sp =
                 share_data->GT_sample->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key_sp);
@@ -105,11 +106,13 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
+    /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
     share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
-    // GT_sample_voxels
+    /* GT_sample_voxels update. */
     share_data->GT_sample->updateInnerOccupancy();
     share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
+    /* Determine the number of voxels in the octree */
     share_data->init_voxels = 0;
     for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(),
                  end = share_data->GT_sample->end_leafs();
@@ -117,10 +120,10 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
          ++it) {
         share_data->init_voxels++;
     }
-    cout << "Map_GT_sample has voxels " << share_data->init_voxels << endl;
+    cout << "Octree GT_sample has " << share_data->init_voxels << " voxels" << endl;
     ofstream fout(share_data->save_path + "/GT_sample_voxels.txt");
     fout << share_data->init_voxels << endl;
-    // Initialize viewspace
+    /* Initialize View Space. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
