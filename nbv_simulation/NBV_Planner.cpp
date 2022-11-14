@@ -8,60 +8,63 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data->now_views_information_processed = false;
     share_data->move_on = false;
     voxel_information = new Voxel_Information(share_data->p_unknown_lower_bound, share_data->p_unknown_upper_bound);
-    // Initializing GT
-    share_data->access_directory(share_data->save_path);
-    // GT cloud
+/*    Initializing GT
+    Making sure the save_path exists. */
+    Share_Data::access_directory(share_data->save_path);
+    /* GT cloud */
     share_data->cloud_ground_truth->is_dense = false;
     share_data->cloud_ground_truth->points.resize(share_data->cloud_pcd->points.size());
     share_data->cloud_ground_truth->width = share_data->cloud_pcd->points.size();
     share_data->cloud_ground_truth->height = 1;
+    /* Creating iterators to the points of GT_cloud (ptr) and PCD_cloud (p). */
     auto ptr = share_data->cloud_ground_truth->points.begin();
     auto p = share_data->cloud_pcd->points.begin();
+    /* If the point cloud is too big we change the unit. */
     float unit = 1.0;
-    for (auto &ptr: share_data->cloud_pcd->points) {
-        if (fabs(ptr.x) >= 10 || fabs(ptr.y) >= 10 || fabs(ptr.z) >= 10) {
+    for (auto &point: share_data->cloud_pcd->points) {
+        if (fabs(point.x) >= 10 || fabs(point.y) >= 10 || fabs(point.z) >= 10) {
             unit = 0.001;
-            cout << "change unit from <mm> to <m>." << endl;
+            cout << "Changing unit from <mm> to <m>." << endl;
             break;
         }
     }
-    // Check the size of the object and scale it uniformly to about 0.15m
+    /* Check the size of the object and scale it uniformly to about 0.15m */
     vector<Eigen::Vector3d> points;
-    for (auto &ptr: share_data->cloud_pcd->points) {
-        Eigen::Vector3d pt(ptr.x * unit, ptr.y * unit, ptr.z * unit);
+    for (auto &point: share_data->cloud_pcd->points) {
+        Eigen::Vector3d pt(point.x * unit, point.y * unit, point.z * unit);
         points.push_back(pt);
     }
+    /* Initializing the center of mass of the point cloud. */
     Eigen::Vector3d object_center_world = Eigen::Vector3d(0, 0, 0);
-    // Calculating point cloud center of mass
-    for (auto &ptr: points) {
-        object_center_world(0) += ptr(0);
-        object_center_world(1) += ptr(1);
-        object_center_world(2) += ptr(2);
+    /* Calculating point cloud center of mass. */
+    for (auto &point: points) {
+        object_center_world(0) += point(0);
+        object_center_world(1) += point(1);
+        object_center_world(2) += point(2);
     }
-    object_center_world(0) /= points.size();
-    object_center_world(1) /= points.size();
-    object_center_world(2) /= points.size();
+    object_center_world(0) /= (double) points.size();
+    object_center_world(1) /= (double) points.size();
+    object_center_world(2) /= (double) points.size();
     // Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching
     // 0.90 - 0.95
     double l = 0, r = 0, mid;
-    for (auto &ptr: points) {
-        r = max(r, (object_center_world - ptr).norm());
+    for (auto &point: points) {
+        r = max(r, (object_center_world - point).norm());
     }
     mid = (l + r) / 2;
-    double precent = check_size(mid, object_center_world, points);
-    double pre_precent = precent;
-    // @FIXME condition always true, maybe it's a AND condition?
-    while (precent > 0.92 || precent < 1.0) {
-        if (precent > 0.92) {
+    double percent = check_size(mid, object_center_world, points);
+    double pre_percent = percent;
+    while (true) {
+        if (percent > 0.92) {
             r = mid;
-        } else if (precent < 1.0) {
+        } else if (percent < 1.0) {
             l = mid;
         }
         mid = (l + r) / 2;
-        precent = check_size(mid, object_center_world, points);
-        if (fabs(pre_precent - precent) < 0.001)
+        percent = check_size(mid, object_center_world, points);
+        if (fabs(pre_percent - percent) < 0.001)
             break;
-        pre_precent = precent;
+        pre_percent = percent;
     }
     double predicted_size = 1.2 * mid;
     float scale = 1.0;
@@ -172,7 +175,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
 
 double NBV_Planner::check_size(double predicted_size, Eigen::Vector3d object_center_world,
                                std::vector<Eigen::Vector3d> &points) {
-    int vaild_points = 0;
+    int valid_points = 0;
     for (auto &ptr: points) {
         if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
             continue;
@@ -180,9 +183,9 @@ double NBV_Planner::check_size(double predicted_size, Eigen::Vector3d object_cen
             continue;
         if (ptr(2) < object_center_world(2) - predicted_size || ptr(2) > object_center_world(2) + predicted_size)
             continue;
-        vaild_points++;
+        valid_points++;
     }
-    return (double) vaild_points / (double) points.size();
+    return (double) valid_points / (double) points.size();
 }
 
 int NBV_Planner::plan() {
@@ -555,8 +558,8 @@ void create_views_information(Views_Information **now_views_information,
                         0.7 * (share_data->sum_local_information == 0
                                ? 0
                                : now_view_space->views[i].information_gain / share_data->sum_local_information) +
-                                0.3 * (share_data->robot_cost_negative == true ? -1 : 1) * now_view_space->views[i].robot_cost /
-                                share_data->sum_robot_cost;
+                        0.3 * (share_data->robot_cost_negative == true ? -1 : 1) * now_view_space->views[i].robot_cost /
+                        share_data->sum_robot_cost;
         }
     }
     // Update flag bit
