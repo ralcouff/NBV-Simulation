@@ -42,7 +42,7 @@ public:
                Voxel_Information *_voxel_information,
                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& cloud);
 
-    bool vaild_view(View &view);
+    bool valid_view(View &view);
 
     double check_size(double predicted_size, std::vector<Eigen::Vector3d> &points);
 

@@ -95,7 +95,7 @@ View_Space::View_Space(int _id,
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
 }
 
-bool View_Space::vaild_view(View &view) {
+bool View_Space::valid_view(View &view) {
     double x = view.init_pos(0);
     double y = view.init_pos(1);
     double z = view.init_pos(2);
@@ -176,7 +176,7 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     int viewnum = 0;
     // The first point of view is fixed to the centre of the model
     View view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
-    if (!vaild_view(view))
+    if (!valid_view(view))
         cout << "check init view." << endl;
     views.push_back(view);
     views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
@@ -193,7 +193,7 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
         view.id = viewnum;
         // cout << x<<" " << y << " " << z << endl;
         // Eligible viewpoint reservations
-        if (vaild_view(view)) {
+        if (valid_view(view)) {
             view.space_id = id;
             view.dis_to_obejct = (object_center_world - view.init_pos).norm();
             view.robot_cost =
