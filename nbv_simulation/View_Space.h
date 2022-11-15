@@ -12,11 +12,11 @@
 
 class View_Space {
 public:
-    // Number of viewpoints
+    /* Number of ViewPoints. */
     int num_of_views;
-    // Sampling viewpoints in space
+    /* Sampled viewpoints in space. */
     std::vector<View> views;
-    // Object centre
+    /* Object center. */
     Eigen::Vector3d object_center_world;
     // Object BBX radius
     double predicted_size{};
@@ -49,12 +49,17 @@ public:
                Voxel_Information *_voxel_information,
                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
 
+    /**
+     * Checking if the generated view is valid ie. not within a two times expansion of BBOX, adn in a 4 time radius
+     * @param view The candidate view
+     * @return TRUE if valid FALSE if not
+     */
     bool valid_view(View &view);
 
     double check_size(double predicted_size, std::vector<Eigen::Vector3d> &points);
 
     /**
-     * Generate a set of viewpoints (views_key_set)
+     * Generate a set of viewpoints in the octomap (views_key_set)
      * @param points The 3D points of the point cloud
      */
     void get_view_space(std::vector<Eigen::Vector3d> &points);

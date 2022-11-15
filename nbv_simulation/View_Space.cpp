@@ -39,9 +39,7 @@ View_Space::View_Space(int _id,
             view.robot_cost =
                     (Eigen::Vector3d(
                             now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
-                             .eval() -
-                     view.init_pos)
-                            .norm();
+                             .eval() - view.init_pos).norm();
             views.push_back(view);
             views_key_set->insert(octo_model->coordToKey(init_pos[0], init_pos[1], init_pos[2]));
         }
@@ -141,7 +139,7 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &po
 
 void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     auto now_time = clock();
-    /* FIXME Redundant with NBV_Planner */
+    /* FIXME Redundant with NBV_Planner:40 */
     object_center_world = Eigen::Vector3d(0, 0, 0);
     // Calculating point cloud center of mass
     for (auto &ptr: points) {
