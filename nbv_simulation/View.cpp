@@ -189,7 +189,7 @@ void View::get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vec
     // pose = (R.inverse() * T).eval();
 }
 
-void View::add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
+[[maybe_unused]] void View::add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
                                          pcl::visualization::PCLVisualizer::Ptr viewer, int space_id) {
     // view.get_next_camera_pos(view_space->now_camera_pose_world, view_space->object_center_world);
     Eigen::Vector4d X(0.05, 0, 0, 1);

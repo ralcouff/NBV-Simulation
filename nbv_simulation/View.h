@@ -41,7 +41,7 @@ public:
 
     void get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vector3d object_center_world);
 
-    void add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
+    [[maybe_unused]] void add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
                                        pcl::visualization::PCLVisualizer::Ptr viewer,
                                        int space_id);
 };
