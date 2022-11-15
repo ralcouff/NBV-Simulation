@@ -73,7 +73,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         scale = (float) (0.1 / predicted_size);
         cout << "Object large. Change scale to about 0.1 m." << endl;
     }
-    /* Converting the Point*/
+    /* Converting the Point. */
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
@@ -112,7 +112,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* GT_sample_voxels update. */
     share_data->GT_sample->updateInnerOccupancy();
     share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
-    /* Determine the number of voxels in the octree */
+    /* Determine the number of voxels in the octree. */
     share_data->init_voxels = 0;
     for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(),
                  end = share_data->GT_sample->end_leafs();
@@ -135,12 +135,12 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     percept = new Perception_3D(share_data);
     if (share_data->show) {
         // Show BBX, camera position, GT
-        pcl::visualization::PCLVisualizer::Ptr viewer =
-                pcl::visualization::PCLVisualizer::Ptr(new pcl::visualization::PCLVisualizer("Iteration"));
-        viewer->setBackgroundColor(0, 0, 0);
-        viewer->addCoordinateSystem(0.1);
-        viewer->initCameraParameters();
-        // First frame camera position
+        pcl::visualization::PCLVisualizer::Ptr visualizer =
+                std::make_shared<pcl::visualization::PCLVisualizer>("Iteration");
+        visualizer->setBackgroundColor(0, 0, 0);
+        visualizer->addCoordinateSystem(0.1);
+        visualizer->initCameraParameters();
+        /* First frame camera position. */
         Eigen::Vector4d X(0.05, 0, 0, 1);
         Eigen::Vector4d Y(0, 0.05, 0, 1);
         Eigen::Vector4d Z(0, 0, 0.05, 1);
@@ -149,29 +149,33 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         Y = view_pose_world * Y;
         Z = view_pose_world * Z;
         O = view_pose_world * O;
-        viewer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(X(0), X(1), X(2)), 255, 0, 0, "X" + to_string(-1));
-        viewer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Y(0), Y(1), Y(2)), 0, 255, 0, "Y" + to_string(-1));
-        viewer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Z(0), Z(1), Z(2)), 0, 0, 255, "Z" + to_string(-1));
-        // test_viewspace
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_viewspace(new pcl::PointCloud<pcl::PointXYZRGB>);
-        test_viewspace->is_dense = false;
-        test_viewspace->points.resize(now_view_space->views.size());
-        auto pt = test_viewspace->points.begin();
+        /* Drawing the camera axis. */
+        visualizer->addLine<pcl::PointXYZ>(
+                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+                pcl::PointXYZ((float) X(0), (float) X(1), (float) X(2)), 255, 0, 0, "X" + to_string(-1));
+        visualizer->addLine<pcl::PointXYZ>(
+                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+                pcl::PointXYZ((float) Y(0), (float) Y(1), (float) Y(2)), 0, 255, 0, "Y" + to_string(-1));
+        visualizer->addLine<pcl::PointXYZ>(
+                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+                pcl::PointXYZ((float) Z(0), (float) Z(1), (float) Z(2)), 0, 0, 255, "Z" + to_string(-1));
+        /* Creating a point cloud containing the potential viewpoints, and displaying it in white in the frame. */
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(new pcl::PointCloud<pcl::PointXYZRGB>);
+        test_view_space->is_dense = false;
+        test_view_space->points.resize(now_view_space->views.size());
+        auto pt = test_view_space->points.begin();
         for (int i = 0; i < now_view_space->views.size(); i++, pt++) {
-            (*pt).x = now_view_space->views[i].init_pos(0);
-            (*pt).y = now_view_space->views[i].init_pos(1);
-            (*pt).z = now_view_space->views[i].init_pos(2);
-            // First display of all dots in white
+            (*pt).x = (float) now_view_space->views[i].init_pos(0);
+            (*pt).y = (float) now_view_space->views[i].init_pos(1);
+            (*pt).z = (float) now_view_space->views[i].init_pos(2);
+            /* Setting color to white */
             (*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
         }
-        viewer->addPointCloud<pcl::PointXYZRGB>(test_viewspace, "test_viewspace");
-        now_view_space->add_bbx_to_cloud(viewer);
-        viewer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
-        while (!viewer->wasStopped()) {
-            viewer->spin();
+        visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
+        now_view_space->add_bbx_to_cloud(visualizer);
+        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
+        while (!visualizer->wasStopped()) {
+            visualizer->spin();
             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
         }
     }

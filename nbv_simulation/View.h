@@ -12,8 +12,8 @@
 class View {
 
 public:
-    int space_id;
-    int id;
+    int space_id{};
+    int id{};
     /* Initial position */
     Eigen::Vector3d init_pos;
     // view_i to view_i+1 rotation matrix
@@ -23,7 +23,7 @@ public:
     double robot_cost;
     double dis_to_object;
     double final_utility;
-    std::atomic<bool> robot_moved;
+    std::atomic<bool> robot_moved{};
     int path_num;
     int vis;
     bool can_move;
@@ -39,7 +39,12 @@ public:
 
     double get_global_information();
 
-    void get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vector3d object_center_world);
+    /**
+     * Get to the next camera position and set the pose parameter
+     * @param now_camera_pose_world The next camera pose in the current reference model
+     * @param object_center_world The current center of the scene
+     */
+    void get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eigen::Vector3d object_center_world);
 
     [[maybe_unused]] void add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
                                        pcl::visualization::PCLVisualizer::Ptr viewer,

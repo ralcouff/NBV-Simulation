@@ -20,8 +20,7 @@ bool Perception_3D::precept(View *now_best_view) {
     octomap::OcTreeKey key_origin;
     bool key_origin_have = ground_truth_model->coordToKeyChecked(
             now_best_view->init_pos(0), now_best_view->init_pos(1), now_best_view->init_pos(2), key_origin);
-    if(key_origin_have)
-    {
+    if (key_origin_have) {
         octomap::point3d origin = ground_truth_model->keyToCoord(key_origin);
         // Traversing the image plane
 //            thread** precept_process =
@@ -39,15 +38,12 @@ bool Perception_3D::precept(View *now_best_view) {
 //                    int i = x * share_data->color_intrinsics.height + y;
 //                    (*precept_process[i]).join();
 //                }
-        for(int x = 0; x < share_data->color_intrinsics.width; ++x)
-            for(int y = 0; y < share_data->color_intrinsics.height; ++y)
-            {
+        for (int x = 0; x < share_data->color_intrinsics.width; ++x)
+            for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
                 int i = x * share_data->color_intrinsics.height + y;
                 precept_thread_process(x, y, cloud_parallel, &origin, &view_pose_world, share_data);
             }
-    }
-    else
-    {
+    } else {
         cout << "View out of map.check." << endl;
     }
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -57,9 +53,8 @@ bool Perception_3D::precept(View *now_best_view) {
     auto ptr = cloud->points.begin();
     int vaild_point = 0;
     auto p = cloud_parallel->points.begin();
-    for(int i = 0; i < cloud_parallel->points.size(); i++, p++)
-    {
-        if((*p).x == 0 && (*p).y == 0 && (*p).z == 0)
+    for (int i = 0; i < cloud_parallel->points.size(); i++, p++) {
+        if ((*p).x == 0 && (*p).y == 0 && (*p).z == 0)
             continue;
         (*ptr).x = (*p).x;
         (*ptr).y = (*p).y;
@@ -79,8 +74,7 @@ bool Perception_3D::precept(View *now_best_view) {
     // Rotate to the world coordinate system
     *share_data->cloud_final += *cloud;
     cout << "virtual cloud get with executed time " << clock() - now_time << " ms." << endl;
-    if(share_data->show)
-    {
+    if (share_data->show) {
         // Display imaging point clouds
         pcl::visualization::PCLVisualizer::Ptr viewer1(new pcl::visualization::PCLVisualizer("Camera"));
         viewer1->setBackgroundColor(0, 0, 0);
@@ -101,8 +95,7 @@ bool Perception_3D::precept(View *now_best_view) {
                 pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Y(0), Y(1), Y(2)), 0, 255, 0, "Y" + std::to_string(-1));
         viewer1->addLine<pcl::PointXYZ>(
                 pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Z(0), Z(1), Z(2)), 0, 0, 255, "Z" + std::to_string(-1));
-        while(!viewer1->wasStopped())
-        {
+        while (!viewer1->wasStopped()) {
             viewer1->spin();
             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
         }
@@ -114,10 +107,9 @@ bool Perception_3D::precept(View *now_best_view) {
 void precept_thread_process(int x,
                             int y,
                             pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                            octomap::point3d* _origin,
-                            Eigen::Matrix4d* _view_pose_world,
-                            Share_Data* share_data)
-{
+                            octomap::point3d *_origin,
+                            Eigen::Matrix4d *_view_pose_world,
+                            Share_Data *share_data) {
     // num++;
     octomap::point3d origin = *_origin;
     Eigen::Matrix4d view_pose_world = *_view_pose_world;
@@ -137,26 +129,23 @@ void precept_thread_process(int x,
     point.r = 0;
     // Crossing unknown areas and finding the end
     bool found_end_point =
-            share_data->ground_truth_model->castRay(origin, direction, end_point, true, 6.0 * share_data->predicted_size);
-    if(!found_end_point)
-    {
+            share_data->ground_truth_model->castRay(origin, direction, end_point, true,
+                                                    6.0 * share_data->predicted_size);
+    if (!found_end_point) {
         // Endpoint not found, no observations available
         cloud->points[x * share_data->color_intrinsics.height + y] = point;
         return;
     }
-    if(end_point == origin)
-    {
+    if (end_point == origin) {
         cout << "view in the object. check!" << endl;
         cloud->points[x * share_data->color_intrinsics.height + y] = point;
         return;
     }
     // Check to see if the end is within the map limits
     bool key_end_have = share_data->ground_truth_model->coordToKeyChecked(end_point, key_end);
-    if(key_end_have)
-    {
-        octomap::ColorOcTreeNode* node = share_data->ground_truth_model->search(key_end);
-        if(node != nullptr)
-        {
+    if (key_end_have) {
+        octomap::ColorOcTreeNode *node = share_data->ground_truth_model->search(key_end);
+        if (node != nullptr) {
             octomap::ColorOcTreeNode::Color color = node->getColor();
             point.x = end_point.x();
             point.y = end_point.y();

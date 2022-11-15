@@ -3,8 +3,9 @@
 
 #pragma once
 
-
+#include <memory>
 #include <thread>
+
 #include "Perception_3D.h"
 #include "Voxel_Information.h"
 #include "View_Space.h"
@@ -32,6 +33,7 @@ public:
 
     /**
      * Constructor of the NBV_Planner object.
+     * It opens a window with the ground truth point cloud, the candidate viewpoints and the first camera pose.
      * @param _share_data The pointer to the data needed for the project
      * @param _status The initial status of the NBV_Planner (default=WaitData)
      */
@@ -44,7 +46,8 @@ public:
      * @param points The points of the point cloud.
      * @return The percentage of points of the point cloud within the given radius.
      */
-    static double check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
+    static double
+    check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
 
     int plan();
 

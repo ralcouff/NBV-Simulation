@@ -1,7 +1,9 @@
 #include "View.h"
 
+#include <utility>
+
 View::View(Eigen::Vector3d _init_pos) {
-    init_pos = _init_pos;
+    init_pos = std::move(_init_pos);
     pose = Eigen::Matrix4d::Identity(4, 4);
     information_gain = 0;
     voxel_num = 0;
@@ -60,17 +62,20 @@ double View::get_global_information() {
     return information;
 }
 
-void View::get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vector3d object_center_world) {
-    // Normalized multiplication
+void View::get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eigen::Vector3d object_center_world) {
+    /* Normalized multiplication */
+    /* Re-projecting point in the camera world referential */
     Eigen::Vector4d object_center_now_camera;
     object_center_now_camera =
             now_camera_pose_world.inverse() *
             Eigen::Vector4d(object_center_world(0), object_center_world(1), object_center_world(2), 1);
+    /* Re-projecting the coordinates of the view in the new referential. */
     Eigen::Vector4d view_now_camera;
     view_now_camera = now_camera_pose_world.inverse() * Eigen::Vector4d(init_pos(0), init_pos(1), init_pos(2), 1);
     // Define the pointing object as Z+ and the ray from the previous camera position to the current X+,
     //  calculate the transformation matrix between the two camera coordinate systems, object and view are
     //  the coordinates under the previous camera coordinate system
+    /* Z, the vector from object to view. */
     Eigen::Vector3d object(object_center_now_camera(0), object_center_now_camera(1), object_center_now_camera(2));
     Eigen::Vector3d view(view_now_camera(0), view_now_camera(1), view_now_camera(2));
     Eigen::Vector3d Z;

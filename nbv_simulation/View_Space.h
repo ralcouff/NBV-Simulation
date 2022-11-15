@@ -69,7 +69,11 @@ public:
                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr update_cloud);
 
-    void add_bbx_to_cloud(pcl::visualization::PCLVisualizer::Ptr viewer);
+    /**
+     * Adding the BBOx of the object to a PCLVisualizer in green
+     * @param visualizer The PCLVisualizer onto which we want to display the bbox
+     */
+    void add_bbx_to_cloud(const pcl::visualization::PCLVisualizer::Ptr &visualizer);
 
 };
 

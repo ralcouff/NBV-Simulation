@@ -35,7 +35,7 @@ View_Space::View_Space(int _id,
             View view(Eigen::Vector3d(init_pos[0], init_pos[1], init_pos[2]));
             view.id = i;
             view.space_id = id;
-            view.dis_to_obejct = (object_center_world - view.init_pos).norm();
+            view.dis_to_object = (object_center_world - view.init_pos).norm();
             view.robot_cost =
                     (Eigen::Vector3d(
                             now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
@@ -199,7 +199,7 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
         // Eligible viewpoint reservations
         if (valid_view(view)) {
             view.space_id = id;
-            view.dis_to_obejct = (object_center_world - view.init_pos).norm();
+            view.dis_to_object = (object_center_world - view.init_pos).norm();
             view.robot_cost =
                     (Eigen::Vector3d(
                             now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
@@ -306,25 +306,25 @@ void View_Space::update(int _id,
          << '\t' << map_entropy / share_data->init_entropy << endl;
 }
 
-void View_Space::add_bbx_to_cloud(pcl::visualization::PCLVisualizer::Ptr viewer) {
+void View_Space::add_bbx_to_cloud(const pcl::visualization::PCLVisualizer::Ptr &visualizer) {
     double x1 = object_center_world(0) - predicted_size;
     double x2 = object_center_world(0) + predicted_size;
     double y1 = object_center_world(1) - predicted_size;
     double y2 = object_center_world(1) + predicted_size;
     double z1 = object_center_world(2) - predicted_size;
     double z2 = object_center_world(2) + predicted_size;
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube1");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube2");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube3");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x1, y2, z2), 0, 255, 0, "cube4");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y1, z2), 0, 255, 0, "cube5");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y2, z1), 0, 255, 0, "cube6");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube8");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube9");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube10");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube11");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube12");
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube7");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube1");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube2");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube3");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x1, y2, z2), 0, 255, 0, "cube4");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y1, z2), 0, 255, 0, "cube5");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y2, z1), 0, 255, 0, "cube6");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube8");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube9");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube10");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube11");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube12");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube7");
 }
 
 void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
