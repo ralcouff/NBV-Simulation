@@ -104,25 +104,25 @@ bool View_Space::valid_view(View &view) {
     double x = view.init_pos(0);
     double y = view.init_pos(1);
     double z = view.init_pos(2);
-    bool vaild = true;
+    bool valid = true;
     // Object bbx does not create a point of view within 2 times expansion
     if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
         y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
         z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
-        vaild = false;
+        valid = false;
     // In a ball of radius 4 times the size of BBX
     if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
         pow2(4 * predicted_size) >
         0)
-        vaild = false;
+        valid = false;
     // Exists in the octree index and not in the hash table
     octomap::OcTreeKey key;
     bool key_have = octo_model->coordToKeyChecked(x, y, z, key);
     if (!key_have)
-        vaild = false;
+        valid = false;
     if (key_have && views_key_set->find(key) != views_key_set->end())
-        vaild = false;
-    return vaild;
+        valid = false;
+    return valid;
 }
 
 double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
