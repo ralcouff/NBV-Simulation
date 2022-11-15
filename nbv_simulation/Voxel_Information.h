@@ -38,7 +38,7 @@ public:
     /**
      * Computes the Shannon entropy of the voxel, based on its occupancy
      * @param occupancy Occupancy probability of a voxel
-     * @return
+     * @return The Shannon entropy of the voxel
      */
     static double entropy(double &occupancy);
 
