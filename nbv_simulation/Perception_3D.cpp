@@ -6,7 +6,7 @@ Perception_3D::Perception_3D(Share_Data *_share_data) {
     iterations = 0;
 }
 
-bool Perception_3D::precept(View *now_best_view) {
+bool Perception_3D::percept(View *now_best_view) {
     auto now_time = clock();
     // Create the current imaging point cloud
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_parallel(new pcl::PointCloud<pcl::PointXYZRGB>);

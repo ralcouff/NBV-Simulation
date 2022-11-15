@@ -22,7 +22,7 @@ public:
      */
     explicit Perception_3D(Share_Data *_share_data);
 
-    bool precept(View *now_best_view);
+    bool percept(View *now_best_view);
 
 };
 

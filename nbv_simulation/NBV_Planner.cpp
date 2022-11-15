@@ -201,7 +201,7 @@ int NBV_Planner::plan() {
         case Over:
             break;
         case WaitData:
-            if (percept->precept(now_best_view)) {
+            if (percept->percept(now_best_view)) {
                 thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
                 next_view_space.detach();
                 status = WaitViewSpace;
