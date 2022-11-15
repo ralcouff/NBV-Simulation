@@ -6,7 +6,7 @@ View::View(Eigen::Vector3d _init_pos) {
     information_gain = 0;
     voxel_num = 0;
     robot_cost = 0;
-    dis_to_obejct = 0;
+    dis_to_object = 0;
     final_utility = 0;
     robot_moved = false;
     path_num = 0;
@@ -19,12 +19,12 @@ View::View(const View &other) {
     id = other.id;
     init_pos = other.init_pos;
     pose = other.pose;
-    information_gain = (double)other.information_gain;
-    voxel_num = (int)other.voxel_num;
+    information_gain = (double) other.information_gain;
+    voxel_num = (int) other.voxel_num;
     robot_cost = other.robot_cost;
-    dis_to_obejct = other.dis_to_obejct;
+    dis_to_object = other.dis_to_object;
     final_utility = other.final_utility;
-    robot_moved = (bool)other.robot_moved;
+    robot_moved = (bool) other.robot_moved;
     path_num = other.path_num;
     vis = other.vis;
     can_move = other.can_move;
@@ -36,12 +36,12 @@ View &View::operator=(const View &other) {
     space_id = other.space_id;
     id = other.id;
     pose = other.pose;
-    information_gain = (double)other.information_gain;
-    voxel_num = (int)other.voxel_num;
+    information_gain = (double) other.information_gain;
+    voxel_num = (int) other.voxel_num;
     robot_cost = other.robot_cost;
-    dis_to_obejct = other.dis_to_obejct;
+    dis_to_object = other.dis_to_object;
     final_utility = other.final_utility;
-    robot_moved = (bool)other.robot_moved;
+    robot_moved = (bool) other.robot_moved;
     path_num = other.path_num;
     vis = other.vis;
     can_move = other.can_move;
@@ -55,7 +55,7 @@ double View::global_function(int x) {
 
 double View::get_global_information() {
     double information = 0;
-    for(int i = 0; i <= id && i < 64; i++)
+    for (int i = 0; i <= id && i < 64; i++)
         information += in_coverage[i] * global_function(id - i);
     return information;
 }
@@ -128,8 +128,7 @@ void View::get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vec
     y_ray = R.inverse() * T * y_ray;
     double min_y = acos(y(1) * y_ray(1));
     double min_x = acos(x(0) * x_ray(0));
-    for(double i = 5; i < 360; i += 5)
-    {
+    for (double i = 5; i < 360; i += 5) {
         Eigen::Matrix3d rotation;
         rotation = Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX()) * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitY()) *
                    Eigen::AngleAxisd(i * acos(-1.0) / 180.0, Eigen::Vector3d::UnitZ());
@@ -156,14 +155,11 @@ void View::get_next_camera_pos(Eigen::Matrix4d now_camera_pose_world, Eigen::Vec
         y_ray = (R * Rz).inverse() * T * y_ray;
         double cos_y = acos(y(1) * y_ray(1));
         double cos_x = acos(x(0) * x_ray(0));
-        if(cos_y < min_y)
-        {
+        if (cos_y < min_y) {
             Rz_min = rotation.eval();
             min_y = cos_y;
             min_x = cos_x;
-        }
-        else if(fabs(cos_y - min_y) < 1e-6 && cos_x < min_x)
-        {
+        } else if (fabs(cos_y - min_y) < 1e-6 && cos_x < min_x) {
             Rz_min = rotation.eval();
             min_y = cos_y;
             min_x = cos_x;
@@ -226,11 +222,10 @@ void View::add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
     // weight(1), weight(2)), 0, 255, 255, "weight" + to_string(space_id) + "-" + to_string(id));
 }
 
-bool view_id_compare(View& a, View& b) { return a.id < b.id; }
+bool view_id_compare(View &a, View &b) { return a.id < b.id; }
 
-bool view_utility_compare(View& a, View& b)
-{
-    if(a.final_utility == b.final_utility)
+bool view_utility_compare(View &a, View &b) {
+    if (a.final_utility == b.final_utility)
         return a.robot_cost < b.robot_cost;
     return a.final_utility > b.final_utility;
 }
