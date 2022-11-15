@@ -581,7 +581,7 @@ void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *sha
         share_data->move_on = true;
 }
 
-[[maybe_unused]] void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer) {
+[[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {
     // pcl display point cloud
     while (!viewer->wasStopped()) {
         viewer->spin();

@@ -68,7 +68,6 @@ void create_views_information(Views_Information **now_views_information,
 
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
 
-void show_cloud(pcl::visualization::PCLVisualizer::Ptr viewer);
-
+[[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H
