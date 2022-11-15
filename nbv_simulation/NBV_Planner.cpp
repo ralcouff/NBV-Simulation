@@ -124,6 +124,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     ofstream fout(share_data->save_path + "/GT_sample_voxels.txt");
     fout << share_data->init_voxels << endl;
     /* Initialize View Space. */
+    /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
