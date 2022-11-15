@@ -22,13 +22,27 @@ public:
      */
     explicit Perception_3D(Share_Data *_share_data);
 
+    /**
+     * Generate the voxels seen by the camera at the position now_best_view
+     * @param now_best_view The view from where to generate the cloud
+     * @return TRUE if the cloud has been correctly generated
+     */
     bool percept(View *now_best_view);
 
 };
 
-void precept_thread_process(int x,
+/**
+ * Add the end points of the ray casting to the current cloud
+ * @param x The x coordinate of the pixel in image
+ * @param y The y coordinate of the pixel in image
+ * @param cloud The cloud onto which we are working
+ * @param _origin A pointer to the origin of the world
+ * @param _view_pose_world The current view pose
+ * @param share_data The shared data among the whole project
+ */
+void percept_thread_process(int x,
                             int y,
-                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                            const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud,
                             octomap::point3d *_origin,
                             Eigen::Matrix4d *_view_pose_world,
                             Share_Data *share_data);

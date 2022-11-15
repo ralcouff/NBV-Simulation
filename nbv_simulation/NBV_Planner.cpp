@@ -223,7 +223,7 @@ int NBV_Planner::plan() {
         case WaitInformation:
             if (share_data->now_views_information_processed) {
                 if (share_data->method_of_IG == 6) { // NBV-NET
-                    share_data->access_directory(share_data->nbv_net_path + "/log");
+                    Share_Data::access_directory(share_data->nbv_net_path + "/log");
                     ifstream ftest;
                     do {
                         ftest.open(share_data->nbv_net_path + "/log/ready.txt");

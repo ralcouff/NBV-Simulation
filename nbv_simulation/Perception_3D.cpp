@@ -7,12 +7,13 @@ Perception_3D::Perception_3D(Share_Data *_share_data) {
 }
 
 bool Perception_3D::percept(View *now_best_view) {
+    /* Setting up a timer. */
     auto now_time = clock();
-    // Create the current imaging point cloud
+    /* Create the current imaging point cloud. */
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_parallel(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_parallel->is_dense = false;
     cloud_parallel->points.resize(share_data->color_intrinsics.width * share_data->color_intrinsics.height);
-    // Get a viewpoint pose
+    /* Get the Viewpoint pose. */
     Eigen::Matrix4d view_pose_world;
     now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
     view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
@@ -30,7 +31,7 @@ bool Perception_3D::percept(View *now_best_view) {
 //                {
 //                    int i = x * share_data->color_intrinsics.height + y;
 //                    precept_process[i] =
-//                      new thread(precept_thread_process, x, y, cloud_parallel, &origin, &view_pose_world, share_data);
+//                      new thread(percept_thread_process, x, y, cloud_parallel, &origin, &view_pose_world, share_data);
 //                }
 //            for(int x = 0; x < share_data->color_intrinsics.width; x++)
 //                for(int y = 0; y < share_data->color_intrinsics.height; y++)
@@ -38,20 +39,21 @@ bool Perception_3D::percept(View *now_best_view) {
 //                    int i = x * share_data->color_intrinsics.height + y;
 //                    (*precept_process[i]).join();
 //                }
+        /* Traversing the imag plane. */
         for (int x = 0; x < share_data->color_intrinsics.width; ++x)
             for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
                 int i = x * share_data->color_intrinsics.height + y;
-                precept_thread_process(x, y, cloud_parallel, &origin, &view_pose_world, share_data);
+                percept_thread_process(x, y, cloud_parallel, &origin, &view_pose_world, share_data);
             }
     } else {
-        cout << "View out of map.check." << endl;
+        cout << "View out of map. Check Viewpoint generation." << endl;
     }
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud = temp;
     cloud->is_dense = false;
     cloud->points.resize(share_data->color_intrinsics.width * share_data->color_intrinsics.height);
     auto ptr = cloud->points.begin();
-    int vaild_point = 0;
+    int valid_point = 0;
     auto p = cloud_parallel->points.begin();
     for (int i = 0; i < cloud_parallel->points.size(); i++, p++) {
         if ((*p).x == 0 && (*p).y == 0 && (*p).z == 0)
@@ -62,12 +64,12 @@ bool Perception_3D::percept(View *now_best_view) {
         (*ptr).b = (*p).b;
         (*ptr).g = (*p).g;
         (*ptr).r = (*p).r;
-        vaild_point++;
+        valid_point++;
         ptr++;
     }
-    cloud->width = vaild_point;
+    cloud->width = valid_point;
     cloud->height = 1;
-    cloud->points.resize(vaild_point);
+    cloud->points.resize(valid_point);
     // Record the current collection point cloud
     share_data->valid_clouds++;
     share_data->clouds.push_back(cloud);
@@ -104,17 +106,17 @@ bool Perception_3D::percept(View *now_best_view) {
     return true;
 }
 
-void precept_thread_process(int x,
+void percept_thread_process(int x,
                             int y,
-                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                            const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud,
                             octomap::point3d *_origin,
                             Eigen::Matrix4d *_view_pose_world,
                             Share_Data *share_data) {
     // num++;
     octomap::point3d origin = *_origin;
     Eigen::Matrix4d view_pose_world = *_view_pose_world;
-    cv::Point2f pixel(x, y);
-    // Reverse projection to find the end point
+    cv::Point2f pixel(x, y); // FIXME : Useless
+    /* Reverse projection to find the endpoint. */
     octomap::point3d end = project_pixel_to_ray_end(x, y, share_data->color_intrinsics, view_pose_world, 1.0);
     // Show it
     octomap::OcTreeKey key_end;
@@ -127,6 +129,7 @@ void precept_thread_process(int x,
     point.b = 0;
     point.g = 0;
     point.r = 0;
+    /* Casting a ray from the camera among a certain direction. */
     // Crossing unknown areas and finding the end
     bool found_end_point =
             share_data->ground_truth_model->castRay(origin, direction, end_point, true,
@@ -137,7 +140,7 @@ void precept_thread_process(int x,
         return;
     }
     if (end_point == origin) {
-        cout << "view in the object. check!" << endl;
+        cout << "View in the object. Check Viewpoints generation!" << endl;
         cloud->points[x * share_data->color_intrinsics.height + y] = point;
         return;
     }

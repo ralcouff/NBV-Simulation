@@ -95,10 +95,10 @@ static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsi
 /**
  * Given pixel coordinates and depth in an image with no distortion or inverse distortion coefficients, compute the
  * corresponding point in 3D space relative to the same camera
- * @param point TODO
- * @param intrin TODO
- * @param pixel TODO
- * @param depth TODO
+ * @param point The output 3D point containing the estimated position of the correspondent pixel
+ * @param intrin Intrinsic parameters of the camera
+ * @param pixel The coordinates of the pixel in image
+ * @param depth The depth of the point in the image
  */
 static void rs2_deproject_pixel_to_point(float point[3],
                                          const struct rs2_intrinsics* intrin,
@@ -106,7 +106,7 @@ static void rs2_deproject_pixel_to_point(float point[3],
                                          float depth)
 {
     assert(intrin->model != RS2_DISTORTION_MODIFIED_BROWN_CONRADY); // Cannot deproject from a forward-distorted image
-    // assert(intrin->model != RS2_DISTORTION_BROWN_CONRADY); // Cannot deproject to an brown conrady model
+    // assert(intrin->model != RS2_DISTORTION_BROWN_CONRADY); // Cannot deproject to a brown conrady model
 
     float x = (pixel[0] - intrin->ppx) / intrin->fx;
     float y = (pixel[1] - intrin->ppy) / intrin->fy;
@@ -156,7 +156,7 @@ static void rs2_deproject_pixel_to_point(float point[3],
         {
             rd = FLT_EPSILON;
         }
-        float r = (float)(tan(intrin->coeffs[0] * rd) / atan(2 * tan(intrin->coeffs[0] / 2.0f)));
+        auto r = (float)(tan(intrin->coeffs[0] * rd) / atan(2 * tan(intrin->coeffs[0] / 2.0f)));
         x *= r / rd;
         y *= r / rd;
     }
@@ -269,13 +269,13 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
 }
 
 /**
- * TODO
+ * Project the pixel of an image to the max_depth desired and creates the endpoint at this range.
  * @param x The coordinate x of the pixel
  * @param y The coordinate y of the pixel
- * @param color_intrinsics TODO
+ * @param color_intrinsics The intrinsic parameters of the camera
  * @param now_camera_pose_world The current camera position
- * @param max_range TODO
- * @return TODO
+ * @param max_range The maximum depth desired for the projection
+ * @return The position of the point at the maximum range of the viewpoint. In the current viewpoint referential.
  */
 inline octomap::point3d project_pixel_to_ray_end(
         int x, int y, rs2_intrinsics& color_intrinsics, Eigen::Matrix4d& now_camera_pose_world, float max_range)
