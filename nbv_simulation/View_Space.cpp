@@ -72,7 +72,7 @@ View_Space::View_Space(int _id,
     share_data->predicted_size = predicted_size;
     double map_size = predicted_size + 3.0 * octomap_resolution;
     share_data->map_size = map_size;
-    /* Filling the octo_model with empty nodes based on the BBOX of the model*/
+    /* Filling the octo_model with empty nodes based on the BBOX of the model. */
     auto now_time = clock();
     for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
          x += octomap_resolution)
@@ -84,7 +84,7 @@ View_Space::View_Space(int _id,
     octo_model->updateInnerOccupancy();
     share_data->init_entropy = 0;
     share_data->voxels_in_BBX = 0;
-    /* Update the entropy of the model */
+    /* Update the entropy of the model. */
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
