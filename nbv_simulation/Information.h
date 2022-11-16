@@ -72,6 +72,14 @@ void ray_information_thread_process(
         View_Space *view_space,
         short method);
 
+/**
+ *
+ * @param node
+ * @param octo_model
+ * @param voxel_information
+ * @param octomap_resolution
+ * @return
+ */
 int frontier_check(octomap::point3d node,
                    octomap::ColorOcTree *octo_model,
                    Voxel_Information *voxel_information,

@@ -455,8 +455,9 @@ string NBV_Planner::out_status() {
     return status_string;
 }
 
-void save_cloud_mid_thread_process(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string name, Share_Data *share_data) {
-    // Thread for saving intermediate point clouds, currently not checking if the save is complete
+void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const string &name,
+                                   Share_Data *share_data) {
+    /* FIXME : Check if the cloud is well saved. */
     share_data->save_cloud_to_disk(cloud, "/clouds", name);
     cout << name << " saved" << endl;
 }
@@ -483,7 +484,7 @@ void create_views_information(Views_Information **now_views_information,
                               int iterations) {
     if (share_data->method_of_IG == 6) { // NBV-NET
         // scale
-        share_data->access_directory(share_data->nbv_net_path + "/viewspace");
+        Share_Data::access_directory(share_data->nbv_net_path + "/viewspace");
         ofstream fout_vs(share_data->nbv_net_path + "/viewspace/" + share_data->name_of_pcd + ".txt");
         double scale_of_object = 0;
         double x1 = now_view_space->object_center_world(0) - now_view_space->predicted_size;
@@ -502,7 +503,7 @@ void create_views_information(Views_Information **now_views_information,
         scale_of_object = max(scale_of_object, (Eigen::Vector3d(x2, y2, z2).eval()).norm());
         fout_vs << scale_of_object * 2.0 << '\n';
         // octotree
-        share_data->access_directory(share_data->nbv_net_path + "/data");
+        Share_Data::access_directory(share_data->nbv_net_path + "/data");
         ofstream fout(share_data->nbv_net_path + "/data/" + share_data->name_of_pcd + '_' + to_string(iterations) +
                       ".txt");
         for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(),

@@ -55,10 +55,33 @@ public:
 
 };
 
-void save_cloud_mid_thread_process(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, string name, Share_Data *share_data);
+/**
+ * Save the cloud to disk.
+ * @param cloud The cloud to save.
+ * @param name The name to give to the cloud.
+ * @param share_data The shared data through the whole project.
+ */
+void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const string &name,
+                                   Share_Data *share_data);
 
+/**
+ * Updating the View Space according to the current best view.
+ * @param now_view_space The View Space to update
+ * @param now_best_view The current best view
+ * @param share_data The data shared through all the files
+ * @param iterations The iteration number
+ */
 void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations);
 
+/**
+ *
+ * @param now_views_information
+ * @param now_best_view FIXME : unused
+ * @param now_view_space
+ * @param share_data
+ * @param nbv_plan
+ * @param iterations
+ */
 void create_views_information(Views_Information **now_views_information,
                               View *now_best_view,
                               View_Space *now_view_space,

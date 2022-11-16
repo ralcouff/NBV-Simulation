@@ -81,7 +81,7 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
                                    Views_Information *views_information, Voxel_Information *voxel_information,
                                    Share_Data *share_data) {
     // Which viewpoints the ray is seen by, added to the diagram
-    vector<int> views_id = (*views_information->rays_to_viwes_map)[ray_id];
+    vector<int> views_id = (*views_information->rays_to_views_map)[ray_id];
     for(int i = 0; i < views_id.size(); i++)
         (*bipartite_list)[ray_id + ray_index_shift].push_back(make_pair(views_id[i], 0.0));
     // Retain only voxels of interest

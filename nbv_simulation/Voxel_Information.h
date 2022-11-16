@@ -4,9 +4,7 @@
 #pragma once
 
 #include <Eigen/Core>
-
 #include <mutex>
-
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
 
@@ -46,12 +44,22 @@ public:
 
     bool is_unknown(double &occupancy) const;
 
+    /**
+     * Checks if voxel is free according to its occupancy
+     * @param occupancy The probability of occupancy of the voxel
+     * @return TRUE if the voxel is free
+     */
     bool is_free(double &occupancy) const;
 
     bool is_occupied(double &occupancy) const;
 
     [[maybe_unused]] bool voxel_unknown(octomap::ColorOcTreeNode *traversed_voxel) const;
 
+    /**
+     * Checks if the voxel is free
+     * @param traversed_voxel The considered voxel is free
+     * @return TRUE if the voxel is free.
+     */
     bool voxel_free(octomap::ColorOcTreeNode *traversed_voxel) const;
 
     bool voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel) const;

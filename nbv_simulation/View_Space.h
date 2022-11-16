@@ -64,10 +64,19 @@ public:
      */
     void get_view_space(std::vector<Eigen::Vector3d> &points);
 
+    /**
+     * Updating View Space
+     * Updating robot cost for each view. Filling the octo_map with update_cloud. Compute the occupancy and the map entropy.
+     * Saving the octomaps.
+     * @param _id The id
+     * @param _share_data The data shared through the whole files
+     * @param cloud FIXME : Unused
+     * @param update_cloud The cloud used to update the octomap
+     */
     void update(int _id,
                 Share_Data *_share_data,
                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                pcl::PointCloud<pcl::PointXYZRGB>::Ptr update_cloud);
+                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud);
 
     /**
      * Adding the BBOx of the object to a PCLVisualizer in green

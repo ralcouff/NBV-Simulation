@@ -224,18 +224,18 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
 void View_Space::update(int _id,
                         Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr update_cloud) {
+                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& update_cloud) {
     share_data = _share_data;
     object_changed = false;
     id = _id;
     now_camera_pose_world = share_data->now_camera_pose_world;
     // Update viewpoint markers
-    for (int i = 0; i < views.size(); i++) {
-        views[i].space_id = id;
-        views[i].robot_cost =
+    for (auto & view : views) {
+        view.space_id = id;
+        view.robot_cost =
                 (Eigen::Vector3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
                          .eval() -
-                 views[i].init_pos)
+                 view.init_pos)
                         .norm();
     }
     // Insert point cloud to intermediate data structure
@@ -248,7 +248,7 @@ void View_Space::update(int _id,
     }
     octo_model->insertPointCloud(
             cloud_octo,
-            octomap::point3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3)),
+            octomap::point3d((float) now_camera_pose_world(0, 3), (float) now_camera_pose_world(1, 3), (float) now_camera_pose_world(2, 3)),
             -1,
             true,
             false);
@@ -270,7 +270,7 @@ void View_Space::update(int _id,
             y >= object_center_world(1) - predicted_size && y <= object_center_world(1) + predicted_size &&
             z >= object_center_world(2) - predicted_size && z <= object_center_world(2) + predicted_size) {
             double occupancy = (*it).getOccupancy();
-            map_entropy += voxel_information->entropy(occupancy);
+            map_entropy += Voxel_Information::entropy(occupancy);
             if (voxel_information->is_occupied(occupancy))
                 occupied_voxels++;
         }
@@ -292,7 +292,7 @@ void View_Space::update(int _id,
                             occupied_voxels++;
             }
     }*/
-    share_data->access_directory(share_data->save_path + "/octomaps");
+    Share_Data::access_directory(share_data->save_path + "/octomaps");
     share_data->octo_model->write(share_data->save_path + "/octomaps/octomap" + to_string(id) + ".ot");
     // share_data->access_directory(share_data->save_path + "/octocloud");
     // share_data->cloud_model->write(share_data->save_path + "/octocloud/octocloud"+to_string(id)+".ot");
@@ -300,7 +300,7 @@ void View_Space::update(int _id,
          << endl;
     cout << "Map " << id << " has voxels(rate) " << 1.0 * occupied_voxels / share_data->init_voxels << ". Map "
          << id << " has entropy(rate) " << map_entropy / share_data->init_entropy << endl;
-    share_data->access_directory(share_data->save_path + "/quantitative");
+    Share_Data::access_directory(share_data->save_path + "/quantitative");
     ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(id) + ".txt");
     fout << occupied_voxels << '\t' << map_entropy << '\t' << 1.0 * occupied_voxels / share_data->init_voxels
          << '\t' << map_entropy / share_data->init_entropy << endl;
