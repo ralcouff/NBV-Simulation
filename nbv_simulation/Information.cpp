@@ -231,7 +231,7 @@ void ray_information_thread_process(
         // Check to see if the node is unknown
         bool voxel_unknown = voxel_information->is_unknown(occupancy);
         // Read the node for the surface rate of the object
-        double on_object = voxel_information->voxel_object(*it, object_weight);
+        double on_object = Voxel_Information::voxel_object(*it, object_weight);
         // If it is occupied, it is the last node
         if (voxel_occupied)
             last = it;

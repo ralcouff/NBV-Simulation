@@ -64,6 +64,11 @@ public:
 
     bool voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel) const;
 
+    /**
+     * Remapping the upper/lower bound to [0,1] range and inverting it
+     * @param occupancy The occupancy of the voxel
+     * @return 0.0 if voxel occupied, 1.0 if free and a value in [0,1] if unknown
+     */
     [[nodiscard]] double get_voxel_visible(double occupancy) const;
 
     [[maybe_unused]] double get_voxel_visible(octomap::ColorOcTreeNode *traversed_voxel) const;

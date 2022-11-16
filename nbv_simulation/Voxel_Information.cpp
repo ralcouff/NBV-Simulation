@@ -52,7 +52,7 @@ bool Voxel_Information::voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel
     return is_occupied(occupancy);
 }
 
-[[maybe_unused]] double Voxel_Information::get_voxel_visible(double occupancy) const {
+double Voxel_Information::get_voxel_visible(double occupancy) const {
     if (occupancy > p_unknown_upper_bound)
         return 0.0;
     if (occupancy < p_unknown_lower_bound)
@@ -60,7 +60,7 @@ bool Voxel_Information::voxel_occupied(octomap::ColorOcTreeNode *traversed_voxel
     return k_vis * occupancy + b_vis;
 }
 
-[[maybe_unused]] [[maybe_unused]] double
+[[maybe_unused]] double
 Voxel_Information::get_voxel_visible(octomap::ColorOcTreeNode *traversed_voxel) const {
     double occupancy = traversed_voxel->getOccupancy();
     if (occupancy > p_unknown_upper_bound)
