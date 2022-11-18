@@ -13,8 +13,8 @@ class Ray_Information {
 public:
     Ray* ray;
     double information_gain;
-    double visible;
-    double object_visible;
+    double visible; // Initialized at 1
+    double object_visible; // P(vis_x) in eq. 2
     int voxel_num;
     bool previous_voxel_unknown;
 

@@ -21,8 +21,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     // Define frontier
-    std::vector<octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
+    std::vector <octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
     double map_size = view_space->predicted_size;
     // Find edges in the map
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
@@ -49,11 +49,11 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
     if (edge->points.size() != 0) {
-        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
-        for (auto & point : points) {
+        for (auto &point: points) {
             octomap::OcTreeKey key;
             bool key_have = octo_model->coordToKeyChecked(point, key);
             if (key_have) {
@@ -81,7 +81,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     rays_info = new Ray_Information *[max_num_of_rays];
     cout << "full rays num is " << max_num_of_rays << endl;
     // Calculate the eight vertices of BBX for delineating the ray range
-    std::vector<Eigen::Vector4d> convex_3d;
+    std::vector <Eigen::Vector4d> convex_3d;
     double x1 = view_space->object_center_world(0) - map_size;
     double x2 = view_space->object_center_world(0) + map_size;
     double y1 = view_space->object_center_world(1) - map_size;
@@ -115,14 +115,14 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                                         &color_intrinsics,
                                         i);
     }
-    // Wait for each viewpoint ray generator to complete its calculation
+    /* Wait for each viewpoint ray generator to complete its calculation. */
     for (int i = 0; i < view_space->views.size(); i++) {
         (*ray_caster[i]).join();
     }
-    cout << "ray_num is " << ray_num << endl;
-    cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Startring compution."
+    cout << "Number of rays (ray_num) : " << ray_num << endl;
+    cout << "All views' rays generated in " << clock() - now_time << " ms. Starting computation of information."
          << endl;
-    // Allocate a thread to each ray
+    /* Allocate a thread to each ray. */
     now_time = clock();
     auto **rays_process = new std::thread *[ray_num];
     for (int i = 0; i < ray_num; i++) {
@@ -137,7 +137,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                                           view_space,
                                           method);
     }
-    // Waiting for the ray calculation to be completed
+    /* Waiting for the ray calculation to be completed. */
     for (int i = 0; i < ray_num; i++) {
         (*rays_process[i]).join();
     }
@@ -173,9 +173,9 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     voxel_information->octomap_resolution = octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
     // Clear viewpoint information
-    for (int i = 0; i < view_space->views.size(); i++) {
-        view_space->views[i].information_gain = 0;
-        view_space->views[i].voxel_num = 0;
+    for (auto & view : view_space->views) {
+        view.information_gain = 0;
+        view.voxel_num = 0;
     }
     // Avoid duplicate searches
     delete occupancy_map;
@@ -183,8 +183,8 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     delete object_weight;
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     // Update frontier
-    std::vector<octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
+    std::vector <octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
@@ -209,15 +209,15 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         pre_edge_cnt = 0x3f3f3f3f;
     if (edge->points.size() != 0) {
         // Calculating frontier
-        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
-        for (int i = 0; i < points.size(); i++) {
+        for (auto & point : points) {
             octomap::OcTreeKey key;
-            bool key_have = octo_model->coordToKeyChecked(points[i], key);
+            bool key_have = octo_model->coordToKeyChecked(point, key);
             if (key_have) {
-                pcl::PointXYZ searchPoint(points[i].x(), points[i].y(), points[i].z());
+                pcl::PointXYZ searchPoint(point.x(), point.y(), point.z());
                 int num = kdtree.nearestKSearch(searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance);
                 if (num > 0) {
                     double p_obj = 1;
@@ -258,7 +258,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
 
         // Calculate the eight vertices of BBX for delineating the ray range
-        std::vector<Eigen::Vector4d> convex_3d;
+        std::vector <Eigen::Vector4d> convex_3d;
         double x1 = view_space->object_center_world(0) - map_size;
         double x2 = view_space->object_center_world(0) + map_size;
         double y1 = view_space->object_center_world(1) - map_size;
@@ -275,7 +275,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         convex_3d.emplace_back(x2, y2, z2, 1);
         voxel_information->convex = convex_3d;
         // Ray generators for assigning viewpoints
-        std::thread **ray_caster = new std::thread *[view_space->views.size()];
+        auto **ray_caster = new std::thread *[view_space->views.size()];
         for (int i = 0; i < view_space->views.size(); i++) {
             // Threads that divide into rays for this viewpoint
             ray_caster[i] = new std::thread(ray_cast_thread_process,
@@ -300,7 +300,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     }
     // Allocate a thread to each ray
     now_time = clock();
-    std::thread **rays_process = new std::thread *[ray_num];
+    auto **rays_process = new std::thread *[ray_num];
     for (int i = 0; i < ray_num; i++) {
         rays_info[i]->clear();
         rays_process[i] = new std::thread(ray_information_thread_process,
@@ -318,13 +318,13 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     for (int i = 0; i < ray_num; i++) {
         (*rays_process[i]).join();
     }
-    double cost_time = clock() - now_time;
+    auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
-    share_data->access_directory(share_data->save_path + "/run_time");
+    Share_Data::access_directory(share_data->save_path + "/run_time");
     std::ofstream fout(share_data->save_path + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
     fout << cost_time << endl;
     now_time = clock();
-    std::thread **view_gain = new std::thread *[view_space->views.size()];
+    auto **view_gain = new std::thread *[view_space->views.size()];
     for (int i = 0; i < view_space->views.size(); i++) {
         // Threads that distribute information statistics for this viewpoint
         view_gain[i] = new std::thread(information_gain_thread_process, rays_info, views_to_rays_map, view_space, i);

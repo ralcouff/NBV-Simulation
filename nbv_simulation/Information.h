@@ -63,6 +63,20 @@ void ray_cast_thread_process(int *ray_num,
                              rs2_intrinsics *color_intrinsics,
                              int pos);
 
+/**
+ *
+ * @param method An int describing the method to use to compute the information
+ * @param ray_information
+ * @param voxel_information
+ * @param visible p_vis
+ * @param is_unknown
+ * @param previous_voxel_unknown
+ * @param is_endpoint
+ * @param is_occupied
+ * @param object p_obj
+ * @param object_visible \PI{1-P_obj_x}
+ * @return information gain for each ray
+ */
 double information_function(short &method,
                             double &ray_information,
                             double voxel_information,
@@ -110,6 +124,13 @@ int frontier_check(octomap::point3d node,
                    Voxel_Information *voxel_information,
                    double octomap_resolution);
 
+/**
+ * Compute the information gain for each view according to the information gain of each ray containing that view
+ * @param rays_info The information about rays
+ * @param views_to_rays_map A mapping of Views to rays
+ * @param view_space The View Space
+ * @param pos The considered voxel
+ */
 void information_gain_thread_process(Ray_Information **rays_info,
                                      unordered_map<int, vector<int>> *views_to_rays_map,
                                      View_Space *view_space,

@@ -22,7 +22,7 @@ public:
     std::unordered_map<int, std::vector<int>> *rays_to_views_map;
     std::unordered_map<Ray, int, Ray_Hash> *rays_map;
     std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map;
-    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight;
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight; // P(obj_x) (eq. (2)
     long long max_num_of_rays;
     int ray_num;
     double alpha;
@@ -36,15 +36,21 @@ public:
     std::size_t edge_cnt;
 
     /**
-     * Compute p_obj for each voxel
+     * Compute the information gain for each view of the View Space [eq. (1)]
      * @param share_data The data shared through the whole project.
-     * @param _voxel_information
-     * @param view_space
+     * @param _voxel_information The information contained in each voxel
+     * @param view_space The considered View Space
      * @param iterations FIXME : unused
      */
     Views_Information(Share_Data *share_data, Voxel_Information *_voxel_information, View_Space *view_space,
                       int iterations);
 
+    /**
+     * Updating the information gain for each view of the View Space
+     * @param share_data
+     * @param view_space
+     * @param iterations
+     */
     void update(Share_Data *share_data, View_Space *view_space, int iterations);
 
 };

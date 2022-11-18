@@ -51,6 +51,11 @@ public:
      */
     bool is_free(double &occupancy) const;
 
+    /**
+     * Checks if the voxel is occupied
+     * @param occupancy
+     * @return
+     */
     bool is_occupied(double &occupancy) const;
 
     [[maybe_unused]] bool voxel_unknown(octomap::ColorOcTreeNode *traversed_voxel) const;
@@ -75,6 +80,12 @@ public:
 
     [[maybe_unused]] static double get_voxel_information(octomap::ColorOcTreeNode *traversed_voxel);
 
+    /**
+     * Search the voxel in object_weight map according to its key.
+     * @param voxel_key The key of the voxel in the unordered map
+     * @param object_weight An unordered map containing the id of the voxel and the corresponding object weight p_obj
+     * @return The object weight of the voxel corresponding to voxel_key
+     */
     static double voxel_object(octomap::OcTreeKey &voxel_key,
                                std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight);
 

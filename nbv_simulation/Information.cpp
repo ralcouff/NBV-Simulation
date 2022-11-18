@@ -243,7 +243,7 @@ void ray_information_thread_process(
         // Statistical information entropy
         rays_info[ray_id]->information_gain = information_function(method,
                                                                    rays_info[ray_id]->information_gain,
-                                                                   voxel_information->entropy(occupancy),
+                                                                   Voxel_Information::entropy(occupancy),
                                                                    rays_info[ray_id]->visible,
                                                                    voxel_unknown,
                                                                    rays_info[ray_id]->previous_voxel_unknown,
