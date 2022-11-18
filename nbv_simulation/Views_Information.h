@@ -47,9 +47,9 @@ public:
 
     /**
      * Updating the information gain for each view of the View Space
-     * @param share_data
-     * @param view_space
-     * @param iterations
+     * @param share_data The data shared through the whole project
+     * @param view_space The considered View Space
+     * @param iterations FIXME : unused
      */
     void update(Share_Data *share_data, View_Space *view_space, int iterations);
 
