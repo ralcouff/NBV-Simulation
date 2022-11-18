@@ -524,7 +524,7 @@ void create_views_information(Views_Information **now_views_information,
             }
         }
     } else { // Search by
-        // Processing views_information
+        /* If it is the first iteration, creates and compute the first Views Information, else update them. */
         if (iterations == 0)
             (*now_views_information) =
                     new Views_Information(share_data, nbv_plan->voxel_information, now_view_space, iterations);
@@ -532,7 +532,7 @@ void create_views_information(Views_Information **now_views_information,
             (*now_views_information)->update(share_data, now_view_space, iterations);
         if (share_data->method_of_IG == OursIG) {
             // Handling network streams and obtaining global optimisation functions
-            views_voxels_MF *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
+            auto *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
                                                                     now_view_space,
                                                                     *now_views_information,
                                                                     nbv_plan->voxel_information,
