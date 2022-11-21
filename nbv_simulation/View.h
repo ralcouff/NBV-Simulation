@@ -22,10 +22,10 @@ public:
     int voxel_num;
     double robot_cost;
     double dis_to_object;
-    double final_utility;
+    double final_utility; // The global final utility
     std::atomic<bool> robot_moved{};
     int path_num;
-    int vis;
+    int vis; // The number of times the view has been visited
     bool can_move;
     std::bitset<64> in_coverage;
 
@@ -44,11 +44,11 @@ public:
      * @param now_camera_pose_world The next camera pose in the current reference model
      * @param object_center_world The current center of the scene
      */
-    void get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eigen::Vector3d object_center_world);
+    void get_next_camera_pos(const Eigen::Matrix4d &now_camera_pose_world, Eigen::Vector3d object_center_world);
 
     [[maybe_unused]] void add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
-                                       pcl::visualization::PCLVisualizer::Ptr viewer,
-                                       int space_id);
+                                                        pcl::visualization::PCLVisualizer::Ptr viewer,
+                                                        int space_id);
 };
 
 /**

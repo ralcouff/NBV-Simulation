@@ -61,7 +61,7 @@ void views_voxels_MF::solve() {
     auto now_time = clock();
     view_id_set = mcmf->work(*bipartite_list);
     auto cost_time = clock() - now_time;
-    cout << "flow network solved with executed time " << cost_time << " ms." << endl;
+    cout << "Flow network solved in : " << cost_time << " ms." << endl;
     cout << view_id_set.size() << " views got by max flow." << endl;
     Share_Data::access_directory(share_data->save_path + "/run_time");
     std::ofstream fout(share_data->save_path + "/run_time/MF" + std::to_string(view_space->id) + ".txt");

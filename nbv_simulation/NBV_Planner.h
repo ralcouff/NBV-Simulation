@@ -49,8 +49,16 @@ public:
     static double
     check_size(double predicted_size, Eigen::Vector3d object_center_world, vector<Eigen::Vector3d> &points);
 
+    /**
+     * Compute and select the next best view
+     * @return The status of the algorithm
+     */
     int plan();
 
+    /**
+     * Give the status of the NBV Planner
+     * @return The status of the NBV Planner as a string
+     */
     string out_status();
 
 };
@@ -74,13 +82,13 @@ void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr 
 void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations);
 
 /**
- *
- * @param now_views_information
+ * Compute the global information function for each view (eq. 6)
+ * @param now_views_information The information contained in the views
  * @param now_best_view FIXME : unused
- * @param now_view_space
- * @param share_data
- * @param nbv_plan
- * @param iterations
+ * @param now_view_space The current view space
+ * @param share_data The data shared through the whole project
+ * @param nbv_plan The NBV Planner
+ * @param iterations The number of iterations
  */
 void create_views_information(Views_Information **now_views_information,
                               View *now_best_view,
@@ -89,6 +97,13 @@ void create_views_information(Views_Information **now_views_information,
                               NBV_Planner *nbv_plan,
                               int iterations);
 
+/**
+ * Virtually move the robot to the chosen best view
+ * @param now_best_view The view where the robot has to move
+ * @param now_view_space The current view space
+ * @param share_data The data shared through the whole project
+ * @param nbv_plan The NBV Planner
+ */
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);

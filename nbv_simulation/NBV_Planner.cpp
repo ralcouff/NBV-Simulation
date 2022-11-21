@@ -1,5 +1,7 @@
 #include "NBV_Planner.h"
 
+#include <memory>
+
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
     iterations = 0;
@@ -265,32 +267,27 @@ int NBV_Planner::plan() {
                         cout << "cannot remove ready.txt." << endl;
                 } else {
                     // Search algorithms
-                    // Sorting of viewpoints
+                    /* Sorting the viewpoints according to their utility. */
                     sort(now_view_space->views.begin(), now_view_space->views.end(), view_utility_compare);
-                    /*if (share_data->sum_local_information == 0) {
-                            cout << "randomly choose a view" << endl;
-                            srand(clock());
-                            random_shuffle(now_view_space->views.begin(), now_view_space->views.end());
-                    }*/
                     // informed_viewspace
                     if (share_data->show) {
-                        // Show BBX with camera position
-                        pcl::visualization::PCLVisualizer::Ptr viewer = pcl::visualization::PCLVisualizer::Ptr(
-                                new pcl::visualization::PCLVisualizer("Iteration" + to_string(iterations)));
-                        viewer->setBackgroundColor(0, 0, 0);
-                        viewer->addCoordinateSystem(0.1);
-                        viewer->initCameraParameters();
-                        // test_viewspace
-                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_viewspace(
+                        /* Show BBX with camera position. */
+                        pcl::visualization::PCLVisualizer::Ptr visualizer = std::make_shared<pcl::visualization::PCLVisualizer>(
+                                "Iteration" + to_string(iterations));
+                        visualizer->setBackgroundColor(0, 0, 0);
+                        visualizer->addCoordinateSystem(0.1);
+                        visualizer->initCameraParameters();
+                        // test_view_space
+                        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(
                                 new pcl::PointCloud<pcl::PointXYZRGB>);
-                        test_viewspace->is_dense = false;
-                        test_viewspace->points.resize(now_view_space->views.size());
-                        auto ptr = test_viewspace->points.begin();
+                        test_view_space->is_dense = false;
+                        test_view_space->points.resize(now_view_space->views.size());
+                        auto ptr = test_view_space->points.begin();
                         int needed = 0;
                         for (int i = 0; i < now_view_space->views.size(); i++) {
-                            (*ptr).x = now_view_space->views[i].init_pos(0);
-                            (*ptr).y = now_view_space->views[i].init_pos(1);
-                            (*ptr).z = now_view_space->views[i].init_pos(2);
+                            (*ptr).x = (float) now_view_space->views[i].init_pos(0);
+                            (*ptr).y = (float) now_view_space->views[i].init_pos(1);
+                            (*ptr).z = (float) now_view_space->views[i].init_pos(2);
                             // Visited points are recorded in blue
                             if (now_view_space->views[i].vis)
                                 (*ptr).r = 0, (*ptr).g = 0, (*ptr).b = 255;
@@ -310,8 +307,8 @@ int NBV_Planner::plan() {
                             ptr++;
                             needed++;
                         }
-                        test_viewspace->points.resize(needed);
-                        viewer->addPointCloud<pcl::PointXYZRGB>(test_viewspace, "test_viewspace");
+                        test_view_space->points.resize(needed);
+                        visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
                         bool best_have = false;
                         for (int i = 0; i < now_view_space->views.size(); i++) {
                             if (now_view_space->views[i].vis) {
@@ -328,24 +325,24 @@ int NBV_Planner::plan() {
                                 Y = view_pose_world * Y;
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(X(0), X(1), X(2)),
-                                                               255,
-                                                               0,
-                                                               0,
-                                                               "X" + to_string(i));
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(Y(0), Y(1), Y(2)),
-                                                               0,
-                                                               255,
-                                                               0,
-                                                               "Y" + to_string(i));
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(Z(0), Z(1), Z(2)),
-                                                               0,
-                                                               0,
-                                                               255,
-                                                               "Z" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(X(0), X(1), X(2)),
+                                                                   255,
+                                                                   0,
+                                                                   0,
+                                                                   "X" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(Y(0), Y(1), Y(2)),
+                                                                   0,
+                                                                   255,
+                                                                   0,
+                                                                   "Y" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(Z(0), Z(1), Z(2)),
+                                                                   0,
+                                                                   0,
+                                                                   255,
+                                                                   "Z" + to_string(i));
                             } else if (!best_have) {
                                 now_view_space->views[i].get_next_camera_pos(share_data->now_camera_pose_world,
                                                                              share_data->object_center_world);
@@ -360,30 +357,30 @@ int NBV_Planner::plan() {
                                 Y = view_pose_world * Y;
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(X(0), X(1), X(2)),
-                                                               255,
-                                                               0,
-                                                               0,
-                                                               "X" + to_string(i));
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(Y(0), Y(1), Y(2)),
-                                                               0,
-                                                               255,
-                                                               0,
-                                                               "Y" + to_string(i));
-                                viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
-                                                               pcl::PointXYZ(Z(0), Z(1), Z(2)),
-                                                               0,
-                                                               0,
-                                                               255,
-                                                               "Z" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(X(0), X(1), X(2)),
+                                                                   255,
+                                                                   0,
+                                                                   0,
+                                                                   "X" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(Y(0), Y(1), Y(2)),
+                                                                   0,
+                                                                   255,
+                                                                   0,
+                                                                   "Y" + to_string(i));
+                                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                                   pcl::PointXYZ(Z(0), Z(1), Z(2)),
+                                                                   0,
+                                                                   0,
+                                                                   255,
+                                                                   "Z" + to_string(i));
                                 best_have = true;
                             }
                         }
-                        viewer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_itreation");
-                        while (!viewer->wasStopped()) {
-                            viewer->spin();
+                        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
+                        while (!visualizer->wasStopped()) {
+                            visualizer->spin();
                             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
                         }
                     }
@@ -392,22 +389,21 @@ int NBV_Planner::plan() {
                         cout << "checking view " << i << endl;
                         if (now_view_space->views[i].vis)
                             continue;
-                        // if (!now_view_space->views[i].can_move) continue;
                         now_best_view = new View(now_view_space->views[i]);
                         max_utility = now_best_view->final_utility;
                         now_view_space->views[i].vis++;
                         now_view_space->views[i].can_move = true;
-                        cout << "choose the " << i << "th view." << endl;
+                        cout << "View " << i << " has been chosen." << endl;
                         break;
                     }
                     if (max_utility == -1) {
-                        cout << "Can't move to any viewport.Stop." << endl;
+                        cout << "Can't move to any viewpoint. Stop." << endl;
                         status = Over;
                         break;
                     }
-                    cout << " next best view pos is (" << now_best_view->init_pos(0) << ", "
+                    cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
-                    cout << " next best view final_utility is " << now_best_view->final_utility << endl;
+                    cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
@@ -417,7 +413,7 @@ int NBV_Planner::plan() {
         case WaitMoving:
             // virtual move
             if (share_data->over) {
-                cout << "Progress over.Saving octomap and cloud." << endl;
+                cout << "Progress over. Saving octomap and cloud." << endl;
                 status = Over;
                 break;
             }
@@ -465,7 +461,7 @@ void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr 
 void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations) {
     // Calculating keyframe camera poses
     share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();;
-    // Handling viewspace
+    // Handling view space
     (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
     // Save the results of intermediate iterations
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_mid(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -533,41 +529,42 @@ void create_views_information(Views_Information **now_views_information,
         if (share_data->method_of_IG == OursIG) {
             // Handling network streams and obtaining global optimisation functions
             auto *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
-                                                                    now_view_space,
-                                                                    *now_views_information,
-                                                                    nbv_plan->voxel_information,
-                                                                    share_data);
+                                                         now_view_space,
+                                                         *now_views_information,
+                                                         nbv_plan->voxel_information,
+                                                         share_data);
             set_cover_solver->solve();
+            /* Recover a set of view for the max coverage problem. */
             vector<int> coverage_view_id_set = set_cover_solver->get_view_id_set();
-            for (int i = 0; i < coverage_view_id_set.size(); i++)
-                now_view_space->views[coverage_view_id_set[i]].in_coverage[iterations] = 1;
+            for (int i: coverage_view_id_set)
+                now_view_space->views[i].in_coverage[iterations] = 1;
         }
         // Combined calculation of local greed and global optimization to produce viewpoint information entropy
         share_data->sum_local_information = 0;
         share_data->sum_global_information = 0;
         share_data->sum_robot_cost = 0;
-        for (int i = 0; i < now_view_space->views.size(); i++) {
-            share_data->sum_local_information += now_view_space->views[i].information_gain;
-            share_data->sum_global_information += now_view_space->views[i].get_global_information();
-            share_data->sum_robot_cost += now_view_space->views[i].robot_cost;
+        for (auto &view: now_view_space->views) {
+            share_data->sum_local_information += view.information_gain;
+            share_data->sum_global_information += view.get_global_information();
+            share_data->sum_robot_cost += view.robot_cost;
         }
         if (share_data->sum_local_information == 0)
-            cout << "full information is zero." << endl;
-        for (int i = 0; i < now_view_space->views.size(); i++) {
+            cout << "Full information is zero." << endl;
+        for (auto &view: now_view_space->views) {
             if (share_data->method_of_IG == OursIG)
-                now_view_space->views[i].final_utility =
-                        (1 - share_data->cost_weight) * now_view_space->views[i].information_gain /
+                view.final_utility =
+                        (1 - share_data->cost_weight) * view.information_gain /
                         share_data->sum_local_information +
-                        share_data->cost_weight * now_view_space->views[i].get_global_information() /
+                        share_data->cost_weight * view.get_global_information() /
                         share_data->sum_global_information;
             else if (share_data->method_of_IG == APORA)
-                now_view_space->views[i].final_utility = now_view_space->views[i].information_gain;
+                view.final_utility = view.information_gain;
             else
-                now_view_space->views[i].final_utility =
+                view.final_utility =
                         0.7 * (share_data->sum_local_information == 0
                                ? 0
-                               : now_view_space->views[i].information_gain / share_data->sum_local_information) +
-                        0.3 * (share_data->robot_cost_negative == true ? -1 : 1) * now_view_space->views[i].robot_cost /
+                               : view.information_gain / share_data->sum_local_information) +
+                        0.3 * (share_data->robot_cost_negative ? -1 : 1) * view.robot_cost /
                         share_data->sum_robot_cost;
         }
     }

@@ -51,8 +51,8 @@ public:
     void solve();
 
     /**
-     * Getter to the view_id_set parameter
-     * @return The View Id Set
+     * Getter to the view_id_set parameter.
+     * @return The ids of the views satisfying the set cover problem.
      */
     [[nodiscard]] vector<int> get_view_id_set() const;
 
