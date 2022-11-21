@@ -1,7 +1,5 @@
 #include "NBV_Planner.h"
 
-#include <memory>
-
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
     iterations = 0;
