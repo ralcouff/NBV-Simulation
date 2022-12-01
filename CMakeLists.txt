@@ -15,6 +15,7 @@ find_package(PCL 1.9.1 REQUIRED)
 
 find_package(octomap 1.9.1 REQUIRED)
 
+find_package(AliceVision REQUIRED)
 
 set(NBV_SIMULATION_SOURCES
         nbv_simulation/main.cpp
@@ -65,4 +66,7 @@ target_link_libraries(nbv_simulation PUBLIC
         ${OpenCV_LIBRARIES}
         ${PCL_LIBRARIES}
         ${OCTOMAP_LIBRARIES}
-        Boost::thread)
+        Boost::thread
+        aliceVision_sfmData
+        aliceVision_sfmDataIO
+        )

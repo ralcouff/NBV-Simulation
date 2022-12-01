@@ -38,6 +38,22 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs.release();
+    // Populating the SfM_Data from AliceVision
+    sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
+                                                                                       color_intrinsics.height,
+                                                                                       color_intrinsics.fx,
+                                                                                       color_intrinsics.fy,
+                                                                                       color_intrinsics.ppx -
+                                                                                       color_intrinsics.width / 2,
+                                                                                       color_intrinsics.ppy -
+                                                                                       color_intrinsics.height / 2,
+                                                                                       std::make_shared<aliceVision::camera::DistortionBrown>(
+                                                                                               color_intrinsics.coeffs[0],
+                                                                                               color_intrinsics.coeffs[1],
+                                                                                               color_intrinsics.coeffs[2],
+                                                                                               color_intrinsics.coeffs[3],
+                                                                                               color_intrinsics.coeffs[4])));
+    aliceVision::sfmDataIO::saveJSON(sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
     // Read the pcd file of the converted model
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
     cloud_pcd = temp_pcd;
@@ -163,4 +179,53 @@ Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &clo
                    << "_" << process_cnt << cd << "/" << name << ".ot";
     octomap_stream >> octomap_file;
     _octo_model->write(octomap_file);
+}
+
+void Share_Data::saveFile(const std::string &filename) {
+
+    bpt::ptree mainTree;
+
+    saveMatrix("version", Eigen::Vector3d(1, 0, 0), mainTree);
+    saveIntrinsic(mainTree);
+
+    savePose(mainTree);
+    bpt::write_json(filename, mainTree);
+}
+
+void Share_Data::saveIntrinsic(bpt::ptree &parentTree) {
+    bpt::ptree intrinsicTree;
+    bpt::ptree intriTree;
+
+    intrinsicTree.put("intrinsicId", 404);
+    intrinsicTree.put("width", color_intrinsics.width);
+    intrinsicTree.put("height", color_intrinsics.height);
+    intrinsicTree.put("sensorWidth", 0); //TODO
+    intrinsicTree.put("sensorHeight", 0); //TODO
+    Eigen::Vector2d principalPoint(color_intrinsics.ppx, color_intrinsics.ppy);
+    saveMatrix("principalPoint", principalPoint, intrinsicTree);
+    intrinsicTree.put("pxInitialFocalLength", color_intrinsics.fx); //FIXME : Using fx or fy ?
+
+    intriTree.push_back(std::make_pair("", intrinsicTree));
+    parentTree.add_child("intrinsics", intriTree);
+
+}
+
+void Share_Data::savePose(bpt::ptree &parentTree) {
+    bpt::ptree poTree;
+
+    for (int i = 0; i < best_views.size(); i++) {
+        bpt::ptree posesTree;
+        bpt::ptree poseTree;
+        bpt::ptree transformTree;
+        posesTree.put("poseId", i);
+        Eigen::Matrix3d rotation = best_views[i].pose.block<3, 3>(0, 0);
+        Eigen::Vector3d position = best_views[i].pose.block<3, 1>(0, 3);
+        saveMatrix("rotation", rotation, transformTree);
+        saveMatrix("center", position, transformTree);
+        poseTree.add_child("transform", transformTree);
+        poseTree.put("locked", 0);
+        posesTree.add_child("pose", poseTree);
+        poTree.push_back(std::make_pair("", posesTree));
+    }
+    parentTree.add_child("poses", poTree);
 }

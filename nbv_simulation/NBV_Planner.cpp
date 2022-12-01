@@ -390,6 +390,8 @@ int NBV_Planner::plan() {
                         now_best_view = new View(now_view_space->views[i]);
                         max_utility = now_best_view->final_utility;
                         now_view_space->views[i].vis++;
+                        share_data->best_views.push_back(*now_best_view);
+                        cout << "Best_Views : " << share_data->best_views.size() << " - Prout" << endl;
                         now_view_space->views[i].can_move = true;
                         cout << "View " << i << " has been chosen." << endl;
                         break;
@@ -402,6 +404,7 @@ int NBV_Planner::plan() {
                     cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
+                    share_data->saveFile("tartanpion.sfm");
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();

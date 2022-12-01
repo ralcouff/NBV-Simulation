@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 #include <filesystem>
 
 #include <octomap/ColorOcTree.h>
@@ -26,10 +29,14 @@
 #include <pcl/visualization/pcl_visualizer.h>
 
 #include <utility>
+#include <aliceVision/sfmData/SfMData.hpp>
+#include <aliceVision/sfmDataIO/jsonIO.hpp>
 
 #include "utils.cpp"
+#include "View.h"
 
 namespace fs = std::filesystem;
+namespace bpt = boost::property_tree;
 
 #define OursIG 0
 #define OA 1
@@ -126,6 +133,10 @@ public:
 
     std::string save_path;
 
+    std::vector<View> best_views{};
+
+    aliceVision::sfmData::SfMData sfm_data{};
+
     /**
      * Constructor of the Share_Data object
      * It is initialized with a file
@@ -202,6 +213,44 @@ public:
      */
     [[maybe_unused]] void
     save_octomap_to_disk(octomap::ColorOcTree *_octo_model, const std::string &cd, const std::string &name) const;
+
+    /**
+     * Save intrinsic parameters in a boost property tree.
+     */
+     void saveIntrinsic(bpt::ptree& parentTree);
+     /**
+      * Save poses
+      */
+    void savePose(bpt::ptree& parentTree);
+
+    /**
+     * Save the main file
+     * @param filename
+     */
+    void saveFile(const string &filename);
 };
+
+/**
+ * @brief Save an Eigen Matrix (or Vector) in a boost property tree.
+ * @param[in] name The node name ( "" = no name )
+ * @param[in] matrix The input matrix
+ * @param[out] parentTree The parent tree
+ * FIXME : Function from Alicevision
+ */
+template<typename Derived>
+inline void saveMatrix(const std::string& name, const Eigen::MatrixBase<Derived>& matrix, bpt::ptree& parentTree)
+{
+    bpt::ptree matrixTree;
+
+    const int size = matrix.size();
+    for(int i = 0; i < size; ++i)
+    {
+        bpt::ptree cellTree;
+        cellTree.put("", matrix(i));
+        matrixTree.push_back(std::make_pair("", cellTree));
+    }
+
+    parentTree.add_child(name, matrixTree);
+}
 
 #endif //NBV_SIMULATION_SHARE_DATA_H
