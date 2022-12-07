@@ -171,7 +171,7 @@ void View::get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eig
         }
     }
     Eigen::Vector3d eulerAngle = Rz_min.eulerAngles(0, 1, 2);
-    // cout << "Rotate getted with angel " << eulerAngle(0)<<","<< eulerAngle(1) << "," << eulerAngle(2)<<" and l2
+    // cout << "Rotate got with angle " << eulerAngle(0)<<","<< eulerAngle(1) << "," << eulerAngle(2)<<" and l2
     // "<< min_l2 << endl;
     Eigen::Matrix4d Rz(Eigen::Matrix4d::Identity(4, 4));
     Rz(0, 0) = Rz_min(0, 0);

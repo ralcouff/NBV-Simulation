@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <thread>
+#include <pcl/io/obj_io.h>
 
 #include "Perception_3D.h"
 #include "Voxel_Information.h"

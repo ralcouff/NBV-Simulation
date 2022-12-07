@@ -24,6 +24,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     for (auto &point: share_data->cloud_pcd->points) {
         if (fabs(point.x) >= 10 || fabs(point.y) >= 10 || fabs(point.z) >= 10) {
             unit = 0.001;
+//            unit = 1.0;
             cout << "Changing unit from <mm> to <m>." << endl;
             break;
         }
@@ -72,6 +73,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     if (predicted_size > 0.1) {
         scale = (float) (0.1 / predicted_size);
         cout << "Object large. Change scale to about 0.1 m." << endl;
+        cout << "Scale = " << scale << endl;
     }
     /* Converting the Point. */
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
@@ -106,6 +108,24 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
+    /* Convert and save a version of the rescaled model */
+
+    /* Add the initial PC to the sfm_data pipeline. */
+    float index = 0;
+    for (auto &pt: share_data->cloud_ground_truth->points){
+        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+        index++;
+    }
+    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
+    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+    transform_1(0,0) = scale*unit;
+    transform_1(1,1) = -scale*unit;
+    transform_1(2,2) = -scale*unit;
+    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
+    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
+    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
+    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
+    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
     share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
@@ -347,6 +367,7 @@ int NBV_Planner::plan() {
                                 Eigen::Matrix4d view_pose_world =
                                         (share_data->now_camera_pose_world * now_view_space->views[i].pose.inverse())
                                                 .eval();
+                                // cout << "VP_World : " << view_pose_world << endl;
                                 Eigen::Vector4d X(0.08, 0, 0, 1);
                                 Eigen::Vector4d Y(0, 0.08, 0, 1);
                                 Eigen::Vector4d Z(0, 0, 0.08, 1);
@@ -355,6 +376,14 @@ int NBV_Planner::plan() {
                                 Y = view_pose_world * Y;
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
+                                // cout << "O : " << O << endl;
+                                int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
+                                // TODO : Give a significative name to the view
+                                share_data->sfm_data.getViews().emplace(nb_nbv,std::make_shared<aliceVision::sfmData::View>("",nb_nbv,0,nb_nbv,share_data->color_intrinsics.width, share_data->color_intrinsics.height));
+                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(view_pose_world.block<3,3>(0,0).transpose(), O.block<3,1>(0,0));
+                                share_data->sfm_data.getPoses().emplace(nb_nbv, aliceVision::sfmData::CameraPose(transform, false));
+//                                cout << "Views : " << share_data->sfm_data.getViews() << endl;
+//                                cout << "Poses : " << share_data->sfm_data.getPoses().size() << endl;
                                 visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
                                                                    pcl::PointXYZ(X(0), X(1), X(2)),
                                                                    255,
@@ -404,10 +433,11 @@ int NBV_Planner::plan() {
                     cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
-                    share_data->saveFile("tartanpion.sfm");
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
                 status = WaitMoving;
             }
             break;
