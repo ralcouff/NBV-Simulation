@@ -108,24 +108,24 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
-    /* Convert and save a version of the rescaled model */
-
     /* Add the initial PC to the sfm_data pipeline. */
     float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points){
-        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+    for (auto &pt: share_data->cloud_ground_truth->points) {
+        share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
+                Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
         index++;
     }
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
+    /* Convert and save a version of the rescaled model */
+    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud(new pcl::PointCloud<pcl::PointXYZ>());
     Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-    transform_1(0,0) = scale*unit;
-    transform_1(1,1) = -scale*unit;
-    transform_1(2,2) = -scale*unit;
-    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
+    transform_1(0, 0) = scale * unit;
+    transform_1(1, 1) = -scale * unit;
+    transform_1(2, 2) = -scale * unit;
+    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud, transform_1);
     pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
-    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
+    pcl::PolygonMesh::Ptr mesh(new pcl::PolygonMesh());
     pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
-    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
+    pcl::io::saveOBJFile("rescaled_model.obj", *mesh);
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
     share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
@@ -378,10 +378,19 @@ int NBV_Planner::plan() {
                                 O = view_pose_world * O;
                                 // cout << "O : " << O << endl;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
-                                // TODO : Give a significative name to the view
-                                share_data->sfm_data.getViews().emplace(nb_nbv,std::make_shared<aliceVision::sfmData::View>("",nb_nbv,0,nb_nbv,share_data->color_intrinsics.width, share_data->color_intrinsics.height));
-                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(view_pose_world.block<3,3>(0,0).transpose(), O.block<3,1>(0,0));
-                                share_data->sfm_data.getPoses().emplace(nb_nbv, aliceVision::sfmData::CameraPose(transform, false));
+                                // TODO : Give a significant name to the view
+                                share_data->sfm_data.getViews().emplace(nb_nbv,
+                                                                        std::make_shared<aliceVision::sfmData::View>("",
+                                                                                                                     nb_nbv,
+                                                                                                                     0,
+                                                                                                                     nb_nbv,
+                                                                                                                     share_data->color_intrinsics.width,
+                                                                                                                     share_data->color_intrinsics.height));
+                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
+                                        view_pose_world.block<3, 3>(0, 0).transpose(), O.block<3, 1>(0, 0));
+                                share_data->sfm_data.getPoses().emplace(nb_nbv,
+                                                                        aliceVision::sfmData::CameraPose(transform,
+                                                                                                         false));
 //                                cout << "Views : " << share_data->sfm_data.getViews() << endl;
 //                                cout << "Poses : " << share_data->sfm_data.getPoses().size() << endl;
                                 visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
@@ -436,7 +445,8 @@ int NBV_Planner::plan() {
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm",
+                                                 aliceVision::sfmDataIO::ESfMData::ALL);
                 aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
                 status = WaitMoving;
             }
@@ -557,7 +567,7 @@ void create_views_information(Views_Information **now_views_information,
                     new Views_Information(share_data, nbv_plan->voxel_information, now_view_space, iterations);
         else
             (*now_views_information)->update(share_data, now_view_space, iterations);
-        if (share_data->method_of_IG == OursIG) {
+        if (share_data->method_of_IG == OursIG or share_data->method_of_IG == MyIG) {
             // Handling network streams and obtaining global optimisation functions
             auto *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
                                                          now_view_space,
@@ -582,7 +592,7 @@ void create_views_information(Views_Information **now_views_information,
         if (share_data->sum_local_information == 0)
             cout << "Full information is zero." << endl;
         for (auto &view: now_view_space->views) {
-            if (share_data->method_of_IG == OursIG)
+            if (share_data->method_of_IG == OursIG or share_data->method_of_IG == MyIG)
                 view.final_utility =
                         (1 - share_data->cost_weight) * view.information_gain /
                         share_data->sum_local_information +

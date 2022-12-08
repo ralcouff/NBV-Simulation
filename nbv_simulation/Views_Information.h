@@ -23,6 +23,7 @@ public:
     std::unordered_map<Ray, int, Ray_Hash> *rays_map;
     std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map;
     std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight; // P(obj_x) (eq. (2)
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight; // My quality
     long long max_num_of_rays;
     int ray_num;
     double alpha;
@@ -52,7 +53,6 @@ public:
      * @param iterations FIXME : unused
      */
     void update(Share_Data *share_data, View_Space *view_space, int iterations);
-
 };
 
 #endif //NBV_SIMULATION_VIEWS_INFORMATION_H

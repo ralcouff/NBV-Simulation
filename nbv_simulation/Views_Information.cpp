@@ -20,9 +20,10 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     // Define frontier
-    std::vector <octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
+    std::vector<octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
     double map_size = view_space->predicted_size;
     // Find edges in the map
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
@@ -31,6 +32,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         double occupancy = (*it).getOccupancy();
         // Record the mapping of key to occ rate in bbx for repeated queries
         (*occupancy_map)[it.getKey()] = occupancy;
+        (*quality_weight)[it.getKey()] = 1;
         if (voxel_information->is_unknown(occupancy)) {
             auto coordinate = it.getCoordinate();
             if (coordinate.x() >= view_space->object_center_world(0) - map_size &&
@@ -49,7 +51,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
     if (edge->points.size() != 0) {
-        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
@@ -72,6 +74,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     cout << "occupancy_map is " << occupancy_map->size() << endl;
     cout << "edge is " << edge->points.size() << endl;
     cout << "object_map is " << object_weight->size() << endl;
+    cout << "Quality_weight is " << quality_weight->size() << endl;
     // Calculate the maximum number of rays according to BBX, the maximum number of rays is the size of the
     //  surface area * volume, used to allocate pointer memory
     double pre_line_point = 2.0 * map_size / octomap_resolution;
@@ -81,7 +84,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     rays_info = new Ray_Information *[max_num_of_rays];
     cout << "full rays num is " << max_num_of_rays << endl;
     // Calculate the eight vertices of BBX for delineating the ray range
-    std::vector <Eigen::Vector4d> convex_3d;
+    std::vector<Eigen::Vector4d> convex_3d;
     double x1 = view_space->object_center_world(0) - map_size;
     double x2 = view_space->object_center_world(0) + map_size;
     double y1 = view_space->object_center_world(1) - map_size;
@@ -132,6 +135,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,
@@ -173,7 +177,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     voxel_information->octomap_resolution = octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
     // Clear viewpoint information
-    for (auto & view : view_space->views) {
+    for (auto &view: view_space->views) {
         view.information_gain = 0;
         view.voxel_num = 0;
     }
@@ -183,8 +187,8 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     delete object_weight;
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     // Update frontier
-    std::vector <octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
+    std::vector<octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
@@ -209,11 +213,11 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         pre_edge_cnt = 0x3f3f3f3f;
     if (edge->points.size() != 0) {
         // Calculating frontier
-        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
-        for (auto & point : points) {
+        for (auto &point: points) {
             octomap::OcTreeKey key;
             bool key_have = octo_model->coordToKeyChecked(point, key);
             if (key_have) {
@@ -258,7 +262,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
 
         // Calculate the eight vertices of BBX for delineating the ray range
-        std::vector <Eigen::Vector4d> convex_3d;
+        std::vector<Eigen::Vector4d> convex_3d;
         double x1 = view_space->object_center_world(0) - map_size;
         double x2 = view_space->object_center_world(0) + map_size;
         double y1 = view_space->object_center_world(1) - map_size;
@@ -309,6 +313,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,

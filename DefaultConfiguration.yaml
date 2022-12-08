@@ -1,7 +1,7 @@
 %YAML:1.0
 model_path: "../3d_models/"
 name_of_pcd: "Armadillo"
-method_of_IG : 0
+method_of_IG : 9
 octomap_resolution: 0.01
 ground_truth_resolution: 0.002
 num_of_max_iteration: 10

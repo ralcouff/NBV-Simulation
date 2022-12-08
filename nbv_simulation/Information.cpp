@@ -207,6 +207,7 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,
@@ -226,6 +227,10 @@ void ray_information_thread_process(
         }
         // Read node probability values
         double occupancy = hash_this_key->second;
+        /* Look up the key from the hash table */
+        auto hash_this_key_quality = (*quality_weight).find(*it);
+        /* Recover the quality of the node */
+        double quality = hash_this_key_quality->second;
         // Check to see if the current node is occupied
         bool voxel_occupied = voxel_information->is_occupied(occupancy);
         // Check to see if the node is unknown
@@ -244,6 +249,7 @@ void ray_information_thread_process(
         rays_info[ray_id]->information_gain = information_function(method,
                                                                    rays_info[ray_id]->information_gain,
                                                                    Voxel_Information::entropy(occupancy),
+                                                                   quality,
                                                                    rays_info[ray_id]->visible,
                                                                    voxel_unknown,
                                                                    rays_info[ray_id]->previous_voxel_unknown,
@@ -252,7 +258,7 @@ void ray_information_thread_process(
                                                                    on_object,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG)
+        if (method == OursIG or method == MyIG)
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         else
             rays_info[ray_id]->visible *= occupancy;
@@ -273,6 +279,7 @@ void ray_information_thread_process(
 inline double information_function(short &method,
                                    double &ray_information,
                                    double voxel_information,
+                                   double voxel_quality,
                                    double &visible,
                                    bool &is_unknown,
                                    bool &previous_voxel_unknown,
@@ -282,6 +289,13 @@ inline double information_function(short &method,
                                    double &object_visible) {
     double final_information = 0;
     switch (method) {
+        case MyIG:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information * voxel_quality;
+            } else {
+                final_information = ray_information;
+            }
+            break;
         case OursIG:
             if (is_unknown) {
                 final_information = ray_information + object * visible * voxel_information;
