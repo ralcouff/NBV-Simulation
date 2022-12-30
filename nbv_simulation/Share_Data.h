@@ -65,6 +65,7 @@ public:
     std::string yaml_file_path;
     std::string name_of_pcd;
     std::string nbv_net_path;
+    std::string sfm_file_path;
 
     // Number of viewpoints sampled at one time
     int num_of_views{};
