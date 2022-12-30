@@ -95,11 +95,19 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
             continue;
         // Read node probability values
         double occupancy = hash_this_key->second;
+        /* Get the voxel quality */
+        auto hash_this_key_quality = (*views_information->quality_weight).find(*it);
+        // Next if you can't find a node
+        if (hash_this_key_quality == (*views_information->quality_weight).end())
+            continue;
+        // Read node probability values
+        double quality = hash_this_key_quality->second;
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, views_information->object_weight);
         /* Statistical information entropy
         Definition 1 in Global Optimality*/
-        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy);
+//        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy);
+        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy) * quality;
         visible *= voxel_information->get_voxel_visible(occupancy);
         if (information_gain > share_data->interesting_threshold) {
             octomap::OcTreeKey node_y = *it;

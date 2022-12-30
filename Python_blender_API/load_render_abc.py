@@ -1,8 +1,54 @@
 import bpy
-import os
 import numpy as np
-import mathutils
 import argparse
+import math
+
+
+def createLight(name, type, radius):
+    light = bpy.data.lights.new(name, type)
+    light.shadow_soft_size = radius * 0.25
+
+    return light
+
+
+def createLightObj(name, light, loc=(0.0, 0.0, 0.0), rot=(0.0, 0.0, 0.0)):
+    radiansRot = tuple([math.radians(a) for a in rot])  # Convert angles to radians
+
+    obj = bpy.data.objects.new(name, light)  # Set object settings
+    obj.location = loc
+    obj.rotation_euler = radiansRot
+    obj.data.energy = 15
+
+    bpy.context.collection.objects.link(obj)
+
+    return obj
+
+
+def createLedLight(name):
+    return createLight(name, 'AREA', 3)
+
+
+def createLedLights(ledDistance, ledAngle):
+    # ---------- Create Led light ----------#
+    ledLight = createLedLight("LedLight")
+    LedFront = createLightObj("LedFront", ledLight, (0, -ledDistance, 0), (90, 0, 0))
+    LedBack = createLightObj("LedBack", ledLight, (0, ledDistance, 0), (-90, 0, 0))
+    LedLeft = createLightObj("LedLeft", ledLight, (ledDistance, 0, 0), (0, 90, 0))
+    LedRight = createLightObj("LedRight", ledLight, (-ledDistance, 0, 0), (0, -90, 0))
+    LedTop = createLightObj("LedTop", ledLight, (0, 0, ledDistance), (0, 0, 0))
+    LedBottom = createLightObj("LedBottom", ledLight, (0, 0, -ledDistance), (180, 0, 0))
+
+    # ---------- Rotate Led light by 37.5 degrees ----------#
+    ledLights = bpy.data.objects.new('LedLights', None)  # None for empty object
+    ledLights.location = (0, 0, 0)
+    ledLights.empty_display_type = 'PLAIN_AXES'
+
+    # Relinking
+    LedFront.parent = LedBack.parent = LedLeft.parent = LedRight.parent = LedTop.parent = LedBottom.parent = ledLights
+    ledLights.rotation_euler[2] = math.radians(ledAngle)
+
+    bpy.context.collection.objects.link(ledLights)
+
 
 # Parsing command line arguments
 argParser = argparse.ArgumentParser()
@@ -13,13 +59,10 @@ argParser.add_argument("-s", "--save", help="Save path for the images")
 
 args = argParser.parse_args()
 
-
 filename = args.file_abc
 file_loc = args.file_obj
 save_type = int(args.type)
-# unit = args.unit
-# scale = args.scale
-
+ledDistance = 2.0
 
 # Clean the scene
 context = bpy.context
@@ -28,28 +71,19 @@ for c in scene.collection.children:
     scene.collection.children.unlink(c)
 
 # Import the Alembic file
-# filename = "/home/alcoufr/dev/NBV-Simulation/cmake-build-debug-cmake-kitware/plop.abc"
 bpy.ops.wm.alembic_import(filepath=filename)
 
 # Loading the obj file
-# file_loc = "/home/alcoufr/dev/NBV-Simulation/3d_models/Armadillo.obj"
 imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
 obj_object = bpy.context.selected_objects[0]
 
-# # Rescaling the object
-# obj_object.data.transform(mathutils.Matrix((
-#     (scale * unit, 0, 0, 0),
-#     (0, -scale * unit, 0, 0),
-#     (0, 0, -scale * unit, 0),
-#     (0, 0, 0, 1))))
-# obj_object.data.update()
-
-light_data = bpy.data.lights.new('light', type='SUN')
-light = bpy.data.objects.new('light', light_data)
-bpy.context.collection.objects.link(light)
-light.rotation_euler = [-np.pi / 2, 0.0, (45 * np.pi) / 180]
-light.data.energy = 10
-light.data.angle = (130 * np.pi) / 180
+createLedLights(0.5, 37.5)
+# light_data = bpy.data.lights.new('light', type='SUN')
+# light = bpy.data.objects.new('light', light_data)
+# bpy.context.collection.objects.link(light)
+# light.rotation_euler = [-np.pi / 2, 0.0, (45 * np.pi) / 180]
+# light.data.energy = 10
+# light.data.angle = (130 * np.pi) / 180
 
 cameras = bpy.data.cameras
 bpy.context.scene.render.engine = 'BLENDER_EEVEE'
@@ -58,7 +92,7 @@ scene.render.image_settings.file_format = 'PNG'
 bpy.context.scene.cycles.device = 'GPU'
 bpy.data.worlds["World"].node_tree.nodes["Background"].inputs[0].default_value = (0.01, 0.01, 0.01, 1)
 
-if save_type == 0: # LAST
+if save_type == 0:  # LAST
     cam_max = -1
     for cam in cameras:
         try:
@@ -80,7 +114,7 @@ if save_type == 0: # LAST
     scene.render.filepath = args.save
     bpy.ops.render.render(write_still=1)
 
-elif save_type == 1: #ALL
+elif save_type == 1:  # ALL
     cameras = bpy.data.cameras
     for i, cam in enumerate(cameras):
         print(i)

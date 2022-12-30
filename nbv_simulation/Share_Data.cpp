@@ -58,17 +58,14 @@ Share_Data::Share_Data(std::string _config_file_path) {
     cloud_pcd = temp_pcd;
     cout << pcd_file_path + name_of_pcd + ".pcd" << endl;
     if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1) {
-        cout << "Can not read 3d model file. Check." << endl;
+        cout << "Can not read 3d model file. Trying to convert it." << endl;
+        if (pcl::io::loadOBJFile(pcd_file_path + name_of_pcd + ".obj", *cloud_pcd) == -1) {
+            cout << "No OBJ file found. Trying to open a ply file." << endl;
+            if (pcl::io::loadPLYFile(pcd_file_path + name_of_pcd + ".ply", *cloud_pcd) == -1) {
+            cout << "No PLY file found. Check" << endl;
+            }
+        }
     }
-/*    *//* Add the initial PC to the sfm_data pipeline. *//*
-    float i = 0;
-    for (auto &pt: cloud_pcd->points){
-        sfm_data.getLandmarks().emplace(i,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
-        i++;
-    }
-    aliceVision::sfmDataIO::saveJSON(sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
-    cout << "pcl_loaded" << endl;*/
-//    sfm_data.getLandmarks().emplace(0, aliceVision::sfmData::Landmark() {x, y, z})
     octo_model = new octomap::ColorOcTree(octomap_resolution);
     ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
     GT_sample = new octomap::ColorOcTree(octomap_resolution);
@@ -85,7 +82,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
     if (method_of_IG == 0)
         save_path += '_' + std::to_string(cost_weight);
-    cout << "pcd and yaml files read." << endl;
+    cout << "PCD and Yaml files read." << endl;
     cout << "save_path is: " << save_path << endl;
     srand(clock());
 }

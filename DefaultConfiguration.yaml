@@ -1,6 +1,6 @@
 %YAML:1.0
 model_path: "../3d_models/"
-name_of_pcd: "Armadillo"
+name_of_pcd: "building"
 method_of_IG : 9
 octomap_resolution: 0.01
 ground_truth_resolution: 0.002

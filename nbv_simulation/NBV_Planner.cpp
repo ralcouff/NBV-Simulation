@@ -108,7 +108,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
-    /* Add the initial PC to the sfm_data pipeline. */
+    /* Add the initial PC to the sfm_data file. */
     float index = 0;
     for (auto &pt: share_data->cloud_ground_truth->points) {
         share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
@@ -116,16 +116,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         index++;
     }
     /* Convert and save a version of the rescaled model */
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-    transform_1(0, 0) = scale * unit;
-    transform_1(1, 1) = -scale * unit;
-    transform_1(2, 2) = -scale * unit;
-    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud, transform_1);
-    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
-    pcl::PolygonMesh::Ptr mesh(new pcl::PolygonMesh());
-    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
-    pcl::io::saveOBJFile("rescaled_model.obj", *mesh);
+    save_rescaled(scale, unit, share_data);
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
     share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
@@ -287,7 +278,7 @@ int NBV_Planner::plan() {
                     // Search algorithms
                     /* Sorting the viewpoints according to their utility. */
                     sort(now_view_space->views.begin(), now_view_space->views.end(), view_utility_compare);
-                    // informed_viewspace
+                    // informed_view_space
                     if (share_data->show) {
                         /* Show BBX with camera position. */
                         pcl::visualization::PCLVisualizer::Ptr visualizer = std::make_shared<pcl::visualization::PCLVisualizer>(
@@ -429,7 +420,7 @@ int NBV_Planner::plan() {
                         max_utility = now_best_view->final_utility;
                         now_view_space->views[i].vis++;
                         share_data->best_views.push_back(*now_best_view);
-                        cout << "Best_Views : " << share_data->best_views.size() << " - Prout" << endl;
+                        cout << "Best_Views : " << share_data->best_views.size() << endl;
                         now_view_space->views[i].can_move = true;
                         cout << "View " << i << " has been chosen." << endl;
                         break;
@@ -445,9 +436,12 @@ int NBV_Planner::plan() {
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm",
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, share_data->save_path + "/" + share_data->name_of_pcd + ".sfm",
                                                  aliceVision::sfmDataIO::ESfMData::ALL);
-                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::Save(share_data->sfm_data,
+                                             share_data->save_path + "/" + share_data->name_of_pcd + ".abc",
+                                             aliceVision::sfmDataIO::ESfMData::ALL);
+                generate_images(iterations, false, share_data);
                 status = WaitMoving;
             }
             break;
@@ -501,7 +495,7 @@ void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr 
 
 void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations) {
     // Calculating keyframe camera poses
-    share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();;
+    share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     // Handling view space
     (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
     // Save the results of intermediate iterations
@@ -626,4 +620,61 @@ void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *sha
         viewer->spin();
         boost::this_thread::sleep(boost::posix_time::microseconds(100000));
     }
+}
+
+void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
+    // TODO : Make global variables in Share Data Object
+    std::string path_to_abc = share_data->save_path + "/" + share_data->name_of_pcd + ".abc";
+    std::string path_to_obj_rescaled = share_data->save_path + "/" + share_data->name_of_pcd + "_rescaled" + ".obj";
+    std::string path_to_img_folder = share_data->save_path + "/img/";
+    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+    std::string python_script_folder = "../Python_blender_API/";
+
+    std::string script_name = python_script_folder + "load_render_abc.py";
+    std::string parameters =
+            "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
+            " -s " + path_to_img_folder + share_data->name_of_pcd + "_" + to_string(iteration) + ".png";
+    std::string command = python_interpreter + " " + script_name + " " + parameters;
+    system(command.c_str());
+}
+
+void save_rescaled(double scale, double unit, Share_Data *share_data) {
+    /* Convert and save a version of the rescaled model */
+    string filename = share_data->name_of_pcd + "_rescaled";
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+//    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+//    transform_1(0, 0) = scale * unit;
+//    transform_1(1, 1) = -scale * unit;
+//    transform_1(2, 2) = -scale * unit;
+//    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud, transform_1);
+//    pcl::io::savePLYFile(filename + ".ply", *scaled_cloud);
+//    pcl::PolygonMesh::Ptr mesh(new pcl::PolygonMesh());
+//    pcl::io::loadPLYFile(filename + ".ply", *mesh);
+//    pcl::io::saveOBJFile(filename + ".obj", *mesh);
+
+    /* Saving the rescaled cloud with Python */
+    // TODO : Add python variables to the Share Data object
+    // TODO : Problem if no mtl given
+    std::string path_to_obj = share_data->pcd_file_path + share_data->name_of_pcd + ".obj";
+    std::string path_to_obj_rescaled = share_data->save_path + "/" + filename + ".obj";
+    if (std::filesystem::exists(path_to_obj_rescaled)) {
+        cout << "The file has already been rescaled" << endl;
+    } else if (unit * scale == 1) {
+        cout << "The file doesn't need to be rescaled" << endl;
+        std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
+        system(command.c_str());
+        command = "cp " + share_data->pcd_file_path + share_data->name_of_pcd + ".mtl " + share_data->save_path + "/" + filename + ".mtl";
+        system(command.c_str());
+    } else {
+        std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+        std::string python_script_folder = "../Python_blender_API/";
+        std::string script_name = python_script_folder + "rescale_obj.py";
+        std::string parameters =
+                "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
+                to_string(scale) + " -s " + path_to_obj_rescaled;
+        std::string command = python_interpreter + " " + script_name + " " + parameters;
+        system(command.c_str());
+    }
+
+
 }

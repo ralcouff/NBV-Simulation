@@ -12,6 +12,9 @@ imported_object = bpy.ops.import_scene.obj(filepath=file_loc)
 obj_object = bpy.context.selected_objects[0]
 
 # Set some lights
+light = bpy.data.lights.new('LedLight', 'AREA', 3)
+light.shadow_soft_size = 0.75
+
 light_data = bpy.data.lights.new('light', type='SUN')
 light = bpy.data.objects.new('light', light_data)
 light.location = (3, 4, -5)
