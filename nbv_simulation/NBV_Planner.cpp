@@ -626,7 +626,7 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
     // TODO : Make global variables in Share Data Object
     std::string path_to_abc = share_data->save_path + "/" + share_data->name_of_pcd + ".abc";
     std::string path_to_obj_rescaled = share_data->save_path + "/" + share_data->name_of_pcd + "_rescaled" + ".obj";
-    std::string path_to_img_folder = share_data->save_path + "/img/";
+    std::string path_to_img_folder = share_data->save_path + "/img2/";
     std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
     std::string python_script_folder = "../Python_blender_API/";
 

@@ -137,6 +137,26 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &po
     return (double) valid_points / (double) points.size();
 }
 
+double View_Space::read_sfm_views(int i) {
+    aliceVision::sfmData::SfMData sfm_input_data{};
+    aliceVision::sfmDataIO::Load(sfm_input_data,share_data->sfm_file_path,aliceVision::sfmDataIO::ESfMData::ALL);
+    for (auto & it : sfm_input_data.getPoses()) {
+        auto transform = it.second.getTransform();
+/*        cout << "Prout c nul" << endl;
+        cout << transform.rotation() << endl;
+        cout << transform.center() << endl;*/
+        View view = View(transform.center());
+        view.vis++;
+        if (!valid_view(view))
+            cout << "check SFM init view." << endl;
+        views.push_back(view);
+        views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
+        i++;
+    }
+    cout << "Number of views in SfM Input : " << sfm_input_data.getPoses().size() << endl;
+    return i;
+}
+
 void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     auto now_time = clock();
     /* FIXME Redundant with NBV_Planner:40 */
@@ -185,6 +205,7 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     views.push_back(view);
     views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
     viewnum++;
+    viewnum = read_sfm_views(viewnum);
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
         double x = get_random_coordinate(object_center_world(0) - predicted_size * 4,

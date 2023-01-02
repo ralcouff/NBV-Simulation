@@ -79,11 +79,16 @@ public:
                 const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud);
 
     /**
-     * Adding the BBOx of the object to a PCLVisualizer in green
+     * Adding the BBOX of the object to a PCLVisualizer in green
      * @param visualizer The PCLVisualizer onto which we want to display the bbox
      */
     void add_bbx_to_cloud(const pcl::visualization::PCLVisualizer::Ptr &visualizer);
 
+    /**
+     * Reading the SFM input file and loading the set of already used views
+     * @param i The number of views already added
+     */
+    double read_sfm_views(int i);
 };
 
 void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
