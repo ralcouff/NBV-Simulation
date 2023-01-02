@@ -66,6 +66,7 @@ public:
     std::string name_of_pcd;
     std::string nbv_net_path;
     std::string sfm_file_path;
+    std::string quality_file_path;
 
     // Number of viewpoints sampled at one time
     int num_of_views{};
@@ -142,6 +143,7 @@ public:
     std::string save_path;
 
     std::vector<View> best_views{};
+    std::vector<float> vertex_quality{};
 
     aliceVision::sfmData::SfMData sfm_data{};
 

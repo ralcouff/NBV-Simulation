@@ -30,3 +30,4 @@ color_p1: -2.1210000850260258e-03
 color_p2: 0.
 depth_scale: 1.0000000474974513e-03
 input_sfm_file: "../3d_models/building.sfm"
+input_quality_file: "../3d_models/building.qlt"

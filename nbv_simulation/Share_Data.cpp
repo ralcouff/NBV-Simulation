@@ -38,6 +38,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs["input_sfm_file"] >> sfm_file_path;
+    fs["input_quality_file"] >> quality_file_path;
     fs.release();
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
@@ -83,6 +84,15 @@ Share_Data::Share_Data(std::string _config_file_path) {
     save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
     if (method_of_IG == 0)
         save_path += '_' + std::to_string(cost_weight);
+    string line;
+    ifstream quality_file(quality_file_path);
+    if (quality_file.is_open()){
+        while (getline(quality_file,line)){
+            vertex_quality.push_back(std::stof(line));
+        }
+        quality_file.close();
+        cout << "Quality file has been read" << endl;
+    }
     cout << "PCD and Yaml files read." << endl;
     cout << "save_path is: " << save_path << endl;
     srand(clock());

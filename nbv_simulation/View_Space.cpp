@@ -14,11 +14,11 @@ View_Space::View_Space(int _id,
     voxel_information = _voxel_information;
     viewer = share_data->viewer;
     views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
-    /* Check if the View Space has already been generated */
+/*    *//* Check if the View Space has already been generated *//*
     ifstream fin(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
-    /* If it has been generated, we read the View Space file*/
+    *//* If it has been generated, we read the View Space file*//*
     if (fin.is_open()) {
-        /* Presence of a collection of read-on viewpoints for documents. */
+        *//* Presence of a collection of read-on viewpoints for documents. *//*
         int num;
         fin >> num;
         if (num != num_of_views)
@@ -45,17 +45,17 @@ View_Space::View_Space(int _id,
         }
         cout << "View Space read." << endl;
     } else {
-        /* The View Space file hasn't been generated, we generate it. */
-        /* Get Point Cloud BBOX. */
-        /* Generate a point vector containing the points of the input cloud. */
+        *//* The View Space file hasn't been generated, we generate it. *//*
+        *//* Get Point Cloud BBOX. *//*
+        *//* Generate a point vector containing the points of the input cloud. *//*
         vector<Eigen::Vector3d> points;
         for (auto &ptr: cloud->points) {
             Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
             points.push_back(pt);
         }
-        /* Viewpoint Generator. */
+        *//* Viewpoint Generator. *//*
         get_view_space(points);
-        /* Writing in file the generated View Space. */
+        *//* Writing in file the generated View Space. *//*
         Share_Data::access_directory(share_data->pcd_file_path);
         ofstream fout(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
         fout << num_of_views << '\n';
@@ -64,7 +64,26 @@ View_Space::View_Space(int _id,
         for (int i = 0; i < num_of_views; i++)
             fout << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
         cout << "View Space acquired." << endl;
+    }*/
+    /* The View Space file hasn't been generated, we generate it. */
+    /* Get Point Cloud BBOX. */
+    /* Generate a point vector containing the points of the input cloud. */
+    vector<Eigen::Vector3d> points;
+    for (auto &ptr: cloud->points) {
+        Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
+        points.push_back(pt);
     }
+    /* Viewpoint Generator. */
+    get_view_space(points);
+    /* Writing in file the generated View Space. */
+    Share_Data::access_directory(share_data->pcd_file_path);
+    ofstream fout_view_space(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
+    fout_view_space << num_of_views << '\n';
+    fout_view_space << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
+    fout_view_space << predicted_size << '\n';
+    for (int i = 0; i < num_of_views; i++)
+        fout_view_space << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
+    cout << "View Space acquired." << endl;
     // Update the data area data
     share_data->object_center_world = object_center_world;
     share_data->predicted_size = predicted_size;
@@ -137,14 +156,11 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &po
     return (double) valid_points / (double) points.size();
 }
 
-double View_Space::read_sfm_views(int i) {
+int View_Space::read_sfm_views(int i) {
     aliceVision::sfmData::SfMData sfm_input_data{};
     aliceVision::sfmDataIO::Load(sfm_input_data,share_data->sfm_file_path,aliceVision::sfmDataIO::ESfMData::ALL);
     for (auto & it : sfm_input_data.getPoses()) {
         auto transform = it.second.getTransform();
-/*        cout << "Prout c nul" << endl;
-        cout << transform.rotation() << endl;
-        cout << transform.center() << endl;*/
         View view = View(transform.center());
         view.vis++;
         if (!valid_view(view))
@@ -239,7 +255,7 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     }
     cout << "view set is " << views_key_set->size() << endl;
     cout << views.size() << " views getted with sample_times " << sample_num << endl;
-    cout << "view_space getted form octomap with executed time " << clock() - now_time << " ms." << endl;
+    cout << "view_space getted from octomap with executed time " << clock() - now_time << " ms." << endl;
 }
 
 void View_Space::update(int _id,

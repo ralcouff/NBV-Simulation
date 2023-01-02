@@ -108,6 +108,9 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
+    cout << "Number of points in input cloud : " << share_data->cloud_pcd->points.size() << endl;
+    cout << "Number of nodes in GT octree : " << share_data->GT_sample->calcNumNodes() << endl;
+    cout << "Size of GT octree : " << share_data->GT_sample->size() << endl;
     /* Add the initial PC to the sfm_data file. */
     float index = 0;
     for (auto &pt: share_data->cloud_ground_truth->points) {
@@ -119,7 +122,15 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     save_rescaled(scale, unit, share_data);
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
+    int casque = 0;
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->ground_truth_model->begin_leafs(), end = share_data->ground_truth_model->end_leafs(); it != end; ++it) {
+        double prout = it->getOccupancy();
+//        cout << "Occupancy : " << prout << endl;
+        ++casque;
+    }
+    cout << "Nb point with occupancy : " << casque << endl;
     share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
+    cout << "Number of points in ground_truth_model octree : "<< share_data->ground_truth_model->size() << endl;
     /* GT_sample_voxels update. */
     share_data->GT_sample->updateInnerOccupancy();
     share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
