@@ -21,18 +21,44 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+//    quality_weight = share_data->quality_weight;
     // Define frontier
     std::vector<octomap::point3d> points;
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
     double map_size = view_space->predicted_size;
     // Find edges in the map
+//    for (auto& et : *quality_weight){
+//        if (et.second != 1.0){
+//            if (et.second != 0){
+//                cout << "Patatou : " << et.second << endl;
+//            }
+//        }
+//    }
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
         double occupancy = (*it).getOccupancy();
         // Record the mapping of key to occ rate in bbx for repeated queries
         (*occupancy_map)[it.getKey()] = occupancy;
-        (*quality_weight)[it.getKey()] = 1;
+        std::vector<int> indices = (*share_data->indices_in_voxel)[it.getKey()];
+        if (indices.empty()){
+            (*quality_weight)[it.getKey()] = 0.01;
+            cout << "Yes" << endl;
+        } else {
+            float mini = 1;
+            for (int ind : indices){
+                mini = std::min(mini,share_data->vertex_quality[ind]);
+            }
+            (*quality_weight)[it.getKey()] = 1;
+        }
+//        cout << "Indices : " << indices.size() << endl;
+//        cout << "Occupancy : " << occupancy << endl;
+//        (*quality_weight)[it.getKey()] = 1;
+//        if ((*share_data->quality_weight)[it.getKey()] != 1.0){
+//            if ((*share_data->quality_weight)[it.getKey()] != 0){
+//                cout << "Prout a : " << (*share_data->quality_weight)[it.getKey()] << endl;
+//            }
+//        }
         if (voxel_information->is_unknown(occupancy)) {
             auto coordinate = it.getCoordinate();
             if (coordinate.x() >= view_space->object_center_world(0) - map_size &&

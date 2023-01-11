@@ -231,6 +231,9 @@ void ray_information_thread_process(
         auto hash_this_key_quality = (*quality_weight).find(*it);
         /* Recover the quality of the node */
         double quality = hash_this_key_quality->second;
+        if (quality >= 0.5) {
+            cout << "Quality : " << quality << endl;
+        }
         // Check to see if the current node is occupied
         bool voxel_occupied = voxel_information->is_occupied(occupancy);
         // Check to see if the node is unknown

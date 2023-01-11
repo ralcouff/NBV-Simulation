@@ -24,7 +24,6 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     for (auto &point: share_data->cloud_pcd->points) {
         if (fabs(point.x) >= 10 || fabs(point.y) >= 10 || fabs(point.z) >= 10) {
             unit = 0.001;
-//            unit = 1.0;
             cout << "Changing unit from <mm> to <m>." << endl;
             break;
         }
@@ -105,6 +104,21 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
                 share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
             }
+        }
+        /* Filling the quality_weight map. */
+        octomap::OcTreeKey key_qlt;
+        bool key_have_qlt =
+                share_data->octo_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key_qlt);
+        if (key_have_qlt) {
+            if ((*share_data->indices_in_voxel)[key].empty()){
+                (*share_data->quality_weight)[key] = 1.0;
+            }
+            (*share_data->indices_in_voxel)[key].push_back(i);
+            float mini = std::min((float)(*share_data->quality_weight)[key],(float) share_data->vertex_quality[i]);
+            (*share_data->quality_weight)[key] = mini;
+//            if ((*share_data->quality_weight)[key] != 1.0){
+//                cout << "Quality_weight " << i << " : " << (*share_data->quality_weight)[key] << endl;
+//            }
         }
         ptr++;
     }

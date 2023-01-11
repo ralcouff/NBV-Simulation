@@ -6,7 +6,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include <algorithm>
 #include <filesystem>
+#include <unordered_map>
 
 #include <octomap/ColorOcTree.h>
 #include <octomap/octomap.h>
@@ -144,6 +146,9 @@ public:
 
     std::vector<View> best_views{};
     std::vector<float> vertex_quality{};
+
+    std::unordered_map<octomap::OcTreeKey, std::vector<int>, octomap::OcTreeKey::KeyHash> *indices_in_voxel{};
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight{}; // My quality
 
     aliceVision::sfmData::SfMData sfm_data{};
 

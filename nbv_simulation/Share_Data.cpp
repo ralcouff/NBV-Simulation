@@ -69,6 +69,8 @@ Share_Data::Share_Data(std::string _config_file_path) {
         }
     }
     octo_model = new octomap::ColorOcTree(octomap_resolution);
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    indices_in_voxel = new std::unordered_map<octomap::OcTreeKey, std::vector<int>, octomap::OcTreeKey::KeyHash>();
     ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
     GT_sample = new octomap::ColorOcTree(octomap_resolution);
     if (num_of_max_flow_node == -1)
@@ -93,6 +95,23 @@ Share_Data::Share_Data(std::string _config_file_path) {
         quality_file.close();
         cout << "Quality file has been read" << endl;
     }
+//    octomap::OcTreeKey key;
+//    int i = 0;
+//    for (auto &p : cloud_pcd->points){
+//        bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
+//        if (key_have) {
+//            if ((indices_in_voxel)[key].empty()){
+//                (*quality_weight)[key] = 1.0;
+//            }
+//            (indices_in_voxel)[key].push_back(i);
+//            float mini = std::min((float)(*quality_weight)[key],(float)vertex_quality[i]);
+//            (*quality_weight)[key] = mini;
+//            if ((*quality_weight)[key] != 1.0){
+//                cout << "Quality_weight " << i << " : " << (*quality_weight)[key] << endl;
+//            }
+//        }
+//        i++;
+//    }
     cout << "PCD and Yaml files read." << endl;
     cout << "save_path is: " << save_path << endl;
     srand(clock());

@@ -3,7 +3,7 @@ model_path: "../3d_models/"
 name_of_pcd: "building"
 method_of_IG: 9
 octomap_resolution: 0.01
-ground_truth_resolution: 0.002
+ground_truth_resolution: 0.01
 num_of_max_iteration: 10
 show: 1
 move_wait: 0
