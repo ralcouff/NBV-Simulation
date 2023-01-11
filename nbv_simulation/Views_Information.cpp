@@ -42,13 +42,13 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         (*occupancy_map)[it.getKey()] = occupancy;
         std::vector<int> indices = (*share_data->indices_in_voxel)[it.getKey()];
         if (indices.empty()){
-            (*quality_weight)[it.getKey()] = 0.01;
+            (*quality_weight)[it.getKey()] = 0.05;
             cout << "Yes" << endl;
         } else {
-            float mini = 1;
-            for (int ind : indices){
-                mini = std::min(mini,share_data->vertex_quality[ind]);
-            }
+//            float mini = 1;
+//            for (int ind : indices){
+//                mini = std::min(mini,share_data->vertex_quality[ind]);
+//            }
             (*quality_weight)[it.getKey()] = 1;
         }
 //        cout << "Indices : " << indices.size() << endl;
