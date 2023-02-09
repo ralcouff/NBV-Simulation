@@ -231,9 +231,9 @@ void ray_information_thread_process(
         auto hash_this_key_quality = (*quality_weight).find(*it);
         /* Recover the quality of the node */
         double quality = hash_this_key_quality->second;
-        if (quality >= 0.5) {
-            cout << "Quality : " << quality << endl;
-        }
+//        if (quality >= 0.5) {
+//            cout << "Quality : " << quality << endl;
+//        }
         // Check to see if the current node is occupied
         bool voxel_occupied = voxel_information->is_occupied(occupancy);
         // Check to see if the node is unknown
@@ -291,12 +291,18 @@ inline double information_function(short &method,
                                    double &object,
                                    double &object_visible) {
     double final_information = 0;
+//    if (voxel_quality >= 0.5){
+//        cout << "Voxel_quality : " << voxel_quality << endl;
+//    }
     switch (method) {
         case MyIG:
             if (is_unknown) {
-                final_information = ray_information + object * visible * voxel_information * voxel_quality;
+                final_information = ray_information + object * visible * voxel_information;
+//                final_information = ray_information + object * visible * voxel_information * voxel_quality;
+//                final_information = voxel_quality;
             } else {
                 final_information = ray_information;
+//                final_information = voxel_quality;
             }
             break;
         case OursIG:

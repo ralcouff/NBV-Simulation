@@ -41,16 +41,31 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         // Record the mapping of key to occ rate in bbx for repeated queries
         (*occupancy_map)[it.getKey()] = occupancy;
         std::vector<int> indices = (*share_data->indices_in_voxel)[it.getKey()];
+        double quality;
         if (indices.empty()){
-            (*quality_weight)[it.getKey()] = 0.05;
-            cout << "Yes" << endl;
+            quality = 1.0;
+//            cout << "Yes" << endl;
         } else {
+            cout << "Nope" << endl;
 //            float mini = 1;
 //            for (int ind : indices){
 //                mini = std::min(mini,share_data->vertex_quality[ind]);
 //            }
-            (*quality_weight)[it.getKey()] = 1;
+            float mini_ind = 10;
+            for (int i : indices){
+                mini_ind = std::min(mini_ind,share_data->vertex_quality[i]);
+            }
+//            cout << "Mini ind : " << mini_ind << endl;
+            if (mini_ind < 0.8){
+                quality = 10;
+            } else {
+                quality = 1.0;
+            }
         }
+        if (quality > 2){
+            cout << "Pkzdoijfjzqh : " << quality << endl;
+        }
+        (*quality_weight)[it.getKey()] = quality;
 //        cout << "Indices : " << indices.size() << endl;
 //        cout << "Occupancy : " << occupancy << endl;
 //        (*quality_weight)[it.getKey()] = 1;
@@ -76,7 +91,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     pre_edge_cnt = 0x3f3f3f3f;
     edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
-    if (edge->points.size() != 0) {
+    if (!edge->points.empty()) {
         pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);

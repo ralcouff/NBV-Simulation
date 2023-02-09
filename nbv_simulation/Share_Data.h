@@ -90,18 +90,20 @@ public:
     std::atomic<int> valid_clouds{};
     // Point cloud group
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clouds;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_pcd;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground_truth;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_final;
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_pcd;
+//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_ground_truth;
+//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_final;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr working_cloud;
     bool move_wait{};
 
     // Eight Forks Map
     octomap::ColorOcTree *octo_model;
     // octomap::ColorOcTree* cloud_model;
-    octomap::ColorOcTree *ground_truth_model;
-    octomap::ColorOcTree *GT_sample;
+//    octomap::ColorOcTree *ground_truth_model;
+//    octomap::ColorOcTree *GT_sample;
     double octomap_resolution{};
-    double ground_truth_resolution{};
+//    double ground_truth_resolution{};
     double map_size{};
     double p_unknown_upper_bound{}; //! Upper bound for voxels to still be considered uncertain. Default: 0.97.
     double p_unknown_lower_bound{}; //! Lower bound for voxels to still be considered uncertain. Default: 0.12.
@@ -120,8 +122,8 @@ public:
     int method_of_IG{};
     pcl::visualization::PCLVisualizer::Ptr viewer;
 
-    double stop_thresh_map{};
-    double stop_thresh_view{};
+//    double stop_thresh_map{};
+//    double stop_thresh_view{};
 
     double skip_coefficient{};
 
@@ -144,6 +146,7 @@ public:
 
     std::string save_path;
 
+    std::vector<View> initial_views{};
     std::vector<View> best_views{};
     std::vector<float> vertex_quality{};
 

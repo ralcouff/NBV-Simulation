@@ -12,16 +12,16 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Making sure the save_path exists. */
     Share_Data::access_directory(share_data->save_path);
     /* GT cloud */
-    share_data->cloud_ground_truth->is_dense = false;
-    share_data->cloud_ground_truth->points.resize(share_data->cloud_pcd->points.size());
-    share_data->cloud_ground_truth->width = share_data->cloud_pcd->points.size();
-    share_data->cloud_ground_truth->height = 1;
+    share_data->working_cloud->is_dense = false;
+    share_data->working_cloud->points.resize(share_data->input_cloud->points.size());
+    share_data->working_cloud->width = share_data->input_cloud->points.size();
+    share_data->working_cloud->height = 1;
     /* Creating iterators to the points of GT_cloud (ptr) and PCD_cloud (p). */
-    auto ptr = share_data->cloud_ground_truth->points.begin();
-    auto p = share_data->cloud_pcd->points.begin();
+    auto ptr = share_data->working_cloud->points.begin();
+    auto p = share_data->input_cloud->points.begin();
     /* If the point cloud is too big we change the unit. */
     float unit = 1.0;
-    for (auto &point: share_data->cloud_pcd->points) {
+    for (auto &point: share_data->input_cloud->points) {
         if (fabs(point.x) >= 10 || fabs(point.y) >= 10 || fabs(point.z) >= 10) {
             unit = 0.001;
             cout << "Changing unit from <mm> to <m>." << endl;
@@ -30,7 +30,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     }
     /* Check the size of the object and scale it uniformly to about 0.15m. */
     vector<Eigen::Vector3d> points;
-    for (auto &point: share_data->cloud_pcd->points) {
+    for (auto &point: share_data->input_cloud->points) {
         Eigen::Vector3d pt(point.x * unit, point.y * unit, point.z * unit);
         points.push_back(pt);
     }
@@ -75,36 +75,48 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         cout << "Scale = " << scale << endl;
     }
     /* Converting the Point. */
-    for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
+    for (int i = 0; i < share_data->input_cloud->points.size(); i++, p++) {
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
         (*ptr).z = (*p).z * scale * unit;
         (*ptr).b = 168;
         (*ptr).g = 168;
         (*ptr).r = 168;
-        /* Filling the GT octree. */
+        /* Filling the octo_model. */
         octomap::OcTreeKey key;
         bool key_have =
-                share_data->ground_truth_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
+                share_data->octo_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
         if (key_have) {
-            octomap::ColorOcTreeNode *voxel = share_data->ground_truth_model->search(key);
+            octomap::ColorOcTreeNode *voxel = share_data->octo_model->search(key);
             if (voxel == nullptr) {
-                share_data->ground_truth_model->setNodeValue(
-                        key, share_data->ground_truth_model->getProbHitLog(), true);
-                share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
+                share_data->octo_model->setNodeValue(
+                        key, share_data->octo_model->getProbHitLog(), true);
+                share_data->octo_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
             }
         }
-        /* Filling the GT_Sample octree. */
-        octomap::OcTreeKey key_sp;
-        bool key_have_sp =
-                share_data->GT_sample->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key_sp);
-        if (key_have_sp) {
-            octomap::ColorOcTreeNode *voxel_sp = share_data->GT_sample->search(key_sp);
-            if (voxel_sp == nullptr) {
-                share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
-                share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
-            }
-        }
+//        /* Filling the GT octree. */
+//        octomap::OcTreeKey key;
+//        bool key_have =
+//                share_data->ground_truth_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
+//        if (key_have) {
+//            octomap::ColorOcTreeNode *voxel = share_data->ground_truth_model->search(key);
+//            if (voxel == nullptr) {
+//                share_data->ground_truth_model->setNodeValue(
+//                        key, share_data->ground_truth_model->getProbHitLog(), true);
+//                share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
+//            }
+//        }
+//        /* Filling the GT_Sample octree. */
+//        octomap::OcTreeKey key_sp;
+//        bool key_have_sp =
+//                share_data->GT_sample->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key_sp);
+//        if (key_have_sp) {
+//            octomap::ColorOcTreeNode *voxel_sp = share_data->GT_sample->search(key_sp);
+//            if (voxel_sp == nullptr) {
+//                share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
+//                share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
+//            }
+//        }
         /* Filling the quality_weight map. */
         octomap::OcTreeKey key_qlt;
         bool key_have_qlt =
@@ -122,12 +134,12 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
-    cout << "Number of points in input cloud : " << share_data->cloud_pcd->points.size() << endl;
-    cout << "Number of nodes in GT octree : " << share_data->GT_sample->calcNumNodes() << endl;
-    cout << "Size of GT octree : " << share_data->GT_sample->size() << endl;
+    cout << "Number of points in input_cloud : " << share_data->input_cloud->points.size() << endl;
+    cout << "Number of nodes in octo_model : " << share_data->octo_model->calcNumNodes() << endl;
+    cout << "Size of octo_model : " << share_data->octo_model->size() << endl;
     /* Add the initial PC to the sfm_data file. */
     float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points) {
+    for (auto &pt: share_data->working_cloud->points) {
         share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
                 Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
         index++;
@@ -135,66 +147,48 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Convert and save a version of the rescaled model */
     save_rescaled(scale, unit, share_data);
     /* GT voxels update. */
-    share_data->ground_truth_model->updateInnerOccupancy();
-    int casque = 0;
-    for (octomap::ColorOcTree::leaf_iterator it = share_data->ground_truth_model->begin_leafs(), end = share_data->ground_truth_model->end_leafs(); it != end; ++it) {
-        double prout = it->getOccupancy();
-//        cout << "Occupancy : " << prout << endl;
-        ++casque;
-    }
-    cout << "Nb point with occupancy : " << casque << endl;
-    share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
-    cout << "Number of points in ground_truth_model octree : "<< share_data->ground_truth_model->size() << endl;
+    share_data->octo_model->updateInnerOccupancy();
+//    int casque = 0;
+//    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs(); it != end; ++it) {
+//        double prout = it->getOccupancy();
+////        cout << "Occupancy : " << prout << endl;
+//        ++casque;
+//    }
+//    cout << "Nb point with occupancy : " << casque << endl;
+    share_data->octo_model->write(share_data->save_path + "/GT.ot");
+    cout << "Number of points in octo_model octree : "<< share_data->octo_model->size() << endl;
     /* GT_sample_voxels update. */
-    share_data->GT_sample->updateInnerOccupancy();
-    share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
+//    share_data->GT_sample->updateInnerOccupancy();
+//    share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
     /* Determine the number of voxels in the octree. */
     share_data->init_voxels = 0;
-    for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(),
-                 end = share_data->GT_sample->end_leafs();
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(),
+                 end = share_data->octo_model->end_leafs();
          it != end;
          ++it) {
         share_data->init_voxels++;
     }
-    cout << "Octree GT_sample has " << share_data->init_voxels << " voxels" << endl;
-    ofstream fout(share_data->save_path + "/GT_sample_voxels.txt");
+    cout << "Octree octo_model has " << share_data->init_voxels << " voxels" << endl;
+    ofstream fout(share_data->save_path + "/octo_model_voxels.txt");
     fout << share_data->init_voxels << endl;
     /* Initialize View Space. */
     /* Generates the set of views around the Point Cloud. */
-    now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
+    now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->working_cloud);
     // Set the initial viewpoint to a uniform position
-    now_view_space->views[0].vis++;
-    now_best_view = new View(now_view_space->views[0]);
-    now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
-    Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+//    now_view_space->views[0].vis++;
+//    now_best_view = new View(now_view_space->views[0]);
+    now_best_view = new View(share_data->initial_views.back());
+//    now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+//    Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     // Camera class initialization
     percept = new Perception_3D(share_data);
     if (share_data->show) {
-        // Show BBX, camera position, GT
-        pcl::visualization::PCLVisualizer::Ptr visualizer =
-                std::make_shared<pcl::visualization::PCLVisualizer>("Iteration");
+        /* Show BBX with camera position. */
+        pcl::visualization::PCLVisualizer::Ptr visualizer = std::make_shared<pcl::visualization::PCLVisualizer>(
+                "Iteration" + to_string(iterations));
         visualizer->setBackgroundColor(0, 0, 0);
         visualizer->addCoordinateSystem(0.1);
         visualizer->initCameraParameters();
-        /* First frame camera position. */
-        Eigen::Vector4d X(0.05, 0, 0, 1);
-        Eigen::Vector4d Y(0, 0.05, 0, 1);
-        Eigen::Vector4d Z(0, 0, 0.05, 1);
-        Eigen::Vector4d O(0, 0, 0, 1);
-        X = view_pose_world * X;
-        Y = view_pose_world * Y;
-        Z = view_pose_world * Z;
-        O = view_pose_world * O;
-        /* Drawing the camera axis. */
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) X(0), (float) X(1), (float) X(2)), 255, 0, 0, "X" + to_string(-1));
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) Y(0), (float) Y(1), (float) Y(2)), 0, 255, 0, "Y" + to_string(-1));
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) Z(0), (float) Z(1), (float) Z(2)), 0, 0, 255, "Z" + to_string(-1));
         /* Creating a point cloud containing the potential viewpoints, and displaying it in white in the frame. */
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(new pcl::PointCloud<pcl::PointXYZRGB>);
         test_view_space->is_dense = false;
@@ -208,8 +202,82 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
             (*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
         }
         visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
+        for (int i = 0; i < now_view_space->views.size(); i++) {
+            if (now_view_space->views[i].vis) {
+                now_view_space->views[i].get_next_camera_pos(share_data->now_camera_pose_world,
+                                                             share_data->object_center_world);
+                Eigen::Matrix4d view_pose_world =
+                        (share_data->now_camera_pose_world * now_view_space->views[i].pose.inverse())
+                                .eval();
+                Eigen::Vector4d X(0.03, 0, 0, 1);
+                Eigen::Vector4d Y(0, 0.03, 0, 1);
+                Eigen::Vector4d Z(0, 0, 0.03, 1);
+                Eigen::Vector4d O(0, 0, 0, 1);
+                X = view_pose_world * X;
+                Y = view_pose_world * Y;
+                Z = view_pose_world * Z;
+                O = view_pose_world * O;
+                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                   pcl::PointXYZ(X(0), X(1), X(2)),
+                                                   255,
+                                                   0,
+                                                   0,
+                                                   "X" + to_string(i));
+                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                   pcl::PointXYZ(Y(0), Y(1), Y(2)),
+                                                   0,
+                                                   255,
+                                                   0,
+                                                   "Y" + to_string(i));
+                visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
+                                                   pcl::PointXYZ(Z(0), Z(1), Z(2)),
+                                                   0,
+                                                   0,
+                                                   255,
+                                                   "Z" + to_string(i));
+            }
+        }
+
+//        // Show BBX, camera position, GT
+//        pcl::visualization::PCLVisualizer::Ptr visualizer =
+//                std::make_shared<pcl::visualization::PCLVisualizer>("Iteration");
+//        visualizer->setBackgroundColor(0, 0, 0);
+//        visualizer->addCoordinateSystem(0.1);
+//        visualizer->initCameraParameters();
+//        /* First frame camera position. */
+//        Eigen::Vector4d X(0.05, 0, 0, 1);
+//        Eigen::Vector4d Y(0, 0.05, 0, 1);
+//        Eigen::Vector4d Z(0, 0, 0.05, 1);
+//        Eigen::Vector4d O(0, 0, 0, 1);
+//        X = view_pose_world * X;
+//        Y = view_pose_world * Y;
+//        Z = view_pose_world * Z;
+//        O = view_pose_world * O;
+//        /* Drawing the camera axis. */
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) X(0), (float) X(1), (float) X(2)), 255, 0, 0, "X" + to_string(-1));
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) Y(0), (float) Y(1), (float) Y(2)), 0, 255, 0, "Y" + to_string(-1));
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) Z(0), (float) Z(1), (float) Z(2)), 0, 0, 255, "Z" + to_string(-1));
+//        /* Creating a point cloud containing the potential viewpoints, and displaying it in white in the frame. */
+//        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(new pcl::PointCloud<pcl::PointXYZRGB>);
+//        test_view_space->is_dense = false;
+//        test_view_space->points.resize(now_view_space->views.size());
+//        auto pt = test_view_space->points.begin();
+//        for (int i = 0; i < now_view_space->views.size(); i++, pt++) {
+//            (*pt).x = (float) now_view_space->views[i].init_pos(0);
+//            (*pt).y = (float) now_view_space->views[i].init_pos(1);
+//            (*pt).z = (float) now_view_space->views[i].init_pos(2);
+//            /* Setting color to white */
+//            (*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
+//        }
+//        visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
         now_view_space->add_bbx_to_cloud(visualizer);
-        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
+        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->working_cloud, "working_cloud");
         while (!visualizer->wasStopped()) {
             visualizer->spin();
             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
@@ -430,7 +498,8 @@ int NBV_Planner::plan() {
                                 best_have = true;
                             }
                         }
-                        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
+//                        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
+                        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->working_cloud, "Working cloud");
                         while (!visualizer->wasStopped()) {
                             visualizer->spin();
                             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
@@ -522,10 +591,10 @@ void create_view_space(View_Space **now_view_space, View *now_best_view, Share_D
     // Calculating keyframe camera poses
     share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     // Handling view space
-    (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
+    (*now_view_space)->update(iterations, share_data, share_data->working_cloud, share_data->clouds[iterations]);
     // Save the results of intermediate iterations
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_mid(new pcl::PointCloud<pcl::PointXYZRGB>);
-    *cloud_mid = *share_data->cloud_final;
+    *cloud_mid = *share_data->working_cloud;
     thread save_mid(save_cloud_mid_thread_process, cloud_mid, "pointcloud" + to_string(iterations), share_data);
     save_mid.detach();
     // Update flag bit
@@ -612,11 +681,13 @@ void create_views_information(Views_Information **now_views_information,
             cout << "Full information is zero." << endl;
         for (auto &view: now_view_space->views) {
             if (share_data->method_of_IG == OursIG or share_data->method_of_IG == MyIG)
+//                view.final_utility =
+//                        (1 - share_data->cost_weight) * view.information_gain /
+//                        share_data->sum_local_information +
+//                        share_data->cost_weight * view.get_global_information() /
+//                        share_data->sum_global_information;
                 view.final_utility =
-                        (1 - share_data->cost_weight) * view.information_gain /
-                        share_data->sum_local_information +
-                        share_data->cost_weight * view.get_global_information() /
-                        share_data->sum_global_information;
+                        view.information_gain;
             else if (share_data->method_of_IG == APORA)
                 view.final_utility = view.information_gain;
             else

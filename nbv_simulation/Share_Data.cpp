@@ -11,7 +11,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["name_of_pcd"] >> name_of_pcd;
     fs["method_of_IG"] >> method_of_IG;
     fs["octomap_resolution"] >> octomap_resolution;
-    fs["ground_truth_resolution"] >> ground_truth_resolution;
+//    fs["ground_truth_resolution"] >> ground_truth_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
     fs["show"] >> show;
     fs["move_wait"] >> move_wait;
@@ -57,13 +57,13 @@ Share_Data::Share_Data(std::string _config_file_path) {
                                                                                                color_intrinsics.coeffs[4])));
     // Read the pcd file of the converted model
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
-    cloud_pcd = temp_pcd;
+    input_cloud = temp_pcd;
     cout << pcd_file_path + name_of_pcd + ".pcd" << endl;
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1) {
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *input_cloud) == -1) {
         cout << "Can not read 3d model file. Trying to convert it." << endl;
-        if (pcl::io::loadOBJFile(pcd_file_path + name_of_pcd + ".obj", *cloud_pcd) == -1) {
+        if (pcl::io::loadOBJFile(pcd_file_path + name_of_pcd + ".obj", *input_cloud) == -1) {
             cout << "No OBJ file found. Trying to open a ply file." << endl;
-            if (pcl::io::loadPLYFile(pcd_file_path + name_of_pcd + ".ply", *cloud_pcd) == -1) {
+            if (pcl::io::loadPLYFile(pcd_file_path + name_of_pcd + ".ply", *input_cloud) == -1) {
             cout << "No PLY file found. Check" << endl;
             }
         }
@@ -71,18 +71,19 @@ Share_Data::Share_Data(std::string _config_file_path) {
     octo_model = new octomap::ColorOcTree(octomap_resolution);
     quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     indices_in_voxel = new std::unordered_map<octomap::OcTreeKey, std::vector<int>, octomap::OcTreeKey::KeyHash>();
-    ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
-    GT_sample = new octomap::ColorOcTree(octomap_resolution);
+//    ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
+//    GT_sample = new octomap::ColorOcTree(octomap_resolution);
     if (num_of_max_flow_node == -1)
         num_of_max_flow_node = num_of_views;
     now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
     over = false;
     pre_clock = (double) clock();
     valid_clouds = 0;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
-    cloud_final = temp;
+//    pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
+//    cloud_final = temp;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);
-    cloud_ground_truth = temp_gt;
+//    cloud_ground_truth = temp_gt;
+    working_cloud = temp_gt;
     save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
     if (method_of_IG == 0)
         save_path += '_' + std::to_string(cost_weight);

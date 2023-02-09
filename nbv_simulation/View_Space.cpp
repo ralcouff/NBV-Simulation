@@ -81,7 +81,7 @@ View_Space::View_Space(int _id,
     fout_view_space << num_of_views << '\n';
     fout_view_space << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
     fout_view_space << predicted_size << '\n';
-    for (int i = 0; i < num_of_views; i++)
+    for (int i = 0; i < views.size(); i++)
         fout_view_space << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
     cout << "View Space acquired." << endl;
     // Update the data area data
@@ -158,18 +158,34 @@ double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &po
 
 int View_Space::read_sfm_views(int i) {
     aliceVision::sfmData::SfMData sfm_input_data{};
-    aliceVision::sfmDataIO::Load(sfm_input_data,share_data->sfm_file_path,aliceVision::sfmDataIO::ESfMData::ALL);
-    for (auto & it : sfm_input_data.getPoses()) {
-        auto transform = it.second.getTransform();
-        View view = View(transform.center());
-        view.vis++;
-        if (!valid_view(view))
-            cout << "check SFM init view." << endl;
-        views.push_back(view);
-        views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
-        i++;
+    if (access(share_data->sfm_file_path.c_str(), F_OK) != -1) {
+        aliceVision::sfmDataIO::Load(sfm_input_data,share_data->sfm_file_path,aliceVision::sfmDataIO::ESfMData::ALL);
+        for (auto &it: sfm_input_data.getPoses()) {
+            auto transform = it.second.getTransform();
+            View view = View(transform.center());
+            view.id = i;
+            if (valid_view(view)) {
+                view.vis++;
+                view.space_id = id;
+                view.dis_to_object = (object_center_world - view.init_pos).norm();
+                view.robot_cost =
+                        (Eigen::Vector3d(
+                                now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
+                                 .eval() -
+                         view.init_pos)
+                                .norm();
+                views.push_back(view);
+                views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
+                share_data->initial_views.push_back(view);
+                view.get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+                Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * view.pose.inverse()).eval();
+                i++;
+            } else {
+                cout << "check SFM init view." << endl;
+            }
+        }
+        cout << "Number of views in SfM Input : " << sfm_input_data.getPoses().size() << endl;
     }
-    cout << "Number of views in SfM Input : " << sfm_input_data.getPoses().size() << endl;
     return i;
 }
 
@@ -220,8 +236,11 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
         cout << "check init view." << endl;
     views.push_back(view);
     views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
+    share_data->initial_views.push_back(view);
     viewnum++;
     viewnum = read_sfm_views(viewnum);
+    cout << "Patati : " << viewnum << endl;
+    cout << views.size() << endl;
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
         double x = get_random_coordinate(object_center_world(0) - predicted_size * 4,

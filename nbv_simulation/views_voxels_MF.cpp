@@ -80,7 +80,7 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
     // Which viewpoints the ray is seen by, added to the diagram
     vector<int> views_id = (*views_information->rays_to_views_map)[ray_id];
     for (int &i: views_id)
-        (*bipartite_list)[ray_id + ray_index_shift].push_back(make_pair(i, 0.0));
+        (*bipartite_list)[ray_id + ray_index_shift].emplace_back(i, 0.0);
     // Retain only voxels of interest
     double visible = 1.0;
     auto first = views_information->rays_info[ray_id]->ray->start;
@@ -98,16 +98,25 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
         /* Get the voxel quality */
         auto hash_this_key_quality = (*views_information->quality_weight).find(*it);
         // Next if you can't find a node
-        if (hash_this_key_quality == (*views_information->quality_weight).end())
+        if (hash_this_key_quality == (*views_information->quality_weight).end()) {
+            cout << "Polololo" << endl;
             continue;
+        }
         // Read node probability values
         double quality = hash_this_key_quality->second;
+//        if (quality >= 0.5) {
+//            cout << "Quality : " << quality << endl;
+//        }
+//        double quality = 1.0;
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, views_information->object_weight);
         /* Statistical information entropy
         Definition 1 in Global Optimality*/
 //        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy);
-        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy) * quality;
+//        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy) * quality;
+        double information_gain = quality;
+//        double information_gain = on_object * visible;
+
         visible *= voxel_information->get_voxel_visible(occupancy);
         if (information_gain > share_data->interesting_threshold) {
             octomap::OcTreeKey node_y = *it;
@@ -126,7 +135,7 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
             // For each viewpoint, count the id and value of the voxel
             for (int i = 0; i < views_id.size(); i++) {
                 (*voxel_information->mutex_voxels[voxel_id - voxel_index_shift]).lock();
-                (*bipartite_list)[voxel_id].push_back(make_pair(ray_id + ray_index_shift, information_gain));
+                (*bipartite_list)[voxel_id].emplace_back(ray_id + ray_index_shift, information_gain);
                 (*voxel_information->mutex_voxels[voxel_id - voxel_index_shift]).unlock();
             }
         }
