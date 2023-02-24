@@ -1,10 +1,11 @@
 %YAML:1.0
-model_path: "../3d_models/"
-name_of_pcd: "lion_head"
-method_of_IG: 9
+#model_path: "../3d_models/"
+model_path: "../Python_blender_API/1_Arma_qlt/"
+name_of_pcd: "dillo_quality_colored_62"
+method_of_IG: 0
 octomap_resolution: 0.01
 ground_truth_resolution: 0.01
-num_of_max_iteration: 10
+num_of_max_iteration: 2
 show: 1
 move_wait: 0
 nbv_net_path: "D:/jupyter_pytorch_cpu/nbv-net"
@@ -30,4 +31,3 @@ color_p1: -2.1210000850260258e-03
 color_p2: 0.
 depth_scale: 1.0000000474974513e-03
 input_sfm_file: "../3d_models/lion_head.sfm"
-input_quality_file: "../3d_models/lion_head.qlt"

@@ -54,7 +54,7 @@ if __name__ == "__main__":
     save_folder = 'Arma_qlt'
     reference_file = "armadillo.obj"
     reference_model = parse_file(reference_file)
-    percentage = [0.01, 0.025, 0.05, 0.1]
+    percentage = [0.001, 0.0025, 0.005, 0.01]
     toto = [int(x * len(reference_model.vertices)) for x in percentage]
     for i in range(n_test):
         print()

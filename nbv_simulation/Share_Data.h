@@ -56,6 +56,16 @@ using Views = aliceVision::HashMap<aliceVision::IndexT, std::shared_ptr<View> >;
 #define PCNBV 7
 #define NewOurs 8
 #define MyIG 9
+#define Test_one 101
+#define Test_two 102
+#define Test_three 103
+#define Test_four 104
+#define Test_five 105
+#define Test_six 106
+#define Test_seven 107
+#define Test_eight 108
+#define Test_nine 109
+
 
 /**
  * The class that contains all the data needed for the NBV algorithm.

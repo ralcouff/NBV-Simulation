@@ -21,19 +21,11 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
-//    quality_weight = share_data->quality_weight;
     // Define frontier
     std::vector<octomap::point3d> points;
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
     double map_size = view_space->predicted_size;
-    // Find edges in the map
-//    for (auto& et : *quality_weight){
-//        if (et.second != 1.0){
-//            if (et.second != 0){
-//                cout << "Patatou : " << et.second << endl;
-//            }
-//        }
-//    }
+    int qlt_count = 0;
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
@@ -41,31 +33,33 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         // Record the mapping of key to occ rate in bbx for repeated queries
         (*occupancy_map)[it.getKey()] = occupancy;
         std::vector<int> indices = (*share_data->indices_in_voxel)[it.getKey()];
+//        cout << indices.size() << endl;
         double quality;
         if (indices.empty()){
-            quality = 1.0;
+            quality = 0.0;
 //            cout << "Yes" << endl;
         } else {
-            cout << "Nope" << endl;
+//            cout << "Nope" << endl;
 //            float mini = 1;
 //            for (int ind : indices){
 //                mini = std::min(mini,share_data->vertex_quality[ind]);
 //            }
-            float mini_ind = 10;
+            float mini_ind = 1.0;
             for (int i : indices){
                 mini_ind = std::min(mini_ind,share_data->vertex_quality[i]);
             }
+            quality = mini_ind;
 //            cout << "Mini ind : " << mini_ind << endl;
-            if (mini_ind < 0.8){
-                quality = 10;
-            } else {
-                quality = 1.0;
-            }
-        }
-        if (quality > 2){
-            cout << "Pkzdoijfjzqh : " << quality << endl;
+//            if (mini_ind < 0.8){
+//                quality = 10;
+//            } else {
+//                quality = 1.0;
+//            }
         }
         (*quality_weight)[it.getKey()] = quality;
+        if (quality <= 0.8) {
+            qlt_count++;
+        }
 //        cout << "Indices : " << indices.size() << endl;
 //        cout << "Occupancy : " << occupancy << endl;
 //        (*quality_weight)[it.getKey()] = 1;
@@ -88,6 +82,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
             }
         }
     }
+    cout << "There are " << qlt_count << " voxels with high quality." << endl;
     pre_edge_cnt = 0x3f3f3f3f;
     edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier

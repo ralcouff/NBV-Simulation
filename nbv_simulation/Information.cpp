@@ -261,7 +261,9 @@ void ray_information_thread_process(
                                                                    on_object,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG or method == MyIG)
+        if (method == OursIG or method == MyIG or method == Test_one or method == Test_two or method == Test_three or
+            method == Test_four or method == Test_five or method == Test_six or method == Test_seven or
+            method == Test_eight or method == Test_nine)
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         else
             rays_info[ray_id]->visible *= occupancy;
@@ -291,23 +293,60 @@ inline double information_function(short &method,
                                    double &object,
                                    double &object_visible) {
     double final_information = 0;
-//    if (voxel_quality >= 0.5){
-//        cout << "Voxel_quality : " << voxel_quality << endl;
-//    }
     switch (method) {
-        case MyIG:
+        case Test_one:
+            final_information = (1 - voxel_quality);
+            break;
+        case Test_two:
+            final_information = 0;
+            break;
+        case Test_three:
+            final_information = (1 - voxel_quality);
+            break;
+        case Test_four:
             if (is_unknown) {
-                final_information = ray_information + object * visible * voxel_information;
-//                final_information = ray_information + object * visible * voxel_information * voxel_quality;
-//                final_information = voxel_quality;
+                final_information = ray_information + object * visible * (1 - voxel_quality);
             } else {
                 final_information = ray_information;
-//                final_information = voxel_quality;
+            }
+            break;
+        case Test_five:
+            final_information = 0;
+            break;
+        case Test_six:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * (1 - voxel_quality);
+            } else {
+                final_information = ray_information;
+            }
+            break;
+        case Test_seven:
+            if (is_unknown) {
+                final_information = ray_information + object * visible;
+            } else {
+                final_information = ray_information;
+            }
+            break;
+        case Test_eight:
+            final_information = 0;
+            break;
+        case Test_nine:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information;
+            } else {
+                final_information = ray_information;
             }
             break;
         case OursIG:
             if (is_unknown) {
                 final_information = ray_information + object * visible * voxel_information;
+            } else {
+                final_information = ray_information;
+            }
+            break;
+        case MyIG:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information * (1 - voxel_quality);
             } else {
                 final_information = ray_information;
             }
@@ -356,6 +395,8 @@ inline double information_function(short &method,
             } else
                 final_information = ray_information + voxel_information;
             break;
+        default:
+            cout << "There might be an error in the computation of final_information" << endl;
     }
     return final_information;
 }

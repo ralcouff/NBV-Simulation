@@ -99,22 +99,53 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
         auto hash_this_key_quality = (*views_information->quality_weight).find(*it);
         // Next if you can't find a node
         if (hash_this_key_quality == (*views_information->quality_weight).end()) {
-            cout << "Polololo" << endl;
             continue;
         }
         // Read node probability values
         double quality = hash_this_key_quality->second;
-//        if (quality >= 0.5) {
-//            cout << "Quality : " << quality << endl;
-//        }
-//        double quality = 1.0;
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, views_information->object_weight);
         /* Statistical information entropy
         Definition 1 in Global Optimality*/
-//        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy);
+        double temp_information;
+        switch (share_data->method_of_IG) {
+            case Test_one:
+                temp_information = 0;
+                break;
+            case Test_two:
+                temp_information = 1 - quality;
+                break;
+            case Test_three:
+                temp_information = 1 - quality;
+                break;
+            case Test_four:
+                temp_information = 0;
+                break;
+            case Test_five:
+                temp_information = on_object * visible * (1 - quality);
+                break;
+            case Test_six:
+                temp_information = on_object * visible * (1 - quality);
+                break;
+            case Test_seven:
+                temp_information = 0;
+                break;
+            case Test_eight:
+                temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
+                break;
+            case Test_nine:
+                temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
+                break;
+            default:
+                temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
+                break;
+        }
+        double information_gain = temp_information;
+//        if (information_gain != 0) {
+//            cout << "Pb with info_gain" << information_gain << endl;
+//        }
 //        double information_gain = on_object * visible * Voxel_Information::entropy(occupancy) * quality;
-        double information_gain = quality;
+//        double information_gain = quality;
 //        double information_gain = on_object * visible;
 
         visible *= voxel_information->get_voxel_visible(occupancy);

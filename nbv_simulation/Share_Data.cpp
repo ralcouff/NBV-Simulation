@@ -38,7 +38,9 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs["input_sfm_file"] >> sfm_file_path;
-    fs["input_quality_file"] >> quality_file_path;
+//    fs["input_quality_file"] >> quality_file_path;
+    quality_file_path = pcd_file_path + name_of_pcd + ".qlt";
+    cout << quality_file_path << endl;
     fs.release();
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
