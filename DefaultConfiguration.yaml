@@ -1,7 +1,8 @@
 %YAML:1.0
 #model_path: "../3d_models/"
-model_path: "../Python_blender_API/1_Arma_qlt/"
-name_of_pcd: "dillo_quality_colored_62"
+model_path: "../study/"
+folder_name: "armadillo_qlt"
+name_of_pcd: "armadillo_quality_colored"
 method_of_IG: 0
 octomap_resolution: 0.01
 ground_truth_resolution: 0.01

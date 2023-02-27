@@ -1,6 +1,8 @@
 #include "Share_Data.h"
 
-Share_Data::Share_Data(std::string _config_file_path) {
+#include <utility>
+
+Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_test, std::string _string_test_time) {
     process_cnt = -1;
     yaml_file_path = std::move(_config_file_path);
     cout << yaml_file_path << endl;
@@ -9,7 +11,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs.open(yaml_file_path, cv::FileStorage::READ);
     fs["model_path"] >> pcd_file_path;
     fs["name_of_pcd"] >> name_of_pcd;
-    fs["method_of_IG"] >> method_of_IG;
+//    fs["method_of_IG"] >> method_of_IG;
     fs["octomap_resolution"] >> octomap_resolution;
 //    fs["ground_truth_resolution"] >> ground_truth_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
@@ -38,10 +40,18 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs["input_sfm_file"] >> sfm_file_path;
-//    fs["input_quality_file"] >> quality_file_path;
-    quality_file_path = pcd_file_path + name_of_pcd + ".qlt";
-    cout << quality_file_path << endl;
+    fs["folder_name"] >> folder_name;
     fs.release();
+    n_model = _n_model;
+    n_size = _n_size;
+    method_of_IG = _n_test;
+    string_test_time = _string_test_time;
+//    Building the filepath to the current file
+    current_input_filename = pcd_file_path + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + name_of_pcd + '_' + std::to_string(n_size);
+    quality_file_path = current_input_filename + ".qlt";
+    save_path = "../results/" + string_test_time + '/' +std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + name_of_pcd + '_' + std::to_string(n_size) + '_' + std::to_string(method_of_IG);
+    test_base_filename = "../results/" + string_test_time + "/results.csv";
+    cout << test_base_filename << endl;
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
                                                                                        color_intrinsics.height,
@@ -61,11 +71,11 @@ Share_Data::Share_Data(std::string _config_file_path) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
     input_cloud = temp_pcd;
     cout << pcd_file_path + name_of_pcd + ".pcd" << endl;
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *input_cloud) == -1) {
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>(current_input_filename + ".pcd", *input_cloud) == -1) {
         cout << "Can not read 3d model file. Trying to convert it." << endl;
-        if (pcl::io::loadOBJFile(pcd_file_path + name_of_pcd + ".obj", *input_cloud) == -1) {
+        if (pcl::io::loadOBJFile(current_input_filename + ".obj", *input_cloud) == -1) {
             cout << "No OBJ file found. Trying to open a ply file." << endl;
-            if (pcl::io::loadPLYFile(pcd_file_path + name_of_pcd + ".ply", *input_cloud) == -1) {
+            if (pcl::io::loadPLYFile(current_input_filename + ".ply", *input_cloud) == -1) {
             cout << "No PLY file found. Check" << endl;
             }
         }
@@ -86,9 +96,8 @@ Share_Data::Share_Data(std::string _config_file_path) {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);
 //    cloud_ground_truth = temp_gt;
     working_cloud = temp_gt;
-    save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
-    if (method_of_IG == 0)
-        save_path += '_' + std::to_string(cost_weight);
+//    if (method_of_IG == 0)
+//        save_path += '_' + std::to_string(cost_weight);
     string line;
     ifstream quality_file(quality_file_path);
     if (quality_file.is_open()){

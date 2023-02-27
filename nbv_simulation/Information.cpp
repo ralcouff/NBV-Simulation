@@ -332,7 +332,7 @@ inline double information_function(short &method,
             break;
         case Test_nine:
             if (is_unknown) {
-                final_information = ray_information + object * visible * voxel_information;
+                final_information = ray_information + object * visible * voxel_information * (1-voxel_quality);
             } else {
                 final_information = ray_information;
             }

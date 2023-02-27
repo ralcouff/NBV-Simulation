@@ -45,7 +45,9 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/Information.cpp
         nbv_simulation/Information.h
         nbv_simulation/NBV_Planner.cpp
-        nbv_simulation/NBV_Planner.h)
+        nbv_simulation/NBV_Planner.h
+        nbv_simulation/Visual.cpp
+        nbv_simulation/Visual.h nbv_simulation/Visual.h)
 
 #set(NBV_SIMULATION_HEADERS
 #        nbv_simulation/Information.hpp

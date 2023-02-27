@@ -4,6 +4,7 @@
 
 #include "Share_Data.h"
 #include "NBV_Planner.h"
+#include "Visual.h"
 
 using namespace std;
 
@@ -47,15 +48,37 @@ int main(int argc, char **argv) {
     const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
-    // Data area initialisation
-    share_data = new Share_Data(config_file);
-    // Console read command threads
-    thread cmd(get_command);
-    // NBV system run threads
-    thread runner(get_run);
-    // Waiting for the thread to finish
-    cmd.join();
-    runner.join();
-    cout << "System over." << endl;
+    std::vector<int> tests{0, 101, 102, 103, 104, 105, 106, 107, 108};
+//    std::vector<int> tests{0};
+    std::vector<int> models{0, 1, 2, 3, 4};
+//    std::vector<int> models{0};
+    std::vector<int> sizes{12, 31, 62, 125};
+//    std::vector<int> sizes{12};
+    char str_time [80];
+    std::time_t rawtime;
+    struct tm * timeinfo;
+
+    time (&rawtime);
+    timeinfo = std::localtime(&rawtime);
+    std::strftime(str_time, 80, "%F-%H-%M", timeinfo);
+    std:: string string_test_time = std::string(str_time);
+
+    Visual::voir();
+//    for (int n_test: tests) {
+//        for (int n_model: models) {
+//            for (int n_size: sizes) {
+//                // Data area initialisation
+//                share_data = new Share_Data(config_file, n_model, n_size, n_test, string_test_time);
+//                // Console read command threads
+////                thread cmd(get_command);
+//                // NBV system run threads
+//                thread runner(get_run);
+//                // Waiting for the thread to finish
+////                cmd.join();
+//                runner.join();
+//                cout << "System over." << endl;
+//            }
+//        }
+//    }
     return EXIT_SUCCESS;
 }

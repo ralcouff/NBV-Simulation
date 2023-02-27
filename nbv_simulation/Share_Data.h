@@ -165,12 +165,22 @@ public:
 
     aliceVision::sfmData::SfMData sfm_data{};
 
+// Parameters for the test pipeline.
+    std::string folder_name;
+    std::string current_input_filename;
+    std::string test_base_filename;
+    std::string string_test_time;
+    int n_model;
+    int n_size;
+    int n_test;
+
+
     /**
      * Constructor of the Share_Data object
      * It is initialized with a file
      * @param _config_file_path The initialization file
      */
-    explicit Share_Data(std::string _config_file_path);
+    explicit Share_Data(std::string _config_file_path, int n_model, int n_size, int n_test, std::string string_test_time);
 
     /**
      * Destructor of the object Share_Data

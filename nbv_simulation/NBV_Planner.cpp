@@ -151,8 +151,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data->octo_model->updateInnerOccupancy();
 //    int casque = 0;
 //    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs(); it != end; ++it) {
-//        double prout = it->getOccupancy();
-////        cout << "Occupancy : " << prout << endl;
+//        double voir = it->getOccupancy();
+////        cout << "Occupancy : " << voir << endl;
 //        ++casque;
 //    }
 //    cout << "Nb point with occupancy : " << casque << endl;
@@ -372,7 +372,8 @@ int NBV_Planner::plan() {
                     // Search algorithms
                     /* Sorting the viewpoints according to their utility. */
                     sort(now_view_space->views.begin(), now_view_space->views.end(), view_utility_compare);
-                    std::ofstream InfoOUT("Prout.txt");
+                    std::ofstream InfoOUT(
+                            share_data->save_path + std::to_string(iterations) + '/' + "global_information.csv");
                     for (auto &view: now_view_space->views) {
                         InfoOUT << view.id << "," << view.final_utility << endl;
                     }
@@ -388,7 +389,7 @@ int NBV_Planner::plan() {
                         visualizer->getCameras(cameras);
                         auto pos = cameras[0].pos;
                         auto view = cameras[0].view;
-                        visualizer->setCameraPosition(pos[0], pos[1], pos[2]-1.2, view[0], view[1], view[2]);
+                        visualizer->setCameraPosition(pos[0], pos[1], pos[2] - 1.2, view[0], view[1], view[2]);
                         // test_view_space
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(
                                 new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -510,10 +511,11 @@ int NBV_Planner::plan() {
                         }
 //                        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
                         visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->working_cloud, "Working cloud");
-                        visualizer->saveScreenshot("Tati.png");
+                        visualizer->saveScreenshot(
+                                share_data->save_path + '/' + std::to_string(iterations) + "_screenshot.png");
 //                        while (!visualizer->wasStopped()) {
-                            visualizer->spinOnce(1);
-                            visualizer->close();
+                        visualizer->spinOnce(1);
+                        visualizer->close();
 //                        }
 //                        while (!visualizer->wasStopped()) {
 //                            visualizer->spin();
@@ -542,6 +544,12 @@ int NBV_Planner::plan() {
                     cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
+                    std::ofstream result(share_data->test_base_filename, std::ios_base::app);
+                    result << share_data->method_of_IG << ',' << share_data->n_model << ',' << share_data->n_size << ','
+                           << std::to_string(iterations) << ',' << now_best_view->id << ','
+                           << now_best_view->init_pos(0) << ',' << now_best_view->init_pos(1) << ','
+                           << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << endl;
+                    result.close();
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
@@ -767,7 +775,7 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
 
 void save_rescaled(double scale, double unit, Share_Data *share_data) {
     /* Convert and save a version of the rescaled model */
-    string filename = share_data->name_of_pcd + "_rescaled";
+    std::string filename = share_data->name_of_pcd + "_rescaled";
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 //    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
 //    transform_1(0, 0) = scale * unit;
@@ -782,8 +790,8 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
     /* Saving the rescaled cloud with Python */
     // TODO : Add python variables to the Share Data object
     // TODO : Problem if no mtl given
-    std::string path_to_obj = share_data->pcd_file_path + share_data->name_of_pcd + ".obj";
-    std::string path_to_obj_rescaled = share_data->save_path + "/" + filename + ".obj";
+    std::string path_to_obj = share_data->current_input_filename + ".obj";
+    std::string path_to_obj_rescaled = share_data->save_path + '/' + filename + ".obj";
     if (std::filesystem::exists(path_to_obj_rescaled)) {
         cout << "The file has already been rescaled" << endl;
     } else if (unit * scale == 1) {

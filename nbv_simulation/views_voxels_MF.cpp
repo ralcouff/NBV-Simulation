@@ -134,7 +134,7 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
                 temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
                 break;
             case Test_nine:
-                temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
+                temp_information = on_object * visible * Voxel_Information::entropy(occupancy) * (1-quality);
                 break;
             default:
                 temp_information = on_object * visible * Voxel_Information::entropy(occupancy);
