@@ -180,7 +180,7 @@ public:
      * It is initialized with a file
      * @param _config_file_path The initialization file
      */
-    explicit Share_Data(std::string _config_file_path, int n_model, int n_size, int n_test, std::string string_test_time);
+    explicit Share_Data(std::string _config_file_path, int n_model, int n_size, short model, std::string string_test_time);
 
     /**
      * Destructor of the object Share_Data

@@ -48,11 +48,11 @@ int main(int argc, char **argv) {
     const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
-    std::vector<int> tests{0, 101, 102, 103, 104, 105, 106, 107, 108};
+    std::vector<int> tests{101, 102, 103, 104, 105, 106, 107, 108};
 //    std::vector<int> tests{0};
     std::vector<int> models{0, 1, 2, 3, 4};
 //    std::vector<int> models{0};
-    std::vector<int> sizes{12, 31, 62, 125};
+    std::vector<int> sizes{12, 50};
 //    std::vector<int> sizes{12};
     char str_time [80];
     std::time_t rawtime;
@@ -63,22 +63,57 @@ int main(int argc, char **argv) {
     std::strftime(str_time, 80, "%F-%H-%M", timeinfo);
     std:: string string_test_time = std::string(str_time);
 
-    Visual::voir();
-//    for (int n_test: tests) {
-//        for (int n_model: models) {
-//            for (int n_size: sizes) {
-//                // Data area initialisation
-//                share_data = new Share_Data(config_file, n_model, n_size, n_test, string_test_time);
-//                // Console read command threads
-////                thread cmd(get_command);
-//                // NBV system run threads
-//                thread runner(get_run);
-//                // Waiting for the thread to finish
-////                cmd.join();
-//                runner.join();
-//                cout << "System over." << endl;
-//            }
-//        }
-//    }
+//    Visual::voir();
+    for (int n_test: tests) {
+        short method;
+        cout << n_test << endl;
+        switch (n_test){
+            case 0:
+                method = OursIG;
+                break;
+            case 101:
+                method = Test_one;
+                break;
+            case 102:
+                method = Test_two;
+                break;
+            case 103:
+                method = Test_three;
+                break;
+            case 104:
+                method = Test_four;
+                break;
+            case 105:
+                method = Test_five;
+                break;
+            case 106:
+                method = Test_six;
+                break;
+            case 107:
+                method = Test_seven;
+                break;
+            case 108:
+                method = Test_eight;
+                break;
+            case 109:
+                method = Test_nine;
+                break;
+        }
+        cout << method << endl;
+        for (int n_model: models) {
+            for (int n_size: sizes) {
+                // Data area initialisation
+                share_data = new Share_Data(config_file, n_model, n_size, method, string_test_time);
+                // Console read command threads
+//                thread cmd(get_command);
+                // NBV system run threads
+                thread runner(get_run);
+                // Waiting for the thread to finish
+//                cmd.join();
+                runner.join();
+                cout << "System over." << endl;
+            }
+        }
+    }
     return EXIT_SUCCESS;
 }

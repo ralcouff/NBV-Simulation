@@ -118,6 +118,8 @@ View_Space::View_Space(int _id,
     Share_Data::access_directory(share_data->save_path + "/quantitative");
     ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(-1) + ".txt");
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
+
+
 }
 
 bool View_Space::valid_view(View &view) {

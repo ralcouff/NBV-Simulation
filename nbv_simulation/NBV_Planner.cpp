@@ -74,7 +74,23 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         cout << "Object large. Change scale to about 0.1 m." << endl;
         cout << "Scale = " << scale << endl;
     }
+    octomap::Pointcloud cloud_octo;
+    for (auto p: share_data->input_cloud->points) {
+        cloud_octo.push_back(p.x*scale*unit, p.y*scale*unit, p.z*scale*unit);
+    }
+    share_data->octo_model->insertPointCloud(
+            cloud_octo,
+            octomap::point3d(0,0,0),
+            -1,
+            true,
+            false);
     /* Converting the Point. */
+    for (octomap::ColorOcTree::tree_iterator it = share_data->octo_model->begin_tree(), end = share_data->octo_model->end_tree(); it!=end; ++it){
+        double occupancy = (*it).getOccupancy();
+        if (occupancy > 0.5) {
+            cout << "Pouloulou : "<< occupancy << endl;
+        }
+    }
     for (int i = 0; i < share_data->input_cloud->points.size(); i++, p++) {
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;

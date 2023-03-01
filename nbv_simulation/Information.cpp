@@ -296,6 +296,7 @@ inline double information_function(short &method,
     switch (method) {
         case Test_one:
             final_information = (1 - voxel_quality);
+            cout << voxel_quality << endl;
             break;
         case Test_two:
             final_information = 0;

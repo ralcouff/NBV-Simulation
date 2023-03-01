@@ -2,7 +2,7 @@
 
 #include <utility>
 
-Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_test, std::string _string_test_time) {
+Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size, short _method, std::string _string_test_time) {
     process_cnt = -1;
     yaml_file_path = std::move(_config_file_path);
     cout << yaml_file_path << endl;
@@ -44,7 +44,7 @@ Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size,
     fs.release();
     n_model = _n_model;
     n_size = _n_size;
-    method_of_IG = _n_test;
+    method_of_IG = _method;
     string_test_time = _string_test_time;
 //    Building the filepath to the current file
     current_input_filename = pcd_file_path + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + name_of_pcd + '_' + std::to_string(n_size);
@@ -81,6 +81,16 @@ Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size,
         }
     }
     octo_model = new octomap::ColorOcTree(octomap_resolution);
+//    octomap::Pointcloud cloud_octo;
+//    for (auto p: input_cloud->points) {
+//        cloud_octo.push_back(p.x, p.y, p.z);
+//    }
+//    octo_model->insertPointCloud(
+//            cloud_octo,
+//            octomap::point3d(0,0,0),
+//            -1,
+//            true,
+//            false);
     quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     indices_in_voxel = new std::unordered_map<octomap::OcTreeKey, std::vector<int>, octomap::OcTreeKey::KeyHash>();
 //    ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
