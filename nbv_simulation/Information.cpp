@@ -1,14 +1,38 @@
 #include "Information.h"
 
-void information_gain_thread_process(Ray_Information **rays_info,
-                                     unordered_map<int, vector<int>> *views_to_rays_map,
-                                     View_Space *view_space,
-                                     int pos) {
-    // Information about each relevant ray of the viewpoint is added to the viewpoint
-    for (auto it = (*views_to_rays_map)[pos].begin(); it != (*views_to_rays_map)[pos].end(); it++) {
-        view_space->views[pos].information_gain += rays_info[*it]->information_gain;
-        view_space->views[pos].voxel_num += rays_info[*it]->voxel_num;
-    }
+int frontier_check(octomap::point3d node,
+                   octomap::ColorOcTree *octo_model,
+                   Voxel_Information *voxel_information,
+                   double octomap_resolution) {
+    int free_cnt = 0;
+    int occupied_cnt = 0;
+    for (int i = -1; i <= 1; i++)
+        for (int j = -1; j <= 1; j++)
+            for (int k = -1; k <= 1; k++) {
+                if (i == 0 && j == 0 && k == 0)
+                    continue;
+                double x = node.x() + i * octomap_resolution;
+                double y = node.y() + j * octomap_resolution;
+                double z = node.z() + k * octomap_resolution;
+                octomap::point3d neighbour(x, y, z);
+                octomap::OcTreeKey neighbour_key;
+                bool neighbour_key_have = octo_model->coordToKeyChecked(neighbour, neighbour_key);
+                if (neighbour_key_have) {
+                    octomap::ColorOcTreeNode *neighbour_voxel = octo_model->search(neighbour_key);
+                    if (neighbour_voxel != nullptr) {
+                        free_cnt += voxel_information->voxel_free(neighbour_voxel) ? 1 : 0;
+                        occupied_cnt += voxel_information->voxel_occupied(neighbour_voxel) ? 1 : 0;
+                    }
+                }
+            }
+    // edge
+    if (free_cnt >= 1 && occupied_cnt >= 1)
+        return 2;
+    // Boundaries
+    if (free_cnt >= 1)
+        return 1;
+    // Nothing
+    return 0;
 }
 
 void ray_cast_thread_process(int *ray_num,
@@ -22,9 +46,9 @@ void ray_cast_thread_process(int *ray_num,
                              rs2_intrinsics *color_intrinsics,
                              int pos) {
     // Get a viewpoint pose
-    view_space->views[pos].get_next_camera_pos(view_space->now_camera_pose_world, view_space->object_center_world);
+    view_space->views[pos].get_next_camera_pos(view_space->current_camera_pose_world, view_space->object_center_world);
     Eigen::Matrix4d view_pose_world =
-            (view_space->now_camera_pose_world * view_space->views[pos].pose.inverse()).eval();
+            (view_space->current_camera_pose_world * view_space->views[pos].pose.inverse()).eval();
     // Projection of the 3D object BBX onto the convex pack area of the picture according to the viewpoint pose
     double skip_coefficient = voxel_information->skip_coefficient;
     // Control the ray traversal according to the accessible voxels, noting the interval jump parameter
@@ -252,17 +276,19 @@ void ray_information_thread_process(
                                                                    on_object,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG)
+        if (method == OursIG) {
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
-        else
+        } else {
             rays_info[ray_id]->visible *= occupancy;
+        }
         rays_info[ray_id]->voxel_num++;
         // Exit if it's the end
         if (is_end)
             break;
     }
-    while (last - first < -1)
+    while (last - first < -1) {
         first--;
+    }
     last++;
     // Update stop to one iterator after the last node
     rays_info[ray_id]->ray->stop = last;
@@ -283,6 +309,13 @@ inline double information_function(short &method,
     double final_information = 0;
     switch (method) {
         case OursIG:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information;
+            } else {
+                final_information = ray_information;
+            }
+            break;
+        case Test_one:
             if (is_unknown) {
                 final_information = ray_information + object * visible * voxel_information;
             } else {
@@ -337,37 +370,13 @@ inline double information_function(short &method,
     return final_information;
 }
 
-int frontier_check(octomap::point3d node,
-                   octomap::ColorOcTree *octo_model,
-                   Voxel_Information *voxel_information,
-                   double octomap_resolution) {
-    int free_cnt = 0;
-    int occupied_cnt = 0;
-    for (int i = -1; i <= 1; i++)
-        for (int j = -1; j <= 1; j++)
-            for (int k = -1; k <= 1; k++) {
-                if (i == 0 && j == 0 && k == 0)
-                    continue;
-                double x = node.x() + i * octomap_resolution;
-                double y = node.y() + j * octomap_resolution;
-                double z = node.z() + k * octomap_resolution;
-                octomap::point3d neighbour(x, y, z);
-                octomap::OcTreeKey neighbour_key;
-                bool neighbour_key_have = octo_model->coordToKeyChecked(neighbour, neighbour_key);
-                if (neighbour_key_have) {
-                    octomap::ColorOcTreeNode *neighbour_voxel = octo_model->search(neighbour_key);
-                    if (neighbour_voxel != nullptr) {
-                        free_cnt += voxel_information->voxel_free(neighbour_voxel) ? 1 : 0;
-                        occupied_cnt += voxel_information->voxel_occupied(neighbour_voxel) ? 1 : 0;
-                    }
-                }
-            }
-    // edge
-    if (free_cnt >= 1 && occupied_cnt >= 1)
-        return 2;
-    // Boundaries
-    if (free_cnt >= 1)
-        return 1;
-    // Nothing
-    return 0;
+void information_gain_thread_process(Ray_Information **rays_info,
+                                     unordered_map<int, vector<int>> *views_to_rays_map,
+                                     View_Space *view_space,
+                                     int pos) {
+    // Information about each relevant ray of the viewpoint is added to the viewpoint
+    for (auto it = (*views_to_rays_map)[pos].begin(); it != (*views_to_rays_map)[pos].end(); it++) {
+        view_space->views[pos].information_gain += rays_info[*it]->information_gain;
+        view_space->views[pos].voxel_num += rays_info[*it]->voxel_num;
+    }
 }

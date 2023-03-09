@@ -14,6 +14,12 @@
 class Ray {
 
 public:
+    octomap::OcTreeKey origin;
+    octomap::OcTreeKey end;
+    octomap::KeyRay *ray_set;
+    octomap::KeyRay::iterator start;
+    octomap::KeyRay::iterator stop;
+
     /**
      * @brief Constructor of a Ray
      * @param _origin The key to the origin voxel
@@ -24,15 +30,9 @@ public:
      */
     Ray(octomap::OcTreeKey _origin,
         octomap::OcTreeKey _end,
-        octomap::KeyRay* _ray_set,
+        octomap::KeyRay *_ray_set,
         octomap::KeyRay::iterator _start,
         octomap::KeyRay::iterator _stop);
-
-    octomap::OcTreeKey origin;
-    octomap::OcTreeKey end;
-    octomap::KeyRay* ray_set;
-    octomap::KeyRay::iterator start;
-    octomap::KeyRay::iterator stop;
 
 };
 
@@ -44,6 +44,6 @@ public:
  * @param other A pointer to the other Ray
  * @return TRUE if they are equal, FALSE if they're not
  */
-bool operator==(Ray const& current, Ray const& other);
+bool operator==(Ray const &current, Ray const &other);
 
 #endif //NBV_SIMULATION_RAY_H

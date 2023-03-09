@@ -4,40 +4,33 @@
 #pragma once
 
 #include <bitset>
-
 #include <Eigen/Core>
-
-#include <pcl/visualization/pcl_visualizer.h>
+#include <Eigen/Geometry>
 
 class View {
-
 public:
-    int space_id{};
-    int id{};
-    /* Initial position */
-    Eigen::Vector3d init_pos;
-    // view_i to view_i+1 rotation matrix
-    Eigen::Matrix4d pose;
-    double information_gain;
-    int voxel_num;
-    double robot_cost;
-    double dis_to_object;
-    double final_utility; // The global final utility
-    std::atomic<bool> robot_moved{};
-    int path_num;
+    int space_id{}; // The View Space id containing the view
+    int id{}; // The id of the view
+    Eigen::Vector3d init_pos; // Position of the view (x,y,z)
+    Eigen::Matrix4d pose; // View_i to View_i+1 rotation matrix
     int vis; // The number of times the view has been visited
-    bool can_move;
+    double information_gain; // The information gain brought by this view
+    int voxel_num;
     std::bitset<64> in_coverage;
+    double final_utility; // The global final utility
 
+
+    /**
+     * Constructor of the view from a Vector3d
+     * @param _init_pos Vector3d containing the position of the view
+     */
     explicit View(Eigen::Vector3d _init_pos);
 
+    /**
+     * Constructor of a view from an other view
+     * @param other The other view to build the new view
+     */
     View(const View &other);
-
-    View &operator=(const View &other);
-
-    static double global_function(int x);
-
-    double get_global_information();
 
     /**
      * Get to the next camera position and set the pose parameter
@@ -46,13 +39,22 @@ public:
      */
     void get_next_camera_pos(const Eigen::Matrix4d &now_camera_pose_world, Eigen::Vector3d object_center_world);
 
-    [[maybe_unused]] void add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
-                                                        pcl::visualization::PCLVisualizer::Ptr viewer,
-                                                        int space_id);
+    /**
+     * Computing his(v,k) (eq. (4))
+     * @param x The difference (it-k)
+     * @return the value of his(v,k)
+     */
+    static double global_function(int x);
+
+    /**
+     * Computes the I_flow function (eq. (5))
+     * @return The value of I_flow for the considered view
+     */
+    double get_global_information();
 };
 
 /**
- * Compares the IDs of two views
+ * Comparison function for ids of the views
  * @param a First view
  * @param b Second View
  * @return True if a.id < b.id

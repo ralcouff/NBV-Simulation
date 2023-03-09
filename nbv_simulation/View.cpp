@@ -1,19 +1,12 @@
 #include "View.h"
 
-#include <utility>
-
 View::View(Eigen::Vector3d _init_pos) {
     init_pos = std::move(_init_pos);
     pose = Eigen::Matrix4d::Identity(4, 4);
+    vis = 0;
     information_gain = 0;
     voxel_num = 0;
-    robot_cost = 0;
-    dis_to_object = 0;
     final_utility = 0;
-    robot_moved = false;
-    path_num = 0;
-    vis = 0;
-    can_move = true;
 }
 
 View::View(const View &other) {
@@ -21,48 +14,14 @@ View::View(const View &other) {
     id = other.id;
     init_pos = other.init_pos;
     pose = other.pose;
+    vis = other.vis;
     information_gain = (double) other.information_gain;
     voxel_num = (int) other.voxel_num;
-    robot_cost = other.robot_cost;
-    dis_to_object = other.dis_to_object;
-    final_utility = other.final_utility;
-    robot_moved = (bool) other.robot_moved;
-    path_num = other.path_num;
-    vis = other.vis;
-    can_move = other.can_move;
     in_coverage = other.in_coverage;
-}
-
-View &View::operator=(const View &other) {
-    init_pos = other.init_pos;
-    space_id = other.space_id;
-    id = other.id;
-    pose = other.pose;
-    information_gain = (double) other.information_gain;
-    voxel_num = (int) other.voxel_num;
-    robot_cost = other.robot_cost;
-    dis_to_object = other.dis_to_object;
     final_utility = other.final_utility;
-    robot_moved = (bool) other.robot_moved;
-    path_num = other.path_num;
-    vis = other.vis;
-    can_move = other.can_move;
-    in_coverage = other.in_coverage;
-    return *this;
 }
 
-double View::global_function(int x) {
-    return exp(-1.0 * x);
-}
-
-double View::get_global_information() {
-    double information = 0;
-    for (int i = 0; i <= id && i < 64; i++)
-        information += in_coverage[i] * global_function(id - i);
-    return information;
-}
-
-void View::get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eigen::Vector3d object_center_world) {
+void View::get_next_camera_pos(const Eigen::Matrix4d &now_camera_pose_world, Eigen::Vector3d object_center_world) {
     /* Normalized multiplication */
     /* Re-projecting point in the camera world referential */
     Eigen::Vector4d object_center_now_camera;
@@ -194,43 +153,24 @@ void View::get_next_camera_pos(const Eigen::Matrix4d& now_camera_pose_world, Eig
     // pose = (R.inverse() * T).eval();
 }
 
-[[maybe_unused]] void View::add_view_coordinates_to_cloud(Eigen::Matrix4d now_camera_pose_world,
-                                         pcl::visualization::PCLVisualizer::Ptr viewer, int space_id) {
-    // view.get_next_camera_pos(view_space->now_camera_pose_world, view_space->object_center_world);
-    Eigen::Vector4d X(0.05, 0, 0, 1);
-    Eigen::Vector4d Y(0, 0.05, 0, 1);
-    Eigen::Vector4d Z(0, 0, 0.05, 1);
-    Eigen::Vector4d weight(final_utility, final_utility, final_utility, 1);
-    X = now_camera_pose_world * X;
-    Y = now_camera_pose_world * Y;
-    Z = now_camera_pose_world * Z;
-    weight = now_camera_pose_world * weight;
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(init_pos(0), init_pos(1), init_pos(2)),
-                                   pcl::PointXYZ(X(0), X(1), X(2)),
-                                   255,
-                                   0,
-                                   0,
-                                   "X" + std::to_string(space_id) + "-" + std::to_string(id));
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(init_pos(0), init_pos(1), init_pos(2)),
-                                   pcl::PointXYZ(Y(0), Y(1), Y(2)),
-                                   0,
-                                   255,
-                                   0,
-                                   "Y" + std::to_string(space_id) + "-" + std::to_string(id));
-    viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(init_pos(0), init_pos(1), init_pos(2)),
-                                   pcl::PointXYZ(Z(0), Z(1), Z(2)),
-                                   0,
-                                   0,
-                                   255,
-                                   "Z" + std::to_string(space_id) + "-" + std::to_string(id));
-    // viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(init_pos(0), init_pos(1), init_pos(2)), pcl::PointXYZ(weight(0),
-    // weight(1), weight(2)), 0, 255, 255, "weight" + to_string(space_id) + "-" + to_string(id));
+double View::global_function(int x) {
+    return exp(-1.0 * x);
+}
+
+double View::get_global_information() {
+    double information = 0;
+    for (int i = 0; i <= id && i < 64; i++)
+        information += in_coverage[i] * global_function(id - i);
+    return information;
 }
 
 bool view_id_compare(View &a, View &b) { return a.id < b.id; }
 
 bool view_utility_compare(View &a, View &b) {
     if (a.final_utility == b.final_utility)
-        return a.robot_cost < b.robot_cost;
+//        return a.robot_cost < b.robot_cost;
+        return view_id_compare(a, b);
     return a.final_utility > b.final_utility;
 }
+
+

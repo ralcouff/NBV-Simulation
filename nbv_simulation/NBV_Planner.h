@@ -1,17 +1,11 @@
 #ifndef NBV_SIMULATION_NBV_PLANNER_H
 #define NBV_SIMULATION_NBV_PLANNER_H
 
-#pragma once
-
-#include <memory>
-#include <thread>
-#include <pcl/io/obj_io.h>
+#include <pcl/visualization/pcl_visualizer.h>
 
 #include "Perception_3D.h"
-#include "Voxel_Information.h"
-#include "View_Space.h"
 #include "Views_Information.h"
-#include "views_voxels_MF.h"
+#include "View_Space.h"
 
 #define Over 0
 #define WaitData 1
@@ -20,17 +14,17 @@
 #define WaitMoving 4
 
 class NBV_Planner {
-
 public:
     atomic<int> status{};
     int iterations;
+    View_Space *current_view_space;
+    View *current_best_view;
+    Share_Data *share_data;
+    pcl::visualization::PCLVisualizer::Ptr visualizer;
     Perception_3D *percept;
     Voxel_Information *voxel_information;
-    View_Space *now_view_space;
-    Views_Information *now_views_information{nullptr};
-    View *now_best_view;
-    Share_Data *share_data;
-    pcl::visualization::PCLVisualizer::Ptr viewer;
+    Views_Information *current_views_information{};
+
 
     /**
      * Constructor of the NBV_Planner object.
@@ -65,35 +59,27 @@ public:
 };
 
 /**
- * Save the cloud to disk.
- * @param cloud The cloud to save.
- * @param name The name to give to the cloud.
- * @param share_data The shared data through the whole project.
- */
-void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const string &name,
-                                   Share_Data *share_data);
-
-/**
  * Updating the View Space according to the current best view.
- * @param now_view_space The View Space to update
- * @param now_best_view The current best view
+ * @param current_view_space The View Space to update
+ * @param current_best_view The current best view
  * @param share_data The data shared through all the files
  * @param iterations The iteration number
  */
-void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations);
+void
+create_view_space(View_Space **current_view_space, View *current_best_view, Share_Data *share_data, int iterations);
 
 /**
  * Compute the global information function for each view (eq. 6)
- * @param now_views_information The information contained in the views
- * @param now_best_view FIXME : unused
- * @param now_view_space The current view space
+ * @param current_views_information The information contained in the views
+ * @param current_best_view FIXME : unused
+ * @param current_view_space The current view space
  * @param share_data The data shared through the whole project
  * @param nbv_plan The NBV Planner
  * @param iterations The number of iterations
  */
-void create_views_information(Views_Information **now_views_information,
-                              View *now_best_view,
-                              View_Space *now_view_space,
+void create_views_information(Views_Information **current_views_information,
+                              View *current_best_view,
+                              View_Space *current_view_space,
                               Share_Data *share_data,
                               NBV_Planner *nbv_plan,
                               int iterations);
@@ -106,7 +92,5 @@ void create_views_information(Views_Information **now_views_information,
  * @param nbv_plan The NBV Planner
  */
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
-
-[[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

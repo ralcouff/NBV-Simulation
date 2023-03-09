@@ -26,8 +26,8 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/Ray_Hash.h
         nbv_simulation/Ray_Information.cpp
         nbv_simulation/Ray_Information.h
-        nbv_simulation/MCMF.cpp
-        nbv_simulation/MCMF.h
+#        nbv_simulation/MCMF.cpp
+#        nbv_simulation/MCMF.h
         nbv_simulation/Share_Data.cpp
         nbv_simulation/Share_Data.h
         nbv_simulation/View.cpp
@@ -40,12 +40,13 @@ set(NBV_SIMULATION_SOURCES
         nbv_simulation/Perception_3D.h
         nbv_simulation/Views_Information.cpp
         nbv_simulation/Views_Information.h
-        nbv_simulation/views_voxels_MF.cpp
-        nbv_simulation/views_voxels_MF.h
+#        nbv_simulation/views_voxels_MF.cpp
+#        nbv_simulation/views_voxels_MF.h
         nbv_simulation/Information.cpp
         nbv_simulation/Information.h
         nbv_simulation/NBV_Planner.cpp
-        nbv_simulation/NBV_Planner.h)
+        nbv_simulation/NBV_Planner.h
+        )
 
 #set(NBV_SIMULATION_HEADERS
 #        nbv_simulation/Information.hpp
