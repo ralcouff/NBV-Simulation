@@ -52,10 +52,12 @@ double Voxel_Information::voxel_object(octomap::OcTreeKey &voxel_key,
     return key->second;
 }
 
-double Voxel_Information::voxel_quality(octomap::OcTreeKey &voxel_key, std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight) {
+double Voxel_Information::voxel_quality(octomap::OcTreeKey &voxel_key,
+                                        std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight) {
     auto key = quality_weight->find(voxel_key);
     if (key == quality_weight->end())
         return 1;
+//    std::cout << "JSP JPP JENAIMARRE" << std::endl;
     return key->second;
 }
 

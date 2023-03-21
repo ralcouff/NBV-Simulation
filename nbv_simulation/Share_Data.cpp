@@ -12,6 +12,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["octomap_resolution"] >> octomap_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
     fs["move_wait"] >> move_wait;
+    fs["show"] >> show;
     fs["p_unknown_upper_bound"] >> p_unknown_upper_bound;
     fs["p_unknown_lower_bound"] >> p_unknown_lower_bound;
     fs["num_of_views"] >> num_of_views;
@@ -62,19 +63,9 @@ Share_Data::Share_Data(std::string _config_file_path) {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     working_cloud = temp_cloud;
 
-    // Reading the quality file
-    ifstream quality_file(quality_file_path);
-    if (quality_file.is_open()) {
-        std::string line;
-        while (getline(quality_file, line)) {
-            //TODO: Fill the vertex quality set
-//            vertex_quality.push_back(std::stof(line));
-        }
-        quality_file.close();
-        cout << "Quality file has been read" << endl;
-    } else {
-        cout << "No Quality file has been found" << endl;
-    }
+    // Creating the quality_weight unordered map
+//    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+
     cout << "3D object and YAML files have been read." << endl;
     cout << "Saving results in: " << save_path << endl;
     srand(clock());
@@ -96,4 +87,27 @@ void Share_Data::access_directory(const std::string &cd) {
             temp += i;
     if (access(temp.c_str(), 0) != 0)
         fs::create_directory(temp);
+}
+
+void Share_Data::updateQuality() {
+    ifstream quality_file(quality_file_path);
+    if (quality_file.is_open()) {
+        for (auto &pt: working_cloud->points) {
+            std::string line;
+            if (getline(quality_file, line)) {
+                octomap::OcTreeKey key;
+                bool key_have = octo_model->coordToKeyChecked(pt.x, pt.y, pt.z, key);
+                if (key_have) {
+                    if ((*quality_weight).find(key) == (*quality_weight).end())
+                        (*quality_weight)[key] = std::stod(line);
+                    else
+                        (*quality_weight)[key] = std::min((*quality_weight)[key],std::stod(line));
+                }
+            }
+        }
+        quality_file.close();
+        cout << "Quality file has been read" << endl;
+    } else {
+        cout << "No Quality file has been found" << endl;
+    }
 }

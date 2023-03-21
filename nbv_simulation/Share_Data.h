@@ -50,10 +50,14 @@ public:
     int init_voxels; // Number of initial voxels in the octo_model
 
     bool move_wait{};
+    bool show{}; // If we want to display the environment
     std::atomic<bool> over{}; // Checks if the process is over
     std::atomic<bool> current_view_space_processed{}; // Is the View Space processed
     std::atomic<bool> current_views_information_processed{}; // Is the Views Information processed
     std::atomic<bool> move_on{}; // Did we continue
+
+    // Quality set
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight; // A quality map for each voxel
 
     // Position matrices
     Eigen::Matrix4d current_camera_pose_world; // The current camera pose considered as the NBV
@@ -93,6 +97,11 @@ public:
      * @param cd The folder path
      */
     static void access_directory(const std::string &cd);
+
+    /**
+     * Update the quality unordered map with the working cloud and the
+     */
+    void updateQuality();
 
 };
 

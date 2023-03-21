@@ -45,6 +45,9 @@ void ray_cast_thread_process(int *ray_num,
                              View_Space *view_space,
                              rs2_intrinsics *color_intrinsics,
                              int pos) {
+
+//    pcl::visualization::PCLVisualizer::Ptr visualizer = std::make_shared<pcl::visualization::PCLVisualizer>("Prout");
+
     // Get a viewpoint pose
     view_space->views[pos].get_next_camera_pos(view_space->current_camera_pose_world, view_space->object_center_world);
     Eigen::Matrix4d view_pose_world =
@@ -69,7 +72,7 @@ void ray_cast_thread_process(int *ray_num,
     int xmin = boundary[1];
     int ymax = boundary[2];
     int ymin = boundary[3];
-    // cout << xmax << " " << xmin << " " << ymax << " " << ymin << " ," << pixel_interval <<endl;
+//     cout << xmax << " " << xmin << " " << ymax << " " << ymin << " ," << pixel_interval <<endl;
     // Intermediate data structures
     vector<Ray *> rays;
     // int num = 0;
@@ -82,11 +85,8 @@ void ray_cast_thread_process(int *ray_num,
     if (key_origin_have) {
         octomap::point3d origin = octo_model->keyToCoord(key_origin);
         // Traversing the wrap-around box
-        // srand(pos);
-        // int rr = rand() % 256, gg = rand() % 256, bb = rand() % 256;
         for (int x = xmin; x <= xmax; x += (int) (pixel_interval * skip_coefficient))
             for (int y = ymin; y <= ymax; y += (int) (pixel_interval * skip_coefficient)) {
-                // num++;
                 cv::Point2f pixel(x, y);
                 // Check if it is inside the convex bale area
                 if (!is_pixel_in_convex(hull, pixel))
@@ -125,6 +125,7 @@ void ray_cast_thread_process(int *ray_num,
                     // The first non-empty node is used as the start of the ray and the last non-empty element from the
                     // tail is used as the end of the ray
                     auto last = ray_set->end();
+//                    auto first = ray_set->begin();
                     last--;
                     while (last != ray_set->begin() && (octo_model->search(*last) == nullptr))
                         last--;
@@ -162,22 +163,26 @@ void ray_cast_thread_process(int *ray_num,
                     auto stop = last;
                     stop++;
                     // Show it
-                    // while (octo_model->keyToCoord(*first).x() < view_space->object_center_world(0) -
-                    // view_space->predicted_size || octo_model->keyToCoord(*first).x() >
-                    // view_space->object_center_world(0) + view_space->predicted_size
-                    //	|| octo_model->keyToCoord(*first).y() < view_space->object_center_world(1) -
-                    //view_space->predicted_size || octo_model->keyToCoord(*first).y() >
-                    //view_space->object_center_world(1) + view_space->predicted_size
-                    //	|| octo_model->keyToCoord(*first).z() < min(view_space->height_of_ground,
-                    //view_space->object_center_world(2) - view_space->predicted_size) ||
-                    //octo_model->keyToCoord(*first).z() > view_space->object_center_world(2) +
-                    //view_space->predicted_size) first++; octomap::point3d ss = octo_model->keyToCoord(*first);
-                    // octomap::point3d ee = octo_model->keyToCoord(*last);
-                    // view_space->viewer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)),
-                    // pcl::PointXYZ(ee(0), ee(1), ee(2)), rr, gg, bb, "line" + to_string(pos) + "-" + to_string(x) +
-                    // "-" + to_string(y)); Add the ray to the set of viewpoints, the first element with the last
+                    while (octo_model->keyToCoord(*first).x() <
+                           view_space->object_center_world(0) - view_space->predicted_size ||
+                           octo_model->keyToCoord(*first).x() >
+                           view_space->object_center_world(0) + view_space->predicted_size ||
+                           octo_model->keyToCoord(*first).y() <
+                           view_space->object_center_world(1) - view_space->predicted_size ||
+                           octo_model->keyToCoord(*first).y() >
+                           view_space->object_center_world(1) + view_space->predicted_size ||
+                           octo_model->keyToCoord(*first).z() <
+                           min(0.0, view_space->object_center_world(2) - view_space->predicted_size) ||
+                           octo_model->keyToCoord(*first).z() >
+                           view_space->object_center_world(2) + view_space->predicted_size)
+                        first++;
+                    octomap::point3d ss = octo_model->keyToCoord(*first);
+                    octomap::point3d ee = octo_model->keyToCoord(*last);
+//                    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)), pcl::PointXYZ(ee(0), ee(1), ee(2)), 255, 0, 255, "line" + to_string(pos) + "-" + to_string(x) +
+//                    "-" + to_string(y)); // Add the ray to the set of viewpoints, the first element with the last
                     // element key+array+head+tail
-                    Ray *ray = new Ray(*first, *last, ray_set, first, stop);
+//                    auto stop = last;
+                    Ray *ray = new Ray(*first, *last, ray_set, first, last);
                     rays.push_back(ray);
                 }
             }
@@ -223,6 +228,18 @@ void ray_cast_thread_process(int *ray_num,
     (*views_to_rays_map)[pos] = ray_ids;
     // Release the lock
     voxel_information->mutex_rays.unlock();
+//    visualizer->setBackgroundColor(0,0,0);
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_octo(new pcl::PointCloud<pcl::PointXYZ>);
+//    for (auto it = octo_model->begin_leafs(); it != octo_model->end_leafs(); it++){
+//        if (it->getOccupancy() > 0.5) {
+//            auto truc = it.getCoordinate();
+//            auto pt = new pcl::PointXYZ(truc.x(), truc.y(), truc.z());
+//            cloud_octo->points.push_back(*pt);
+//        }
+//    }
+//    visualizer->addPointCloud<pcl::PointXYZ>(cloud_octo, "tartuffe",0);
+//    visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "tartuffe");
+//    visualizer->spinOnce(10);
 }
 
 void ray_information_thread_process(
@@ -231,6 +248,7 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,
@@ -256,6 +274,8 @@ void ray_information_thread_process(
         bool voxel_unknown = voxel_information->is_unknown(occupancy);
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, object_weight);
+        // Get the quality of the voxel
+        double qlt = Voxel_Information::voxel_quality(*it, quality_weight);
         // If it is occupied, it is the last node
         if (voxel_occupied)
             last = it;
@@ -274,9 +294,10 @@ void ray_information_thread_process(
                                                                    is_end,
                                                                    voxel_occupied,
                                                                    on_object,
+                                                                   qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG) {
+        if (method == OursIG || method == Test_one) {
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         } else {
             rays_info[ray_id]->visible *= occupancy;
@@ -305,6 +326,7 @@ inline double information_function(short &method,
                                    bool &is_endpoint,
                                    bool &is_occupied,
                                    double &object,
+                                   double &qlt,
                                    double &object_visible) {
     double final_information = 0;
     switch (method) {
@@ -316,11 +338,7 @@ inline double information_function(short &method,
             }
             break;
         case Test_one:
-            if (is_unknown) {
-                final_information = ray_information + object * visible * voxel_information;
-            } else {
-                final_information = ray_information;
-            }
+            final_information = ray_information + visible * (1-qlt);
             break;
         case OA:
             final_information = ray_information + visible * voxel_information;

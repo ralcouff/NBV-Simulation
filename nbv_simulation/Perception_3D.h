@@ -20,10 +20,9 @@ public:
 
     /**
      * Generate the voxels seen by the camera at the position now_best_view
-     * @param current_best_view The view from where to generate the cloud
      * @return TRUE if the cloud has been correctly generated
      */
-    bool percept(View *current_best_view);
+    bool percept();
 };
 
 #endif //NBV_SIMULATION_PERCEPTION_3D_H

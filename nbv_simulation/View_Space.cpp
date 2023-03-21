@@ -97,7 +97,8 @@ View_Space::View_Space(int _id,
                 share_data->octo_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
         if (key_have) {
             octomap::ColorOcTreeNode *voxel = share_data->octo_model->search(key);
-            if (voxel == nullptr) {
+            if (voxel->getOccupancy() < 0.65) {
+//            if (voxel == nullptr) {
                 share_data->octo_model->setNodeValue(
                         key, share_data->octo_model->getProbHitLog(), true);
             } else {

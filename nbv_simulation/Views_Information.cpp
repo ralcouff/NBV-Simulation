@@ -24,6 +24,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
 
+
     /* Computing the frontier voxels */
     std::vector<octomap::point3d> points;
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
@@ -47,9 +48,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         }
     }
     pre_edge_cnt = 0x3f3f3f3f;
-    edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
-    if (edge->points.size() != 0) {
+    if (!edge->points.empty()) {
         pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
@@ -70,6 +70,40 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
             }
         }
     }
+
+    ifstream quality_file(share_data->quality_file_path);
+    if (quality_file.is_open()) {
+        for (auto &pt: share_data->working_cloud->points) {
+            std::string line;
+            if (getline(quality_file, line)) {
+                octomap::OcTreeKey key;
+                bool key_have = octo_model->coordToKeyChecked(pt.x, pt.y, pt.z, key);
+                if (key_have) {
+                    if ((*quality_weight).find(key) == (*quality_weight).end())
+                        (*quality_weight)[key] = std::stod(line);
+                    else
+                        (*quality_weight)[key] = std::min((*quality_weight)[key],std::stod(line));
+                }
+            }
+        }
+        quality_file.close();
+        cout << "Quality file has been read" << endl;
+    } else {
+        cout << "No Quality file has been found" << endl;
+    }
+
+    // Displaying the repartition of quality in the octomap
+    std::map<double, int> qlt_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()), quality_weight);
+        qlt_map[qltt]++;
+    }
+    cout << "Quality in octo_model" << endl;
+    for (auto &it: qlt_map) {
+        std::cout << it.first << " - " << it.second << endl;
+    }
+
     cout << "Size of occupancy_map: " << occupancy_map->size() << endl;
     cout << "Size of edge: " << edge->points.size() << endl;
     cout << "Size of object_weight: " << object_weight->size() << endl;
@@ -79,7 +113,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     long long superficial = ceil(5.0 * pre_line_point * pre_line_point);
     long long volume = ceil(pre_line_point * pre_line_point * pre_line_point);
     max_num_of_rays = superficial * volume;
-                                                                                                                                                                                rays_info = new Ray_Information *[max_num_of_rays];
+    rays_info = new Ray_Information *[max_num_of_rays];
     cout << "There are: " << max_num_of_rays << " rays" << endl;
     // Calculate the eight vertices of BBX for delineating the ray range
     std::vector<Eigen::Vector4d> convex_3d;
@@ -121,7 +155,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
 //                                        &color_intrinsics,
 //                                        i);
 //    }
-//     Wait for each viewpoint ray generator to complete its calculation.
+////     Wait for each viewpoint ray generator to complete its calculation.
 //    for (int i = 0; i < view_space->views.size(); i++) {
 //        (*ray_caster[i]).join();
 //    }
@@ -133,8 +167,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     now_time = clock();
     //TODO: Multi-thread it
     for (int i = 0; i < ray_num; i++) {
-        ray_information_thread_process(i, rays_info, rays_map, occupancy_map, object_weight, octo_model,
-                                       voxel_information, view_space, method);
+        ray_information_thread_process(i, rays_info, rays_map, occupancy_map, object_weight, quality_weight,
+                                       octo_model, voxel_information, view_space, method);
     }
     //    auto **rays_process = new std::thread *[ray_num];
 //    for (int i = 0; i < ray_num; i++) {

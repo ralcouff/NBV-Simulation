@@ -22,7 +22,7 @@ public:
     int method; // The method used for the computation of Global Information
     octomap::ColorOcTree *octo_model; // The current octomap
     double octomap_resolution; // The resolution of the current octomap
-    double alpha; // TODO:
+    double alpha; // The decrease rate used for the computation of distance eq. (2):
     Voxel_Information *voxel_information; // Voxel Information object
     int pre_edge_cnt;
     std::size_t edge_cnt;
@@ -49,5 +49,4 @@ public:
     Views_Information(Share_Data *share_data, Voxel_Information *_voxel_information, View_Space *view_space,
                       int iterations);
 };
-
 #endif //NBV_SIMULATION_VIEWS_INFORMATION_H

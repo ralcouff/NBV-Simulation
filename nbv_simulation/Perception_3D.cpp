@@ -6,7 +6,7 @@ Perception_3D::Perception_3D(Share_Data *_share_data) {
     iterations = 0;
 }
 
-bool Perception_3D::percept(View *current_best_view) {
+bool Perception_3D::percept() {
     share_data->valid_clouds++;
     share_data->clouds.push_back(share_data->working_cloud);
     iterations++;

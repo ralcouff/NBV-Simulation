@@ -2,6 +2,7 @@
 #define NBV_SIMULATION_NBV_PLANNER_H
 
 #include <pcl/visualization/pcl_visualizer.h>
+#include <boost/thread/thread.hpp>
 
 #include "Perception_3D.h"
 #include "Views_Information.h"

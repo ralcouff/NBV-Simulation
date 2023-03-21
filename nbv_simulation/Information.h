@@ -1,6 +1,8 @@
 #pragma once
 
 #include <octomap/ColorOcTree.h>
+#include <pcl/visualization/pcl_visualizer.h>
+
 #include "Voxel_Information.h"
 #include "Ray_Information.h"
 #include "Ray_Hash.h"
@@ -50,6 +52,7 @@ void ray_cast_thread_process(int *ray_num,
  * @param rays_map
  * @param occupancy_map
  * @param object_weight
+ * @param quality_weight
  * @param octo_model
  * @param voxel_information
  * @param view_space
@@ -61,6 +64,7 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,
@@ -89,6 +93,7 @@ double information_function(short &method,
                             bool &is_endpoint,
                             bool &is_occupied,
                             double &object,
+                            double &qlt,
                             double &object_visible);
 
 /**

@@ -40,9 +40,9 @@ typedef struct rs2_intrinsics
 /**
  * Given a point in 3D space, compute the corresponding pixel coordinates in an image with no distortion or forward
  * distortion coefficients produced by the same camera
- * @param pixel TODO
- * @param intrin TODO
- * @param point TODO
+ * @param pixel The pixel to project onto
+ * @param intrin Intrinsic parameters of the camera
+ * @param point The point to project
  */
 static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsics* intrin, const float point[3])
 {
@@ -67,7 +67,7 @@ static void rs2_project_point_to_pixel(float pixel[2], const struct rs2_intrinsi
         {
             r = FLT_EPSILON;
         }
-        float rd = (float)(1.0f / intrin->coeffs[0] * atan(2 * r * tan(intrin->coeffs[0] / 2.0f)));
+        auto rd = (float)(1.0f / intrin->coeffs[0] * atan(2 * r * tan(intrin->coeffs[0] / 2.0f)));
         x *= rd / r;
         y *= rd / r;
     }
@@ -176,18 +176,18 @@ inline double pow2(double x) { return x * x; }
 /**
  *
  * @param hull The hull containing the object
- * @param color_intrinsics TODO
+ * @param color_intrinsics The intrinsic parameters of the camera
  * @return
  */
 inline vector<int> get_xmax_xmin_ymax_ymin_in_hull(vector<cv::Point2f>& hull, rs2_intrinsics& color_intrinsics)
 {
-    float x_max = 0, x_min = color_intrinsics.width - 1, y_max = 0, y_min = color_intrinsics.height - 1;
-    for(int i = 0; i < hull.size(); i++)
+    float x_max = 0, x_min = (float) color_intrinsics.width - 1, y_max = 0, y_min = (float) color_intrinsics.height - 1;
+    for(auto & i : hull)
     {
-        x_max = std::max(x_max, hull[i].x);
-        x_min = std::min(x_min, hull[i].x);
-        y_max = std::max(y_max, hull[i].y);
-        y_min = std::min(y_min, hull[i].y);
+        x_max = std::max(x_max, i.x);
+        x_min = std::min(x_min, i.x);
+        y_max = std::max(y_max, i.y);
+        y_min = std::min(y_min, i.y);
     }
     std::vector<int> boundary;
     boundary.push_back((int)floor(x_max));
@@ -213,7 +213,7 @@ inline bool is_pixel_in_convex(vector<cv::Point2f>& hull, cv::Point2f& pixel)
  * Compute the projection of the 3D convex hull onto the image plane
  * @param convex_3d The 3D convex hull of the object
  * @param now_camera_pose_world The current camera pose
- * @param color_intrinsics TODO
+ * @param color_intrinsics The intrinsic parameters of the camera
  * @param pixel_interval TODO
  * @param max_range TODO
  * @param octomap_resolution The resolution of the current octomap
@@ -229,9 +229,9 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
     // Projection of the cube vertices to the image coordinate system
     double now_range = 0;
     vector<cv::Point2f> contours;
-    for(int i = 0; i < convex_3d.size(); i++)
+    for(const auto & i : convex_3d)
     {
-        Eigen::Vector4d vertex = now_camera_pose_world.inverse() * convex_3d[i];
+        Eigen::Vector4d vertex = now_camera_pose_world.inverse() * i;
         float point[3] = {static_cast<float>(vertex(0)), static_cast<float>(vertex(1)), static_cast<float>(vertex(2))};
         float pixel[2];
         rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
@@ -240,7 +240,7 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
         // Calculate the distance of the furthest point from the viewpoint
         Eigen::Vector4d view_pos(
                 now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
-        now_range = max(now_range, (view_pos - convex_3d[i]).norm());
+        now_range = max(now_range, (view_pos - i).norm());
     }
     max_range = min(max_range, now_range);
     // Calculating convex packages
