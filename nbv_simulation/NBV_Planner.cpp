@@ -94,8 +94,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                     (*ptr).r = 255;
                 } else {
                     (*ptr).b = 255;
-                    (*ptr).g = 0;
-                    (*ptr).r = 0;
+                    (*ptr).g = 255;
+                    (*ptr).r = 255;
                 }
             }
         }
@@ -217,6 +217,7 @@ int NBV_Planner::plan() {
                     }
                     test_view_space->points.resize(needed);
                     visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
+                    visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "test_view_space");
                     bool best_have = false;
                     for (int i = 0; i < current_view_space->views.size(); i++) {
                         if (current_view_space->views[i].vis) {
@@ -298,11 +299,13 @@ int NBV_Planner::plan() {
                                                                    0,
                                                                    255,
                                                                    "Ray" + to_string(r_id));
-                                cout << r_id << endl;
+//                                cout << r_id << endl;
                             }
+                            cout << "There are: " << rays_id.size() << " rays projected in the octomap."<< endl;
                         }
                     }
                     visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->working_cloud, "cloud_now_iteration");
+                    visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 5, "cloud_now_iteration");
                     while (!visualizer->wasStopped()) {
                         visualizer->spin();
                         boost::this_thread::sleep(boost::posix_time::microseconds(100000));

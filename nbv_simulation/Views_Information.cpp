@@ -137,28 +137,28 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     // Initial subscripts for rays start from 0
     ray_num = 0;
     //TODO: Multi-thread it
+//    for (int i = 0; i < view_space->views.size(); i++) {
+//        ray_cast_thread_process(&ray_num, rays_info, rays_map, views_to_rays_map, rays_to_views_map, octo_model,
+//                                voxel_information, view_space, &color_intrinsics, i);
+//    }
     for (int i = 0; i < view_space->views.size(); i++) {
-        ray_cast_thread_process(&ray_num, rays_info, rays_map, views_to_rays_map, rays_to_views_map, octo_model,
-                                voxel_information, view_space, &color_intrinsics, i);
+        // Threads that divide into rays for this viewpoint
+        ray_caster[i] = new std::thread(ray_cast_thread_process,
+                                        &ray_num,
+                                        rays_info,
+                                        rays_map,
+                                        views_to_rays_map,
+                                        rays_to_views_map,
+                                        octo_model,
+                                        voxel_information,
+                                        view_space,
+                                        &color_intrinsics,
+                                        i);
     }
-//    for (int i = 0; i < view_space->views.size(); i++) {
-//        // Threads that divide into rays for this viewpoint
-//        ray_caster[i] = new std::thread(ray_cast_thread_process,
-//                                        &ray_num,
-//                                        rays_info,
-//                                        rays_map,
-//                                        views_to_rays_map,
-//                                        rays_to_views_map,
-//                                        octo_model,
-//                                        voxel_information,
-//                                        view_space,
-//                                        &color_intrinsics,
-//                                        i);
-//    }
-////     Wait for each viewpoint ray generator to complete its calculation.
-//    for (int i = 0; i < view_space->views.size(); i++) {
-//        (*ray_caster[i]).join();
-//    }
+//     Wait for each viewpoint ray generator to complete its calculation.
+    for (int i = 0; i < view_space->views.size(); i++) {
+        (*ray_caster[i]).join();
+    }
     cout << "Number of rays (ray_num) : " << ray_num << endl;
     cout << "All views' rays generated in " << clock() - now_time << " ms. Starting computation of information."
          << endl;
@@ -170,7 +170,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         ray_information_thread_process(i, rays_info, rays_map, occupancy_map, object_weight, quality_weight,
                                        octo_model, voxel_information, view_space, method);
     }
-    //    auto **rays_process = new std::thread *[ray_num];
+//    auto **rays_process = new std::thread *[ray_num];
 //    for (int i = 0; i < ray_num; i++) {
 //        rays_process[i] = new std::thread(ray_information_thread_process,
 //                                          i,
@@ -178,6 +178,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
 //                                          rays_map,
 //                                          occupancy_map,
 //                                          object_weight,
+//                                          quality_weight,
 //                                          octo_model,
 //                                          voxel_information,
 //                                          view_space,

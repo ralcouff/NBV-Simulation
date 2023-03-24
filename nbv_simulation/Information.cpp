@@ -64,15 +64,19 @@ void ray_cast_thread_process(int *ray_num,
                                pixel_interval,
                                max_range,
                                voxel_information->octomap_resolution);
-    // if (hull.size() != 4 && hull.size() != 5 && hull.size() != 6) cout << "hull wrong with size " << hull.size() <<
-    // endl; Calculating the enclosing box of a convex pack
+    // Calculating the enclosing box of a convex pack
     vector<int> boundary;
     boundary = get_xmax_xmin_ymax_ymin_in_hull(hull, *color_intrinsics);
     int xmax = boundary[0];
     int xmin = boundary[1];
     int ymax = boundary[2];
     int ymin = boundary[3];
-//     cout << xmax << " " << xmin << " " << ymax << " " << ymin << " ," << pixel_interval <<endl;
+    pixel_interval = 1;
+    xmax = std::min(xmax, (int) (color_intrinsics->width - 1) / 2);
+    xmin = std::max(xmin, (int) -color_intrinsics->ppx + 1);
+    ymax = std::min(ymax, (int) (color_intrinsics->height - 1) / 2);
+    ymin = std::max(ymin, (int) -color_intrinsics->ppy + 1);
+//    cout << xmax << " " << xmin << " " << ymax << " " << ymin << " ," << pixel_interval << endl;
     // Intermediate data structures
     vector<Ray *> rays;
     // int num = 0;
@@ -182,6 +186,7 @@ void ray_cast_thread_process(int *ray_num,
 //                    "-" + to_string(y)); // Add the ray to the set of viewpoints, the first element with the last
                     // element key+array+head+tail
 //                    auto stop = last;
+                    first = ray_set->begin();
                     Ray *ray = new Ray(*first, *last, ray_set, first, last);
                     rays.push_back(ray);
                 }
@@ -298,6 +303,7 @@ void ray_information_thread_process(
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
         if (method == OursIG || method == Test_one) {
+//        if (method == OursIG) {
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         } else {
             rays_info[ray_id]->visible *= occupancy;
@@ -338,7 +344,7 @@ inline double information_function(short &method,
             }
             break;
         case Test_one:
-            final_information = ray_information + visible * (1-qlt);
+            final_information = ray_information + visible * (1 - qlt);
             break;
         case OA:
             final_information = ray_information + visible * voxel_information;

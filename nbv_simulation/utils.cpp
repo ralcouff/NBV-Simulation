@@ -236,7 +236,7 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
         float pixel[2];
         rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
         contours.emplace_back(pixel[0], pixel[1]);
-        // cout << pixel[0] << " " << pixel[1] << endl;
+//        cout << "Pixel: " << pixel[0] << " ; " << pixel[1] << endl;
         // Calculate the distance of the furthest point from the viewpoint
         Eigen::Vector4d view_pos(
                 now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
