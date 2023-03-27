@@ -23,7 +23,6 @@ bool Perception_3D::percept(View *now_best_view) {
             now_best_view->init_pos(0), now_best_view->init_pos(1), now_best_view->init_pos(2), key_origin);
     if (key_origin_have) {
         octomap::point3d origin = ground_truth_model->keyToCoord(key_origin);
-        // Traversing the image plane
 //            thread** precept_process =
 //              new thread*[share_data->color_intrinsics.width * share_data->color_intrinsics.height];
 //            for(int x = 0; x < share_data->color_intrinsics.width; x++)
@@ -39,10 +38,9 @@ bool Perception_3D::percept(View *now_best_view) {
 //                    int i = x * share_data->color_intrinsics.height + y;
 //                    (*precept_process[i]).join();
 //                }
-        /* Traversing the imag plane. */
+        /* Traversing the image plane. */
         for (int x = 0; x < share_data->color_intrinsics.width; ++x)
             for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
-                int i = x * share_data->color_intrinsics.height + y;
                 percept_thread_process(x, y, cloud_parallel, &origin, &view_pose_world, share_data);
             }
     } else {
@@ -75,7 +73,8 @@ bool Perception_3D::percept(View *now_best_view) {
     share_data->clouds.push_back(cloud);
     // Rotate to the world coordinate system
     *share_data->cloud_final += *cloud;
-    cout << "virtual cloud get with executed time " << clock() - now_time << " ms." << endl;
+    cout << "Virtual cloud got in: " << clock() - now_time << " ms." << endl;
+    cout << valid_point << " points were acquired" << endl;
     if (share_data->show) {
         // Display imaging point clouds
         pcl::visualization::PCLVisualizer::Ptr viewer1(new pcl::visualization::PCLVisualizer("Camera"));
@@ -112,13 +111,10 @@ void percept_thread_process(int x,
                             octomap::point3d *_origin,
                             Eigen::Matrix4d *_view_pose_world,
                             Share_Data *share_data) {
-    // num++;
-    octomap::point3d origin = *_origin;
-    Eigen::Matrix4d view_pose_world = *_view_pose_world;
-    cv::Point2f pixel(x, y); // FIXME : Useless
+    octomap::point3d origin = *_origin; // The origin of the rays, corresponding to the position of camera.
+    Eigen::Matrix4d view_pose_world = *_view_pose_world; // The current camera pose
     /* Reverse projection to find the endpoint. */
     octomap::point3d end = project_pixel_to_ray_end(x, y, share_data->color_intrinsics, view_pose_world, 1.0);
-    // Show it
     octomap::OcTreeKey key_end;
     octomap::point3d direction = end - origin;
     octomap::point3d end_point;
@@ -140,7 +136,7 @@ void percept_thread_process(int x,
         return;
     }
     if (end_point == origin) {
-        cout << "View in the object. Check Viewpoints generation!" << endl;
+        cout << "View in the object. Check Viewpoints generation !" << endl;
         cloud->points[x * share_data->color_intrinsics.height + y] = point;
         return;
     }
@@ -158,5 +154,6 @@ void percept_thread_process(int x,
             point.r = color.r;
         }
     }
+    // Adding the point in the cloud.
     cloud->points[x * share_data->color_intrinsics.height + y] = point;
 }
