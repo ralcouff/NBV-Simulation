@@ -110,6 +110,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
 
     cout << "3D object and YAML files have been read." << endl;
     cout << "Saving results in: " << savePath << endl;
+    cout << "The input cloud has: " << cloud_pcd->points.size() << " points." << endl;
     srand(clock());
 }
 
