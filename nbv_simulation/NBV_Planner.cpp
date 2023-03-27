@@ -2,29 +2,33 @@
 
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
-    iterations = 0;
     status = _status;
+    iterations = 0;
     share_data->now_view_space_processed = false;
     share_data->now_views_information_processed = false;
     share_data->move_on = false;
+
+    /* Making sure the savePath exists. */
+    Share_Data::access_directory(share_data->savePath);
+
+    /* Initializing the Voxel Information */
     voxel_information = new Voxel_Information(share_data->p_unknown_lower_bound, share_data->p_unknown_upper_bound);
-    /* Initializing GT */
-    /* Making sure the save_path exists. */
-    Share_Data::access_directory(share_data->save_path);
-    /* GT cloud */
+
+    /* Initializing GT cloud */
     share_data->cloud_ground_truth->is_dense = false;
     share_data->cloud_ground_truth->points.resize(share_data->cloud_pcd->points.size());
     share_data->cloud_ground_truth->width = share_data->cloud_pcd->points.size();
     share_data->cloud_ground_truth->height = 1;
-    /* Creating iterators to the points of GT_cloud (ptr) and PCD_cloud (p). */
+
+    /* Creating iterators to the points of GT_cloud (ptr) and pcd_cloud (p). */
     auto ptr = share_data->cloud_ground_truth->points.begin();
     auto p = share_data->cloud_pcd->points.begin();
-    /* If the point cloud is too big we change the unit. */
+
+    /* Re-scaling the model if it's too big. */
     float unit = 1.0;
     for (auto &point: share_data->cloud_pcd->points) {
         if (fabs(point.x) >= 10 || fabs(point.y) >= 10 || fabs(point.z) >= 10) {
             unit = 0.001;
-//            unit = 1.0;
             cout << "Changing unit from <mm> to <m>." << endl;
             break;
         }
@@ -35,7 +39,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         Eigen::Vector3d pt(point.x * unit, point.y * unit, point.z * unit);
         points.push_back(pt);
     }
-    /* Initializing the center of mass of the point cloud. */
+
+    /* Computing and initializing the center of mass of the point cloud. */
     Eigen::Vector3d object_center_world = Eigen::Vector3d(0, 0, 0);
     /* Calculating point cloud center of mass. */
     for (auto &point: points) {
@@ -46,6 +51,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     object_center_world(0) /= (double) points.size();
     object_center_world(1) /= (double) points.size();
     object_center_world(2) /= (double) points.size();
+
     /* Dichotomous search of the BBX radius, terminated by the ratio of the number of points in the BBX reaching
      * 0.92 and more */
     double l = 0, r = 0, mid;
@@ -75,7 +81,9 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         cout << "Object large. Change scale to about 0.1 m." << endl;
         cout << "Scale = " << scale << endl;
     }
-    /* Converting the Point. */
+
+    /* Converting the points. */
+    ifstream quality_file(share_data->qualityFilePath);
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
@@ -83,6 +91,18 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         (*ptr).b = 168;
         (*ptr).g = 168;
         (*ptr).r = 168;
+        /* If we have a quality file, we color the points in the octomap that have a "bad" quality. */
+        if (quality_file.is_open()) {
+            std::string line;
+            if (getline(quality_file, line)) {
+                if (std::stod(line) != 1) {
+                    (*ptr).b = 0;
+                    (*ptr).g = 0;
+                    (*ptr).r = 255;
+                }
+            }
+        }
+
         /* Filling the GT octree. */
         octomap::OcTreeKey key;
         bool key_have =
@@ -95,6 +115,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
             }
         }
+
         /* Filling the GT_Sample octree. */
         octomap::OcTreeKey key_sp;
         bool key_have_sp =
@@ -108,51 +129,55 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         }
         ptr++;
     }
-    /* Convert and save a version of the rescaled model */
+    quality_file.close();
 
+    /* Convert and save a version of the rescaled model */
     /* Add the initial PC to the sfm_data pipeline. */
-    float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points){
-        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
-        index++;
-    }
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
-    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-    transform_1(0,0) = scale*unit;
-    transform_1(1,1) = -scale*unit;
-    transform_1(2,2) = -scale*unit;
-    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
-    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
-    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
-    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
-    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
+    //TODO : Re_add the Sfm pipeline and save a rescaled_model of the object
+//    float index = 0;
+//    for (auto &pt: share_data->cloud_ground_truth->points){
+//        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+//        index++;
+//    }
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
+//    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+//    transform_1(0,0) = scale*unit;
+//    transform_1(1,1) = -scale*unit;
+//    transform_1(2,2) = -scale*unit;
+//    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
+//    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
+//    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
+//    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
+//    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
+
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
-    share_data->ground_truth_model->write(share_data->save_path + "/GT.ot");
+    share_data->ground_truth_model->write(share_data->savePath + "/GT.ot");
+
     /* GT_sample_voxels update. */
     share_data->GT_sample->updateInnerOccupancy();
-    share_data->GT_sample->write(share_data->save_path + "/GT_sample.ot");
+    share_data->GT_sample->write(share_data->savePath + "/GT_sample.ot");
+
     /* Determine the number of voxels in the octree. */
-    share_data->init_voxels = 0;
-    for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(),
-                 end = share_data->GT_sample->end_leafs();
-         it != end;
-         ++it) {
-        share_data->init_voxels++;
-    }
+    share_data->init_voxels = (int) share_data->GT_sample->getNumLeafNodes();
     cout << "Octree GT_sample has " << share_data->init_voxels << " voxels" << endl;
-    ofstream fout(share_data->save_path + "/GT_sample_voxels.txt");
+    ofstream fout(share_data->savePath + "/GT_sample_voxels.txt");
     fout << share_data->init_voxels << endl;
+
     /* Initialize View Space. */
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
+
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
     now_best_view = new View(now_view_space->views[0]);
     now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
     Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+
     // Camera class initialization
     percept = new Perception_3D(share_data);
+
+    /* Displaying the correct initialization. */
     if (share_data->show) {
         // Show BBX, camera position, GT
         pcl::visualization::PCLVisualizer::Ptr visualizer =
@@ -243,13 +268,13 @@ int NBV_Planner::plan() {
         case WaitInformation:
             if (share_data->now_views_information_processed) {
                 if (share_data->method_of_IG == 6) { // NBV-NET
-                    Share_Data::access_directory(share_data->nbv_net_path + "/log");
+                    Share_Data::access_directory(share_data->nbvNetPath + "/log");
                     ifstream ftest;
                     do {
-                        ftest.open(share_data->nbv_net_path + "/log/ready.txt");
+                        ftest.open(share_data->nbvNetPath + "/log/ready.txt");
                     } while (!ftest.is_open());
                     ftest.close();
-                    ifstream fin(share_data->nbv_net_path + "/log/" + share_data->name_of_pcd + '_' +
+                    ifstream fin(share_data->nbvNetPath + "/log/" + share_data->nameOfObject + '_' +
                                  to_string(iterations) + ".txt");
                     double x, y, z, a, b, c;
                     fin >> x >> y >> z >> a >> b >> c;
@@ -280,7 +305,7 @@ int NBV_Planner::plan() {
                     R(3, 3) = 1;
                     now_best_view->pose = R;
                     this_thread::sleep_for(chrono::seconds(5));
-                    int removed = remove((share_data->nbv_net_path + "/log/ready.txt").c_str());
+                    int removed = remove((share_data->nbvNetPath + "/log/ready.txt").c_str());
                     if (removed != 0)
                         cout << "cannot remove ready.txt." << endl;
                 } else {
@@ -379,9 +404,18 @@ int NBV_Planner::plan() {
                                 // cout << "O : " << O << endl;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
                                 // TODO : Give a significative name to the view
-                                share_data->sfm_data.getViews().emplace(nb_nbv,std::make_shared<aliceVision::sfmData::View>("",nb_nbv,0,nb_nbv,share_data->color_intrinsics.width, share_data->color_intrinsics.height));
-                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(view_pose_world.block<3,3>(0,0).transpose(), O.block<3,1>(0,0));
-                                share_data->sfm_data.getPoses().emplace(nb_nbv, aliceVision::sfmData::CameraPose(transform, false));
+                                share_data->sfm_data.getViews().emplace(nb_nbv,
+                                                                        std::make_shared<aliceVision::sfmData::View>("",
+                                                                                                                     nb_nbv,
+                                                                                                                     0,
+                                                                                                                     nb_nbv,
+                                                                                                                     share_data->color_intrinsics.width,
+                                                                                                                     share_data->color_intrinsics.height));
+                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
+                                        view_pose_world.block<3, 3>(0, 0).transpose(), O.block<3, 1>(0, 0));
+                                share_data->sfm_data.getPoses().emplace(nb_nbv,
+                                                                        aliceVision::sfmData::CameraPose(transform,
+                                                                                                         false));
 //                                cout << "Views : " << share_data->sfm_data.getViews() << endl;
 //                                cout << "Poses : " << share_data->sfm_data.getPoses().size() << endl;
                                 visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
@@ -436,7 +470,8 @@ int NBV_Planner::plan() {
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm",
+                                                 aliceVision::sfmDataIO::ESfMData::ALL);
                 aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
                 status = WaitMoving;
             }
@@ -511,8 +546,8 @@ void create_views_information(Views_Information **now_views_information,
                               int iterations) {
     if (share_data->method_of_IG == 6) { // NBV-NET
         // scale
-        Share_Data::access_directory(share_data->nbv_net_path + "/viewspace");
-        ofstream fout_vs(share_data->nbv_net_path + "/viewspace/" + share_data->name_of_pcd + ".txt");
+        Share_Data::access_directory(share_data->nbvNetPath + "/viewspace");
+        ofstream fout_vs(share_data->nbvNetPath + "/viewspace/" + share_data->nameOfObject + ".txt");
         double scale_of_object = 0;
         double x1 = now_view_space->object_center_world(0) - now_view_space->predicted_size;
         double x2 = now_view_space->object_center_world(0) + now_view_space->predicted_size;
@@ -530,8 +565,8 @@ void create_views_information(Views_Information **now_views_information,
         scale_of_object = max(scale_of_object, (Eigen::Vector3d(x2, y2, z2).eval()).norm());
         fout_vs << scale_of_object * 2.0 << '\n';
         // octotree
-        Share_Data::access_directory(share_data->nbv_net_path + "/data");
-        ofstream fout(share_data->nbv_net_path + "/data/" + share_data->name_of_pcd + '_' + to_string(iterations) +
+        Share_Data::access_directory(share_data->nbvNetPath + "/data");
+        ofstream fout(share_data->nbvNetPath + "/data/" + share_data->nameOfObject + '_' + to_string(iterations) +
                       ".txt");
         for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(),
                      end = share_data->octo_model->end_leafs();
