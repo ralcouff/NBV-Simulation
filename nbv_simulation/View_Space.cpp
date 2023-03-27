@@ -4,21 +4,28 @@ View_Space::View_Space(int _id,
                        Share_Data *_share_data,
                        Voxel_Information *_voxel_information,
                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud) {
-    share_data = _share_data;
-    object_changed = false;
+
     id = _id;
+    share_data = _share_data;
+    voxel_information = _voxel_information;
+
+    object_changed = false;
     num_of_views = share_data->num_of_views;
     now_camera_pose_world = share_data->now_camera_pose_world;
-    octo_model = share_data->octo_model;
     octomap_resolution = share_data->octomap_resolution;
-    voxel_information = _voxel_information;
+    octo_model = share_data->octo_model;
+
+    /* Getting the visualizer. */
     viewer = share_data->viewer;
+
+    /* Initializing the set containing the OctreeKeys for each view. */
     views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
+
     /* Check if the View Space has already been generated */
-    ifstream fin(share_data->objectFilePath + share_data->nameOfObject + ".txt");
-    /* If it has been generated, we read the View Space file*/
+    ifstream fin(share_data->viewSpaceFilePath);
     if (fin.is_open()) {
-        /* Presence of a collection of read-on viewpoints for documents. */
+        /* The view space has already been generated */
+        // Reading the View Space from file
         int num;
         fin >> num;
         if (num != num_of_views)
@@ -43,11 +50,10 @@ View_Space::View_Space(int _id,
             views.push_back(view);
             views_key_set->insert(octo_model->coordToKey(init_pos[0], init_pos[1], init_pos[2]));
         }
-        cout << "View Space read." << endl;
+        cout << "View Space acquired." << endl;
     } else {
         /* The View Space file hasn't been generated, we generate it. */
-        /* Get Point Cloud BBOX. */
-        /* Generate a point vector containing the points of the input cloud. */
+        // Generating a vector containing the points of the input cloud
         vector<Eigen::Vector3d> points;
         for (auto &ptr: cloud->points) {
             Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
@@ -56,22 +62,19 @@ View_Space::View_Space(int _id,
         /* Viewpoint Generator. */
         get_view_space(points);
         /* Writing in file the generated View Space. */
-        Share_Data::access_directory(share_data->objectFilePath);
-        ofstream fout(share_data->objectFilePath + share_data->nameOfObject + ".txt");
-        fout << num_of_views << '\n';
-        fout << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
-        fout << predicted_size << '\n';
-        for (int i = 0; i < num_of_views; i++)
-            fout << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
-        cout << "View Space acquired." << endl;
+        save_view_space();
     }
-    // Update the data area data
+    cout << "View Space initialized" << endl;
+
+    /* Updating the Share Data object */
     share_data->object_center_world = object_center_world;
     share_data->predicted_size = predicted_size;
+    share_data->init_entropy = 0;
+    share_data->voxels_in_BBX = 0;
     double map_size = predicted_size + 3.0 * octomap_resolution;
     share_data->map_size = map_size;
+
     /* Filling the octo_model with empty nodes based on the BBOX of the model. */
-    auto now_time = clock();
     for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
          x += octomap_resolution)
         for (double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size;
@@ -80,8 +83,7 @@ View_Space::View_Space(int _id,
                  z += octomap_resolution)
                 octo_model->setNodeValue(x, y, z, (float) 0, true);
     octo_model->updateInnerOccupancy();
-    share_data->init_entropy = 0;
-    share_data->voxels_in_BBX = 0;
+
     /* Update the entropy of the model. */
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
@@ -90,7 +92,10 @@ View_Space::View_Space(int _id,
         share_data->init_entropy += Voxel_Information::entropy(occupancy);
         share_data->voxels_in_BBX++;
     }
+
+    /* Initialize the list of mutex for each voxel */
     voxel_information->init_mutex_voxels(share_data->voxels_in_BBX);
+
     cout << "Map_init has " << share_data->voxels_in_BBX << " voxels(in BBX), and "
          << share_data->init_entropy << " entropy" << endl;
     Share_Data::access_directory(share_data->savePath + "/quantitative");
@@ -98,48 +103,10 @@ View_Space::View_Space(int _id,
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
 }
 
-bool View_Space::valid_view(View &view) {
-    double x = view.init_pos(0);
-    double y = view.init_pos(1);
-    double z = view.init_pos(2);
-    bool valid = true;
-    // Object bbx does not create a point of view within 2 times expansion
-    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
-        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
-        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
-        valid = false;
-    // In a ball of radius 4 times the size of BBX
-    if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
-        pow2(4 * predicted_size) >
-        0)
-        valid = false;
-    // Exists in the octree index and not in the hash table
-    octomap::OcTreeKey key;
-    bool key_have = octo_model->coordToKeyChecked(x, y, z, key);
-    if (!key_have)
-        valid = false;
-    if (key_have && views_key_set->find(key) != views_key_set->end())
-        valid = false;
-    return valid;
-}
-
-double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
-    int valid_points = 0;
-    for (auto &ptr: points) {
-        if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
-            continue;
-        if (ptr(1) < object_center_world(1) - predicted_size || ptr(1) > object_center_world(1) + predicted_size)
-            continue;
-        if (ptr(2) < object_center_world(2) - predicted_size || ptr(2) > object_center_world(2) + predicted_size)
-            continue;
-        valid_points++;
-    }
-    return (double) valid_points / (double) points.size();
-}
-
 void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     auto now_time = clock();
     /* FIXME Redundant with NBV_Planner:40 */
+    /* Pre-computing the center of mass of the object and its BBOX. */
     object_center_world = Eigen::Vector3d(0, 0, 0);
     // Calculating point cloud center of mass
     for (auto &ptr: points) {
@@ -171,19 +138,23 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
             break;
         pre_percent = percent;
     }
+
     predicted_size = 1.2 * mid;
-    cout << "object's bbx solved within percentage " << percent << " with executed time " << clock() - now_time
+    cout << "Computed object BBOX within percentage: " << percent << " ; with executed time " << clock() - now_time
          << " ms." << endl;
-    cout << "object's pos is (" << object_center_world(0) << "," << object_center_world(1) << ","
+    cout << "Object position is: (" << object_center_world(0) << ", " << object_center_world(1) << ", "
          << object_center_world(2) << ") and size is " << predicted_size << endl;
-    int sample_num = 0;
-    int viewnum = 0;
-    // The first point of view is fixed to the centre of the model
-    View view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
-    if (!valid_view(view))
-        cout << "check init view." << endl;
-    views.push_back(view);
-    views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
+
+    /* Generating a set of random views */
+    int sample_num = 0; // The number of samples made to achieve the correct number of views.
+    int viewnum = 0; // The init_view number
+    // The first point of init_view is fixed to the centre of the model
+    View init_view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
+    if (!valid_view(init_view)) {
+        cout << "There might be a problem with the initial view." << endl;
+    }
+    views.push_back(init_view);
+    views_key_set->insert(octo_model->coordToKey(init_view.init_pos(0), init_view.init_pos(1), init_view.init_pos(2)));
     viewnum++;
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
@@ -195,42 +166,87 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
                                          object_center_world(2) + predicted_size * 4);
         View view(Eigen::Vector3d(x, y, z));
         view.id = viewnum;
-        // cout << x<<" " << y << " " << z << endl;
         // Eligible viewpoint reservations
         if (valid_view(view)) {
             view.space_id = id;
             view.dis_to_object = (object_center_world - view.init_pos).norm();
-            view.robot_cost =
-                    (Eigen::Vector3d(
-                            now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
-                             .eval() -
-                     view.init_pos)
-                            .norm();
+            view.robot_cost = (Eigen::Vector3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3),
+                                               now_camera_pose_world(2, 3)).eval() - view.init_pos).norm();
             views.push_back(view);
             views_key_set->insert(octo_model->coordToKey(x, y, z));
             viewnum++;
         }
         sample_num++;
         if (sample_num >= 10 * num_of_views) {
-            cout << "lack of space to get view. error." << endl;
+            cout << "lack of space to get init_view. error." << endl;
             break;
         }
     }
-    cout << "view set is " << views_key_set->size() << endl;
-    cout << views.size() << " views getted with sample_times " << sample_num << endl;
-    cout << "view_space getted form octomap with executed time " << clock() - now_time << " ms." << endl;
+    cout << "There are " << views_key_set->size() << " views in View Set" << endl;
+    cout << views.size() << " views got with " << sample_num << " samples" << endl;
+    cout << "View Space got from octomap in " << clock() - now_time << " ms." << endl;
+}
+
+double View_Space::check_size(double _predicted_size, vector<Eigen::Vector3d> &points) {
+    int valid_points = 0;
+    for (auto &ptr: points) {
+        if (ptr(0) < object_center_world(0) - _predicted_size || ptr(0) > object_center_world(0) + _predicted_size)
+            continue;
+        if (ptr(1) < object_center_world(1) - _predicted_size || ptr(1) > object_center_world(1) + _predicted_size)
+            continue;
+        if (ptr(2) < object_center_world(2) - _predicted_size || ptr(2) > object_center_world(2) + _predicted_size)
+            continue;
+        valid_points++;
+    }
+    return (double) valid_points / (double) points.size();
+}
+
+bool View_Space::valid_view(View &view) {
+    double x = view.init_pos(0);
+    double y = view.init_pos(1);
+    double z = view.init_pos(2);
+    bool valid = true;
+    // Object bbx does not create a point of view within 2 times expansion
+    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
+        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
+        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
+        valid = false;
+    // In a ball of radius 4 times the size of BBX
+    if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
+        pow2(4 * predicted_size) >
+        0)
+        valid = false;
+    // Exists in the octree index and not in the hash table
+    octomap::OcTreeKey key;
+    bool key_have = octo_model->coordToKeyChecked(x, y, z, key);
+    if (!key_have)
+        valid = false;
+    if (key_have && views_key_set->find(key) != views_key_set->end())
+        valid = false;
+    return valid;
+}
+
+void View_Space::save_view_space() {
+    Share_Data::access_directory(share_data->objectFilePath);
+    ofstream fout(share_data->viewSpaceFilePath);
+    fout << num_of_views << '\n';
+    fout << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
+    fout << predicted_size << '\n';
+    for (int i = 0; i < num_of_views; i++)
+        fout << views[i].init_pos(0) << ' ' << views[i].init_pos(1) << ' ' << views[i].init_pos(2) << '\n';
+    cout << "View Space saved in: " << share_data->objectFilePath << endl;
 }
 
 void View_Space::update(int _id,
                         Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& update_cloud) {
+                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud) {
     share_data = _share_data;
     object_changed = false;
     id = _id;
     now_camera_pose_world = share_data->now_camera_pose_world;
     // Update viewpoint markers
-    for (auto & view : views) {
+    for (auto &view: views) {
         view.space_id = id;
         view.robot_cost =
                 (Eigen::Vector3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
@@ -248,7 +264,8 @@ void View_Space::update(int _id,
     }
     octo_model->insertPointCloud(
             cloud_octo,
-            octomap::point3d((float) now_camera_pose_world(0, 3), (float) now_camera_pose_world(1, 3), (float) now_camera_pose_world(2, 3)),
+            octomap::point3d((float) now_camera_pose_world(0, 3), (float) now_camera_pose_world(1, 3),
+                             (float) now_camera_pose_world(2, 3)),
             -1,
             true,
             false);
@@ -327,9 +344,9 @@ void View_Space::add_bbx_to_cloud(const pcl::visualization::PCLVisualizer::Ptr &
     visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube7");
 }
 
-void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
-                             vector<Eigen::Vector3d> &points,
-                             pcl::visualization::PCLVisualizer::Ptr viewer) {
+[[maybe_unused]] void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
+                                              vector<Eigen::Vector3d> &points,
+                                              pcl::visualization::PCLVisualizer::Ptr viewer) {
     viewer->addLine<pcl::PointXYZ>(
             pcl::PointXYZ(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3)),
             pcl::PointXYZ(points[0](0), points[0](1), points[0](2)),
@@ -347,7 +364,7 @@ void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
     }
 }
 
-void delete_trajectory_in_cloud(int num, pcl::visualization::PCLVisualizer::Ptr viewer) {
+[[maybe_unused]] void delete_trajectory_in_cloud(int num, pcl::visualization::PCLVisualizer::Ptr viewer) {
     viewer->removeCorrespondences("trajectory" + to_string(-1));
     for (int i = 0; i < num - 1; i++) {
         viewer->removeCorrespondences("trajectory" + to_string(i));

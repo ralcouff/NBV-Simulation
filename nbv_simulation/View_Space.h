@@ -12,30 +12,31 @@
 
 class View_Space {
 public:
-    /* Number of ViewPoints. */
-    int num_of_views;
-    /* Sampled viewpoints in space. */
-    std::vector<View> views;
-    /* Object center. */
-    Eigen::Vector3d object_center_world;
-    // Object BBX radius
-    double predicted_size{};
-    // The first few nbv iterations
-    int id;
-    // Camera positions for this nbv iteration
-    Eigen::Matrix4d now_camera_pose_world;
-    int occupied_voxels{};
-    double map_entropy{};
-    bool object_changed;
-    double octomap_resolution;
-    pcl::visualization::PCLVisualizer::Ptr viewer;
-    double height_of_ground{};
-    double cut_size{};
-    std::unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash> *views_key_set;
-    octomap::ColorOcTree *octo_model;
+    int id; // The id of the View Space
+    Share_Data *share_data; // The shared data among the whole project
     Voxel_Information *voxel_information;
-    double camera_to_object_dis{};
-    Share_Data *share_data;
+
+    int num_of_views; //Number of viewpoints
+    std::vector<View> views; // Sampled viewpoints in space
+
+    Eigen::Vector3d object_center_world; // Object center of mass
+    Eigen::Matrix4d now_camera_pose_world; // The current camera pose
+    double predicted_size{}; // The estimated BBOX radius of the object
+
+    double octomap_resolution; // The current octomap resolution
+    octomap::ColorOcTree *octo_model; // The current octomap
+
+    std::unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash> *views_key_set; // A set containing the octree keys of the views
+
+    int occupied_voxels{}; //TODO
+    double map_entropy{}; //TODO
+    bool object_changed; //TODO
+
+    pcl::visualization::PCLVisualizer::Ptr viewer; //TODO
+    double height_of_ground{}; //TODO : MAYBE UNUSED
+    double cut_size{}; //TODO : MAYBE UNUSED
+    double camera_to_object_dis{}; //TODO : MAYBE UNUSED
+
 
     /**
      * Creates a set of potential viewpoints for the algorithm
@@ -50,19 +51,31 @@ public:
                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
 
     /**
+     * Generate a set of viewpoints in the octomap (views_key_set)
+     * @param points The 3D points of the point cloud
+     */
+    void get_view_space(std::vector<Eigen::Vector3d> &points);
+
+    /**
+     * Checks if the points are within a ball of radius predicted size around the center of mass of the object.
+     * @param _predicted_size The radius of the ball to determine
+     * @param points A vector of points to check
+     * @return The percentage of points inside that ball
+     */
+    double check_size(double _predicted_size, std::vector<Eigen::Vector3d> &points);
+
+    /**
      * Checking if the generated view is valid ie. not within a two times expansion of BBOX, adn in a 4 time radius
      * @param view The candidate view
      * @return TRUE if valid FALSE if not
      */
     bool valid_view(View &view);
 
-    double check_size(double predicted_size, std::vector<Eigen::Vector3d> &points);
-
     /**
-     * Generate a set of viewpoints in the octomap (views_key_set)
-     * @param points The 3D points of the point cloud
+     * Save the current View Space with the number of views, the object center and the predicted size of the model,
+     * as well as the position of each view.
      */
-    void get_view_space(std::vector<Eigen::Vector3d> &points);
+    void save_view_space();
 
     /**
      * Updating View Space
@@ -86,10 +99,10 @@ public:
 
 };
 
-void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
+[[maybe_unused]] void add_trajectory_to_cloud(Eigen::Matrix4d now_camera_pose_world,
                              vector<Eigen::Vector3d> &points,
                              pcl::visualization::PCLVisualizer::Ptr viewer);
 
-void delete_trajectory_in_cloud(int num, pcl::visualization::PCLVisualizer::Ptr viewer);
+[[maybe_unused]] void delete_trajectory_in_cloud(int num, pcl::visualization::PCLVisualizer::Ptr viewer);
 
 #endif //NBV_SIMULATION_VIEW_SPACE_H
