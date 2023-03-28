@@ -241,10 +241,12 @@ void View_Space::update(int _id,
                         Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                         const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud) {
-    share_data = _share_data;
-    object_changed = false;
     id = _id;
+    share_data = _share_data;
+
+    object_changed = false;
     now_camera_pose_world = share_data->now_camera_pose_world;
+
     // Update viewpoint markers
     for (auto &view: views) {
         view.space_id = id;
@@ -254,10 +256,12 @@ void View_Space::update(int _id,
                  view.init_pos)
                         .norm();
     }
+
     // Insert point cloud to intermediate data structure
     auto now_time = clock();
     double map_size = predicted_size + 3.0 * octomap_resolution;
     share_data->map_size = map_size;
+    /* Creating a temporary cloud to update the octomap. */
     octomap::Pointcloud cloud_octo;
     for (auto p: update_cloud->points) {
         cloud_octo.push_back(p.x, p.y, p.z);
@@ -271,9 +275,24 @@ void View_Space::update(int _id,
             false);
     for (auto p: update_cloud->points) {
         octo_model->integrateNodeColor(p.x, p.y, p.z, p.r, p.g, p.b);
+        octomap::OcTreeKey key;
+        octomap::OcTreeKey gt_key;
+        bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
+        bool key_have_gt = share_data->ground_truth_model->coordToKeyChecked(p.x, p.y, p.z, gt_key);
+        if (key_have) {
+            if (key_have_gt) {
+                if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
+                    (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
+                } else {
+                    (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+                                                                  (*share_data->quality_weight)[key]);
+                }
+            }
+        }
     }
     octo_model->updateInnerOccupancy();
-    cout << "Octomap updated via cloud with executed time " << clock() - now_time << " ms." << endl;
+    cout << "Octomap updated via cloud in: " << clock() - now_time << " ms." << endl;
+
     // On the map, statistical information entropy
     map_entropy = 0;
     occupied_voxels = 0;
@@ -313,7 +332,8 @@ void View_Space::update(int _id,
     share_data->octo_model->write(share_data->savePath + "/octomaps/octomap" + to_string(id) + ".ot");
     // share_data->access_directory(share_data->savePath + "/octocloud");
     // share_data->cloud_model->write(share_data->savePath + "/octocloud/octocloud"+to_string(id)+".ot");
-    cout << "Map " << id << " has voxels " << occupied_voxels << ". Map " << id << " has entropy " << map_entropy
+    cout << "Map " << id << " has " << occupied_voxels << " occupied voxels. Map " << id << " has an entropy of: "
+         << map_entropy
          << endl;
     cout << "Map " << id << " has voxels(rate) " << 1.0 * occupied_voxels / share_data->init_voxels << ". Map "
          << id << " has entropy(rate) " << map_entropy / share_data->init_entropy << endl;

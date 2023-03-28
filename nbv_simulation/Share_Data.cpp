@@ -92,6 +92,9 @@ Share_Data::Share_Data(std::string _config_file_path) {
     ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
     GT_sample = new octomap::ColorOcTree(octomap_resolution);
 
+    // Generating the quality weight map for octo_model
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+
     // Initializing the camera pose world to identity
     now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
 

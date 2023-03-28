@@ -82,9 +82,14 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         cout << "Scale = " << scale << endl;
     }
 
+    /* Initializing the quality sets */
+    share_data->gt_quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    share_data->gt_sample_quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+
     /* Converting the points. */
     ifstream quality_file(share_data->qualityFilePath);
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
+        std::string line;
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
         (*ptr).z = (*p).z * scale * unit;
@@ -93,7 +98,6 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         (*ptr).r = 168;
         /* If we have a quality file, we color the points in the octomap that have a "bad" quality. */
         if (quality_file.is_open()) {
-            std::string line;
             if (getline(quality_file, line)) {
                 if (std::stod(line) != 1) {
                     (*ptr).b = 0;
@@ -102,7 +106,6 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 }
             }
         }
-
         /* Filling the GT octree. */
         octomap::OcTreeKey key;
         bool key_have =
@@ -114,6 +117,11 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                         key, share_data->ground_truth_model->getProbHitLog(), true);
                 share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
             }
+            if ((*share_data->gt_quality_weight).find(key) == (*share_data->gt_quality_weight).end())
+                (*share_data->gt_quality_weight)[key] = std::stod(line);
+            else
+                (*share_data->gt_quality_weight)[key] = std::min((*share_data->gt_quality_weight)[key],
+                                                                 std::stod(line));
         }
 
         /* Filling the GT_Sample octree. */
@@ -126,6 +134,12 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
                 share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
             }
+            if ((*share_data->gt_sample_quality_weight).find(key_sp) == (*share_data->gt_sample_quality_weight).end())
+                (*share_data->gt_sample_quality_weight)[key_sp] = std::stod(line);
+            else
+                (*share_data->gt_sample_quality_weight)[key_sp] = std::min(
+                        (*share_data->gt_sample_quality_weight)[key_sp], std::stod(line));
+
         }
         ptr++;
     }

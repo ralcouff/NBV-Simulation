@@ -101,6 +101,8 @@ public:
 
     // Quality set
     std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight; // A quality map for each voxel
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_quality_weight; // A quality map for each voxel
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_sample_quality_weight; // A quality map for each voxel
 
     // Position matrices
     Eigen::Matrix4d now_camera_pose_world; // The current camera pose considered as the NBV
