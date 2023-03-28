@@ -207,6 +207,7 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,
@@ -232,6 +233,8 @@ void ray_information_thread_process(
         bool voxel_unknown = voxel_information->is_unknown(occupancy);
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, object_weight);
+        // Read the quality of the voxel
+        double qlt = Voxel_Information::voxel_quality(*it, quality_weight);
         // If it is occupied, it is the last node
         if (voxel_occupied)
             last = it;
@@ -250,6 +253,7 @@ void ray_information_thread_process(
                                                                    is_end,
                                                                    voxel_occupied,
                                                                    on_object,
+                                                                   qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
         if (method == OursIG)
@@ -279,6 +283,7 @@ inline double information_function(short &method,
                                    bool &is_endpoint,
                                    bool &is_occupied,
                                    double &object,
+                                   double &qlt,
                                    double &object_visible) {
     double final_information = 0;
     switch (method) {
@@ -288,6 +293,9 @@ inline double information_function(short &method,
             } else {
                 final_information = ray_information;
             }
+            break;
+        case Test_one:
+            final_information = ray_information + visible * (1 - qlt);
             break;
         case OA:
             final_information = ray_information + visible * voxel_information;

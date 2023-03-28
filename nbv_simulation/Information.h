@@ -74,6 +74,7 @@ void ray_cast_thread_process(int *ray_num,
  * @param is_endpoint
  * @param is_occupied
  * @param object p_obj
+ * @param qlt quality of the voxel
  * @param object_visible \PI{1-P_obj_x}
  * @return information gain for each ray
  */
@@ -86,6 +87,7 @@ double information_function(short &method,
                             bool &is_endpoint,
                             bool &is_occupied,
                             double &object,
+                            double &qlt,
                             double &object_visible);
 
 /**
@@ -106,6 +108,7 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,

@@ -89,7 +89,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Converting the points. */
     ifstream quality_file(share_data->qualityFilePath);
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
-        std::string line;
+        std::string line = "1";
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
         (*ptr).z = (*p).z * scale * unit;

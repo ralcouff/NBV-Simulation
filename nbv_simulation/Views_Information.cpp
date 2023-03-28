@@ -22,6 +22,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    quality_weight = share_data->quality_weight;
 
     /* Computing the frontier voxels */
     std::vector<octomap::point3d> points;
@@ -135,6 +137,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,
@@ -185,6 +188,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     delete object_weight;
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    quality_weight = share_data->quality_weight;
     // Update frontier
     std::vector<octomap::point3d> points;
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
@@ -210,7 +214,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     edge_cnt = edge->points.size();
     if (edge_cnt > pre_edge_cnt)
         pre_edge_cnt = 0x3f3f3f3f;
-    if (edge->points.size() != 0) {
+    if (!edge->points.empty()) {
         // Calculating frontier
         pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
@@ -312,6 +316,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,
