@@ -120,6 +120,16 @@ void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *sha
 void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const octomap::ColorOcTree &octo_model,
                        Eigen::Matrix<double, 3, 1> object_center_world, double predicted_size);
 
+void generate_images(int iteration, bool save_mode, Share_Data *share_data);
+
+/**
+ * Save a rescaled model of the original model, using blender
+ * @param scale The scale used to rescale the model
+ * @param unit The unit with which we resize the model if it's too big
+ * @param share_data The shared data alongside the whole project
+ */
+void save_rescaled(double scale, double unit, Share_Data *share_data);
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

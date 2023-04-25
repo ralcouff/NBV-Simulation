@@ -96,6 +96,9 @@ int main(int argc, char **argv) {
             for (int n_size: sizes) {
                 for (int n_iter: reconstructionIterations) {
                     share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
+                    thread runner(get_run);
+                    runner.join();
+                    cout << "System over." << endl;
                 }
             }
         }

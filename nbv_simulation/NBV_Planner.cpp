@@ -174,15 +174,15 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         std::cout << it.first << " - " << it.second << endl;
     }
 
-
-    /* Convert and save a version of the rescaled model */
     /* Add the initial PC to the sfm_data pipeline. */
     //TODO : Re_add the Sfm pipeline and save a rescaled_model of the object
-//    float index = 0;
-//    for (auto &pt: share_data->cloud_ground_truth->points){
-//        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
-//        index++;
-//    }
+    float index = 0;
+    for (auto &pt: share_data->cloud_ground_truth->points){
+        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+        index++;
+    }
+    /* Convert and save a version of the rescaled model */
+    save_rescaled(scale, unit, share_data);
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
 //    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
 //    transform_1(0,0) = scale*unit;
@@ -554,13 +554,22 @@ int NBV_Planner::plan() {
                     cout << " Next best view position is: (" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
+                    std::ofstream result(share_data->test_base_filename, std::ios_base::app);
+                    result << share_data->method_of_IG << ',' << share_data->n_model << ',' << share_data->n_size << ','
+                           << std::to_string(iterations) << ',' << now_best_view->id << ','
+                           << now_best_view->init_pos(0) << ',' << now_best_view->init_pos(1) << ','
+                           << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << endl;
+                    result.close();
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm",
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+                                                 share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
                                                  aliceVision::sfmDataIO::ESfMData::ALL);
-                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc",
+                aliceVision::sfmDataIO::Save(share_data->sfm_data,
+                                             share_data->savePath + '/' + share_data->nameOfObject + ".abc",
                                              aliceVision::sfmDataIO::ESfMData::ALL);
+                generate_images(iterations, false, share_data);
                 status = WaitMoving;
             }
             break;
@@ -795,6 +804,52 @@ void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const
     visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube23");
     visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube24");
     cout << "Finished generating the octomap" << endl;
+}
+
+void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
+    // TODO : Make global variables in Share Data Object
+    std::string path_to_abc = share_data->savePath + "/" + share_data->nameOfObject + ".abc";
+    std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
+    std::string path_to_img_folder = share_data->savePath + "/img2/";
+    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+    std::string python_script_folder = "../Python_blender_API/";
+
+    std::string script_name = python_script_folder + "load_render_abc.py";
+    std::string parameters =
+            "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
+            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
+    std::string command = python_interpreter + " " + script_name + " " + parameters;
+    system(command.c_str());
+}
+
+void save_rescaled(double scale, double unit, Share_Data *share_data) {
+    /* Convert and save a version of the rescaled model */
+    std::string filename = share_data->nameOfObject + "_rescaled";
+
+    /* Saving the rescaled cloud with Python */
+    // TODO : Add python variables to the Share Data object
+    // TODO : Problem if no mtl given
+    std::string path_to_obj = share_data->current_input_filename + ".obj";
+    std::string path_to_obj_rescaled = share_data->savePath + '/' + filename + ".obj";
+    if (std::filesystem::exists(path_to_obj_rescaled)) {
+        cout << "The file has already been rescaled" << endl;
+    } else if (unit * scale == 1) {
+        cout << "The file doesn't need to be rescaled" << endl;
+        std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
+        system(command.c_str());
+        command = "cp " + share_data->objectFilePath + share_data->nameOfObject + ".mtl " + share_data->savePath + "/" +
+                  filename + ".mtl";
+        system(command.c_str());
+    } else {
+        std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+        std::string python_script_folder = "../Python_blender_API/";
+        std::string script_name = python_script_folder + "rescale_obj.py";
+        std::string parameters =
+                "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
+                to_string(scale) + " -s " + path_to_obj_rescaled;
+        std::string command = python_interpreter + " " + script_name + " " + parameters;
+        system(command.c_str());
+    }
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {
