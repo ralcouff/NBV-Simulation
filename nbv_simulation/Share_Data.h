@@ -144,12 +144,27 @@ public:
     double stop_thresh_view{};
     double camera_to_object_dis{};
 
+    // Test Pipeline parameters.
+    std::string folder_name;
+    std::string current_input_filename;
+    std::string test_base_filename;
+    std::string string_test_time;
+    int n_model;
+    int n_size;
+    int n_test;
+    int reconstructionIterations;
+
     /**
      * Constructor of the Share_Data object
      * It is initialized with a file
      * @param _config_file_path The initialization file
+     * @param _n_model
+     * @param _n_size
+     * @param _n_iter
+     * @param _model
+     * @param string_test_time
      */
-    explicit Share_Data(std::string _config_file_path);
+    explicit Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_iter, short _model, std::string string_test_time);
 
     /**
      * Destructor of the object Share_Data

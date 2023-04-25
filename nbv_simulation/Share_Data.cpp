@@ -1,6 +1,10 @@
 #include "Share_Data.h"
 
-Share_Data::Share_Data(std::string _config_file_path) {
+#include <string>
+#include <utility>
+
+Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_iter, short _method,
+                       std::string _string_test_time) {
     process_cnt = -1;
 
     // Reading yaml files
@@ -40,15 +44,23 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs["qlt_update"] >> qlt_update_factor;
+    fs["folder_name"] >> folder_name;
     fs.release();
 
+    // Test parameters
+    n_model = _n_model;
+    n_size = _n_size;
+    method_of_IG = _method;
+    string_test_time = std::move(_string_test_time);
+    reconstructionIterations = _n_iter;
+
     // Building the different file paths
-    objectFilePath = objectFolderPath + nameOfObject;
+    objectFilePath = objectFolderPath + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size);
     qualityFilePath = objectFilePath + ".qlt";
-    viewSpaceFilePath = objectFilePath + ".txt";
-    savePath = "../results/" + nameOfObject + '_' + std::to_string(method_of_IG);
-    if (method_of_IG == 0)
-        savePath += '_' + std::to_string(cost_weight);
+    viewSpaceFilePath = objectFolderPath + folder_name + ".txt";
+    savePath = "../results/" + string_test_time + '/' + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size) + '_' + std::to_string(reconstructionIterations) + '_' + std::to_string(method_of_IG);
+    access_directory(savePath);
+    test_base_filename = "../results/" + string_test_time + "/results.csv";
 
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
@@ -78,15 +90,15 @@ Share_Data::Share_Data(std::string _config_file_path) {
             }
         }
     }
-/*    *//* Add the initial PC to the sfm_data pipeline. *//*
+
+    /* Add the initial PC to the sfm_data pipeline. */
     float i = 0;
     for (auto &pt: cloud_pcd->points){
         sfm_data.getLandmarks().emplace(i,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
         i++;
     }
-    aliceVision::sfmDataIO::saveJSON(sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
-    cout << "pcl_loaded" << endl;*/
-//    sfm_data.getLandmarks().emplace(0, aliceVision::sfmData::Landmark() {x, y, z})
+    aliceVision::sfmDataIO::saveJSON(sfm_data, savePath + "/scene.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
+    cout << "The sfmData file has been saved" << endl;
 
     // Generating the octomaps
     octo_model = new octomap::ColorOcTree(octomap_resolution);

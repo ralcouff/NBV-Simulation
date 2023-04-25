@@ -1,6 +1,7 @@
 #include <atomic>
 #include <iostream>
 #include <thread>
+#include <vector>
 
 #include "Share_Data.h"
 #include "NBV_Planner.h"
@@ -10,6 +11,25 @@ using namespace std;
 atomic<bool> stop{false}; // End of control program
 Share_Data *share_data;   // Shared data area pointer
 NBV_Planner *nbv_plan;
+
+short get_method(int n_test) {
+    short method;
+    switch (n_test){
+        case 0:
+            method = OursIG;
+            break;
+        case 101:
+            method = Test_one;
+            break;
+        case 102:
+            method = Test_two;
+            break;
+        default:
+            cout << "This method does not exists, choosing the default one (0).";
+            method = OursIG;
+    }
+    return method;
+}
 
 void get_command() { // Read command strings from the console
     string cmd;
@@ -27,12 +47,12 @@ void get_command() { // Read command strings from the console
             cout << "Choose your next method iteration" << endl;
             cin >> cmd2;
             int method_number = stoi(cmd2);
-            share_data->method_of_IG = method_number;
+            share_data->method_of_IG = get_method(method_number);
+//            share_data->method_of_IG = method_number;
             cout << "The method number is:" << method_number << endl;
             cout << "The new method is: " << share_data->method_of_IG << endl;
-            // TODO: Check if the method exists and the correct input
         } else
-            cout << "Wrong command. Retry :" << endl;
+            cout << "Wrong command. Retry:" << endl;
     }
     cout << "get_command over." << endl;
 }
@@ -56,15 +76,40 @@ int main(int argc, char **argv) {
     const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
+    std::vector<int> tests{0,101,102};
+    std::vector<int> models{0, 1, 2, 3, 4};
+    std::vector<int> sizes{1024, 4096};
+    std::vector<int> reconstructionIterations{1, 2, 3, 4, 5};
+
+    char str_time [80];
+    std::time_t rawTime;
+    struct tm * timeInfo;
+
+    time (&rawTime);
+    timeInfo = std::localtime(&rawTime);
+    std::strftime(str_time, 80, "%F-%H-%M", timeInfo);
+    std:: string string_test_time = std::string(str_time);
+
+    for (int n_test: tests) {
+        short method = get_method(n_test);
+        for (int n_model: models){
+            for (int n_size: sizes) {
+                for (int n_iter: reconstructionIterations) {
+                    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
+                }
+            }
+        }
+    }
+
     // Data area initialisation
-    share_data = new Share_Data(config_file);
-    // Console read command threads
-    thread cmd(get_command);
-    // NBV system run threads
-    thread runner(get_run);
-    // Waiting for the thread to finish
-    cmd.join();
-    runner.join();
-    cout << "System over." << endl;
+//    share_data = new Share_Data(config_file);
+//    // Console read command threads
+//    thread cmd(get_command);
+//    // NBV system run threads
+//    thread runner(get_run);
+//    // Waiting for the thread to finish
+//    cmd.join();
+//    runner.join();
+//    cout << "System over." << endl;
     return EXIT_SUCCESS;
 }
