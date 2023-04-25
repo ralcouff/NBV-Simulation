@@ -48,6 +48,7 @@ double Voxel_Information::voxel_object(octomap::OcTreeKey &voxel_key,
     auto key = object_weight->find(voxel_key);
     if (key == object_weight->end())
         return 0;
+//    std::cout << "P_obj got" << std::endl;
     return key->second;
 }
 
@@ -56,13 +57,14 @@ double Voxel_Information::voxel_quality(octomap::OcTreeKey &voxel_key,
     auto key = quality_weight->find(voxel_key);
     if (key == quality_weight->end())
         return 1;
+//    std::cout << "Quality got" << std::endl;
     return key->second;
 }
 
 double Voxel_Information::get_voxel_visible(double occupancy) const {
     if (occupancy > p_unknown_upper_bound)
         return 0.0;
-    if (occupancy < p_unknown_lower_bound)
+    if (occupancy <= p_unknown_upper_bound)
         return 1.0;
     return k_vis * occupancy + b_vis;
 }

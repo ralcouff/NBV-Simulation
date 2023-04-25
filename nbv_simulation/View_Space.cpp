@@ -158,12 +158,12 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     viewnum++;
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
-        double x = get_random_coordinate(object_center_world(0) - predicted_size * 4,
-                                         object_center_world(0) + predicted_size * 4);
-        double y = get_random_coordinate(object_center_world(1) - predicted_size * 4,
-                                         object_center_world(1) + predicted_size * 4);
-        double z = get_random_coordinate(object_center_world(2) - predicted_size * 4,
-                                         object_center_world(2) + predicted_size * 4);
+        double x = get_random_coordinate(object_center_world(0) - predicted_size * 2.5,
+                                         object_center_world(0) + predicted_size * 2.5);
+        double y = get_random_coordinate(object_center_world(1) - predicted_size * 2.5,
+                                         object_center_world(1) + predicted_size * 2.5);
+        double z = get_random_coordinate(object_center_world(2) - predicted_size * 2.5,
+                                         object_center_world(2) + predicted_size * 2.5);
         View view(Eigen::Vector3d(x, y, z));
         view.id = viewnum;
         // Eligible viewpoint reservations
@@ -207,13 +207,13 @@ bool View_Space::valid_view(View &view) {
     double z = view.init_pos(2);
     bool valid = true;
     // Object bbx does not create a point of view within 2 times expansion
-    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
-        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
-        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
+    if (x > object_center_world(0) - 1.5 * predicted_size && x < object_center_world(0) + 1.5 * predicted_size &&
+        y > object_center_world(1) - 1.5 * predicted_size && y < object_center_world(1) + 1.5 * predicted_size &&
+        z > object_center_world(2) - 1.5 * predicted_size && z < object_center_world(2) + 1.5 * predicted_size)
         valid = false;
     // In a ball of radius 4 times the size of BBX
     if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
-        pow2(4 * predicted_size) >
+        pow2(2.5 * predicted_size) >
         0)
         valid = false;
     // Exists in the octree index and not in the hash table
@@ -273,22 +273,45 @@ void View_Space::update(int _id,
             -1,
             true,
             false);
+    octo_model->updateInnerOccupancy();
+    std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash> key_seen{};
     for (auto p: update_cloud->points) {
-        octo_model->integrateNodeColor(p.x, p.y, p.z, p.r, p.g, p.b);
         octomap::OcTreeKey key;
         octomap::OcTreeKey gt_key;
         bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
         bool key_have_gt = share_data->ground_truth_model->coordToKeyChecked(p.x, p.y, p.z, gt_key);
         if (key_have) {
-            if (key_have_gt) {
-                if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
-                    (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
-                } else {
-                    (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
-                                                                  (*share_data->quality_weight)[key]);
+            if (key_seen.find(key) == key_seen.end()) {
+                if (key_have_gt) {
+                    if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
+                        (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
+                    } else {
+//                        (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+//                                                                      (*share_data->quality_weight)[key]);
+                        if (share_data->method_of_IG == Test_one) {
+                            if ((*share_data->gt_quality_weight)[gt_key] == 1) {
+                                (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+                                                                              (*share_data->quality_weight)[key]);
+                            } else {
+                                (*share_data->quality_weight)[key] = std::min(
+                                        share_data->qlt_update_factor * (*share_data->quality_weight)[key],
+                                        1.0);
+                            }
+                        } else {
+                            (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+                                                                          (*share_data->quality_weight)[key]);
+                        }
+                    }
                 }
+                key_seen[key] = 1;
+            } else {
+                key_seen[key] += 1;
             }
         }
+        if ((*share_data->quality_weight)[key] == 1)
+            octo_model->integrateNodeColor(key, 168, 168, 168);
+        else
+            octo_model->integrateNodeColor(key, (int) (*share_data->quality_weight)[key] * 255, 0, 0);
     }
     octo_model->updateInnerOccupancy();
     cout << "Octomap updated via cloud in: " << clock() - now_time << " ms." << endl;

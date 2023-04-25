@@ -1,4 +1,7 @@
 #include "NBV_Planner.h"
+#include "octomap/octomap_types.h"
+#include <pcl/impl/point_types.hpp>
+#include <string>
 
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
@@ -145,6 +148,33 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     }
     quality_file.close();
 
+    // Displaying the repartition of quality in the octomap
+    std::map<double, int> qlt_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->ground_truth_model->begin_leafs(), end = share_data->ground_truth_model->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()),
+                                                       share_data->gt_quality_weight);
+        qlt_map[qltt]++;
+    }
+    cout << "Quality in gt_quality_weight" << endl;
+    for (auto &it: qlt_map) {
+        std::cout << it.first << " - " << it.second << endl;
+    }
+
+    // Displaying the repartition of quality in the octomap
+    std::map<double, int> qlt_mapp{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(), end = share_data->GT_sample->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()),
+                                                       share_data->gt_sample_quality_weight);
+        qlt_mapp[qltt]++;
+    }
+    cout << "Quality in gt_sample_quality_weight" << endl;
+    for (auto &it: qlt_mapp) {
+        std::cout << it.first << " - " << it.second << endl;
+    }
+
+
     /* Convert and save a version of the rescaled model */
     /* Add the initial PC to the sfm_data pipeline. */
     //TODO : Re_add the Sfm pipeline and save a rescaled_model of the object
@@ -233,6 +263,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
         now_view_space->add_bbx_to_cloud(visualizer);
         visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
+        visualize_octomap(visualizer, *share_data->octo_model, share_data->object_center_world,
+                          share_data->predicted_size);
         while (!visualizer->wasStopped()) {
             visualizer->spin();
             boost::this_thread::sleep(boost::posix_time::microseconds(100000));
@@ -281,6 +313,16 @@ int NBV_Planner::plan() {
             break;
         case WaitInformation:
             if (share_data->now_views_information_processed) {
+                std::map<double, int> occupancy{};
+                for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+                     it != end; ++it) {
+                    double occ = it->getOccupancy();
+                    occupancy[occ]++;
+                }
+                cout << "Occupancy in octo_model" << endl;
+                for (auto &it: occupancy) {
+                    std::cout << it.first << " - " << it.second << endl;
+                }
                 if (share_data->method_of_IG == 6) { // NBV-NET
                     Share_Data::access_directory(share_data->nbvNetPath + "/log");
                     ifstream ftest;
@@ -326,6 +368,12 @@ int NBV_Planner::plan() {
                     // Search algorithms
                     /* Sorting the viewpoints according to their utility. */
                     sort(now_view_space->views.begin(), now_view_space->views.end(), view_utility_compare);
+                    /* Save a file containing the value of the local_information of each view. */
+                    std::ofstream InfoOUT(
+                            share_data->savePath + '/' + "global_information.csv");
+                    for (auto &view: now_view_space->views) {
+                        InfoOUT << view.id << "," << view.final_utility << endl;
+                    }
                     // informed_viewspace
                     if (share_data->show) {
                         /* Show BBX with camera position. */
@@ -352,7 +400,7 @@ int NBV_Planner::plan() {
                             else if (now_view_space->views[i].in_coverage[iterations] &&
                                      i < now_view_space->views.size() / 10)
                                 (*ptr).r = 255, (*ptr).g = 255, (*ptr).b = 0;
-                                // The setting within the network stream is green
+                                // The setting within the network stream is red
                             else if (now_view_space->views[i].in_coverage[iterations])
                                 (*ptr).r = 255, (*ptr).g = 0, (*ptr).b = 0;
                                 // The top 10% of the weighted points are set to blue-green
@@ -417,7 +465,7 @@ int NBV_Planner::plan() {
                                 O = view_pose_world * O;
                                 // cout << "O : " << O << endl;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
-                                // TODO : Give a significative name to the view
+                                // TODO : Give a significant name to the view
                                 share_data->sfm_data.getViews().emplace(nb_nbv,
                                                                         std::make_shared<aliceVision::sfmData::View>("",
                                                                                                                      nb_nbv,
@@ -451,8 +499,33 @@ int NBV_Planner::plan() {
                                                                    255,
                                                                    "Z" + to_string(i));
                                 best_have = true;
+                                std::vector<int> rays_id = (*now_views_information->views_to_rays_map)[now_view_space->views[i].id];
+                                for (int r_id: rays_id) {
+                                    auto start = now_views_information->rays_info[r_id]->ray->origin;
+                                    auto stop = now_views_information->rays_info[r_id]->ray->end;
+                                    auto stop_unknown = now_views_information->rays_info[r_id]->ray->end_unknown;
+                                    octomap::point3d ss = share_data->octo_model->keyToCoord(start);
+                                    octomap::point3d ee = share_data->octo_model->keyToCoord(stop);
+                                    octomap::point3d ee_u = share_data->octo_model->keyToCoord(stop_unknown);
+                                    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)),
+                                                                       pcl::PointXYZ(ee(0), ee(1), ee(2)),
+                                                                       255,
+                                                                       0,
+                                                                       255,
+                                                                       "Ray" + to_string(r_id));
+                                    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)),
+                                                                       pcl::PointXYZ(ee_u(0), ee_u(1), ee_u(2)),
+                                                                       168,
+                                                                       168,
+                                                                       0,
+                                                                       "Ray" + to_string(r_id) + "prout");
+
+                                }
+                                cout << "There are: " << rays_id.size() << " rays projected in the octomap." << endl;
                             }
                         }
+                        visualize_octomap(visualizer, *share_data->octo_model, share_data->object_center_world,
+                                          share_data->predicted_size);
                         visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
                         while (!visualizer->wasStopped()) {
                             visualizer->spin();
@@ -468,7 +541,7 @@ int NBV_Planner::plan() {
                         max_utility = now_best_view->final_utility;
                         now_view_space->views[i].vis++;
                         share_data->best_views.push_back(*now_best_view);
-                        cout << "Best_Views : " << share_data->best_views.size() << " - Prout" << endl;
+                        cout << "Best_Views : " << share_data->best_views.size() << endl;
                         now_view_space->views[i].can_move = true;
                         cout << "View " << i << " has been chosen." << endl;
                         break;
@@ -478,7 +551,7 @@ int NBV_Planner::plan() {
                         status = Over;
                         break;
                     }
-                    cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
+                    cout << " Next best view position is: (" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
                 }
@@ -486,7 +559,8 @@ int NBV_Planner::plan() {
                 next_moving.detach();
                 aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm",
                                                  aliceVision::sfmDataIO::ESfMData::ALL);
-                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc",
+                                             aliceVision::sfmDataIO::ESfMData::ALL);
                 status = WaitMoving;
             }
             break;
@@ -630,6 +704,8 @@ void create_views_information(Views_Information **now_views_information,
         }
         if (share_data->sum_local_information == 0)
             cout << "Full information is zero." << endl;
+        if (share_data->sum_global_information == 0)
+            cout << "Global information is zero." << endl;
         for (auto &view: now_view_space->views) {
             if (share_data->method_of_IG == OursIG)
                 view.final_utility =
@@ -639,6 +715,10 @@ void create_views_information(Views_Information **now_views_information,
                         share_data->sum_global_information;
             else if (share_data->method_of_IG == APORA)
                 view.final_utility = view.information_gain;
+            else if (share_data->method_of_IG == Test_one || share_data->method_of_IG == Test_two)
+//                view.final_utility = (share_data->sum_local_information == 0 ? 0 : view.information_gain /
+//                                                                                   share_data->sum_local_information);
+                view.final_utility = (share_data->sum_local_information == 0 ? 0 : view.information_gain);
             else
                 view.final_utility =
                         0.7 * (share_data->sum_local_information == 0
@@ -655,8 +735,66 @@ void create_views_information(Views_Information **now_views_information,
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan) {
     if (share_data->num_of_max_iteration > 0 && nbv_plan->iterations + 1 >= share_data->num_of_max_iteration)
         share_data->over = true;
-    if (!share_data->move_wait)
+    if (!share_data->move_wait) {
         share_data->move_on = true;
+    }
+}
+
+void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const octomap::ColorOcTree &octo_model,
+                       Eigen::Matrix<double, 3, 1> object_center_world, double predicted_size) {
+    double half_resolution = octo_model.getResolution() / 2;
+    int n = 1245;
+    double rr = 0.25;
+    double gg = 0.25;
+    double bb = 0.25;
+    for (auto it = octo_model.begin_leafs(), end = octo_model.end_leafs(); it != end; ++it) {
+        if (it->getOccupancy() > 0.5) {
+            auto coord = it.getCoordinate();
+            visualizer->addCube(coord.x() - half_resolution, coord.x() + half_resolution, coord.y() - half_resolution,
+                                coord.y() + half_resolution, coord.z() - half_resolution, coord.z() + half_resolution,
+                                rr, gg, bb, "cube" + to_string(++n));
+//            pcl::PointXYZ pt1(coord.x() - half_resolution, coord.y() + half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt2(coord.x() - half_resolution, coord.y() - half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt3(coord.x() + half_resolution, coord.y() - half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt4(coord.x() + half_resolution, coord.y() + half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt5(coord.x() - half_resolution, coord.y() + half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt6(coord.x() - half_resolution, coord.y() - half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt7(coord.x() + half_resolution, coord.y() - half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt8(coord.x() + half_resolution, coord.y() + half_resolution, coord.z() - half_resolution);
+
+//            visualizer->addLine<pcl::PointXYZ>(pt1, pt2, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt2, pt3, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt3, pt4, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt4, pt1, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt1, pt5, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt2, pt6, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt3, pt7, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt4, pt8, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt5, pt6, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt6, pt7, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt7, pt8, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt8, pt5, rr, gg, bb, "line" + to_string(++n));
+        }
+    }
+    double x1 = object_center_world(0) - predicted_size;
+    double x2 = object_center_world(0) + predicted_size;
+    double y1 = object_center_world(1) - predicted_size;
+    double y2 = object_center_world(1) + predicted_size;
+    double z1 = object_center_world(2) - predicted_size;
+    double z2 = object_center_world(2) + predicted_size;
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube13");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube14");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube15");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x1, y2, z2), 0, 255, 0, "cube16");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y1, z2), 0, 255, 0, "cube17");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y2, z1), 0, 255, 0, "cube18");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube19");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube20");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube21");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube22");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube23");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube24");
+    cout << "Finished generating the octomap" << endl;
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

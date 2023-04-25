@@ -1,4 +1,5 @@
 #include "Views_Information.h"
+#include "Information.h"
 
 Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *_voxel_information,
                                      View_Space *view_space, int iterations) {
@@ -69,6 +70,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                         p_obj *= distance_function(pointNKNSquaredDistance[j], alpha);
                     }
                     (*object_weight)[key] = p_obj;
+                    octo_model->integrateNodeColor(key, 0, 0, 255);
                 }
             }
         }
@@ -106,6 +108,16 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     // Initial subscripts for rays start from 0
     ray_num = 0;
     for (int i = 0; i < view_space->views.size(); i++) {
+//        ray_cast_thread_process(&ray_num,
+//                                rays_info,
+//                                rays_map,
+//                                views_to_rays_map,
+//                                rays_to_views_map,
+//                                octo_model,
+//                                voxel_information,
+//                                view_space,
+//                                &color_intrinsics,
+//                                i);
         // Threads that divide into rays for this viewpoint
         ray_caster[i] = new std::thread(ray_cast_thread_process,
                                         &ray_num,
@@ -129,24 +141,36 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
 
     /* Allocate a thread to each ray. */
     now_time = clock();
-    auto **rays_process = new std::thread *[ray_num];
+//    auto **rays_process = new std::thread *[ray_num];
     for (int i = 0; i < ray_num; i++) {
-        rays_process[i] = new std::thread(ray_information_thread_process,
-                                          i,
-                                          rays_info,
-                                          rays_map,
-                                          occupancy_map,
-                                          object_weight,
-                                          quality_weight,
-                                          octo_model,
-                                          voxel_information,
-                                          view_space,
-                                          method);
+        ray_information_thread_process(i,
+                                       rays_info,
+                                       rays_map,
+                                       occupancy_map,
+                                       object_weight,
+                                       quality_weight,
+                                       octo_model,
+                                       voxel_information,
+                                       view_space,
+                                       method);
+//        rays_process[i] = new std::thread(ray_information_thread_process,
+//                                          i,
+//                                          rays_info,
+//                                          rays_map,
+//                                          occupancy_map,
+//                                          object_weight,
+//                                          quality_weight,
+//                                          octo_model,
+//                                          voxel_information,
+//                                          view_space,
+//                                          method);
     }
+    cout << "Finished that shit !" << endl;
+    cout << "----------------------------------------------------------------------------------------" << endl;
     /* Waiting for the ray calculation to be completed. */
-    for (int i = 0; i < ray_num; i++) {
-        (*rays_process[i]).join();
-    }
+//    for (int i = 0; i < ray_num; i++) {
+//        (*rays_process[i]).join();
+//    }
     auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
     Share_Data::access_directory(share_data->savePath + "/run_time");
@@ -164,20 +188,31 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         (*view_gain[i]).join();
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
+    // Displaying the repartition of quality in the octomap
+    std::map<double, int> qlt_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()), quality_weight);
+        qlt_map[qltt]++;
+    }
+    cout << "Quality in octo_model" << endl;
+    for (auto &it: qlt_map) {
+        std::cout << it.first << " - " << it.second << endl;
+    }
 }
 
 void Views_Information::update(Share_Data *share_data, View_Space *view_space, int iterations) {
-    // Update internal data
-    auto now_time = clock();
-    double map_size = view_space->predicted_size;
-    // Note that the viewpoints need to be sorted by id to create the mapping
-    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
-    // Re-recording the octree
+    /* Re-setting the parameters */
     octo_model = share_data->octo_model;
     octomap_resolution = share_data->octomap_resolution;
-    alpha = 0.1 / octomap_resolution;
     voxel_information->octomap_resolution = octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
+    alpha = 0.1 / octomap_resolution;
+    auto now_time = clock();
+
+    /* Initializing all the maps and lists needed */
+    // Sorting the views by id to create the mapping
+    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
     // Clear viewpoint information
     for (auto &view: view_space->views) {
         view.information_gain = 0;
@@ -188,10 +223,13 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     delete object_weight;
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+//    delete quality_weight;
+//    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     quality_weight = share_data->quality_weight;
-    // Update frontier
+    /* Computing the frontier voxels */
     std::vector<octomap::point3d> points;
     pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
+    double map_size = view_space->predicted_size;
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
@@ -232,6 +270,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                         p_obj *= distance_function(pointNKNSquaredDistance[j], alpha);
                     }
                     (*object_weight)[key] = p_obj;
+                    octo_model->integrateNodeColor(key, (1-p_obj)*255, 0, p_obj*255);
                 }
             }
         }
@@ -307,25 +346,35 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     }
     // Allocate a thread to each ray
     now_time = clock();
-    auto **rays_process = new std::thread *[ray_num];
+//    auto **rays_process = new std::thread *[ray_num];
     for (int i = 0; i < ray_num; i++) {
         rays_info[i]->clear();
-        rays_process[i] = new std::thread(ray_information_thread_process,
-                                          i,
-                                          rays_info,
-                                          rays_map,
-                                          occupancy_map,
-                                          object_weight,
-                                          quality_weight,
-                                          octo_model,
-                                          voxel_information,
-                                          view_space,
-                                          method);
+//        rays_process[i] = new std::thread(ray_information_thread_process,
+//                                          i,
+//                                          rays_info,
+//                                          rays_map,
+//                                          occupancy_map,
+//                                          object_weight,
+//                                          quality_weight,
+//                                          octo_model,
+//                                          voxel_information,
+//                                          view_space,
+//                                          method);
+        ray_information_thread_process(i,
+                                       rays_info,
+                                       rays_map,
+                                       occupancy_map,
+                                       object_weight,
+                                       quality_weight,
+                                       octo_model,
+                                       voxel_information,
+                                       view_space,
+                                       method);
     }
     // Waiting for the ray calculation to be completed
-    for (int i = 0; i < ray_num; i++) {
-        (*rays_process[i]).join();
-    }
+//    for (int i = 0; i < ray_num; i++) {
+//        (*rays_process[i]).join();
+//    }
     auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
     Share_Data::access_directory(share_data->savePath + "/run_time");
@@ -342,4 +391,16 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         (*view_gain[i]).join();
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
+
+    std::map<double, int> qlt_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()), quality_weight);
+        qlt_map[qltt]++;
+    }
+    cout << "Quality in octo_model" << endl;
+    for (auto &it: qlt_map) {
+        std::cout << it.first << " - " << it.second << endl;
+    }
+
 }

@@ -54,6 +54,7 @@ using Views = aliceVision::HashMap<aliceVision::IndexT, std::shared_ptr<View> >;
 #define PCNBV 7
 #define NewOurs 8
 #define Test_one 101
+#define Test_two 102
 
 /**
  * The class that contains all the data needed for the NBV algorithm.
@@ -95,14 +96,15 @@ public:
     std::atomic<bool> over{}; // Checks if the process is over
     std::atomic<bool> now_view_space_processed{}; // Is the View Space processed
     std::atomic<bool> now_views_information_processed{};  // Are the Views Information processed
-    std::atomic<bool> move_on{}; // Did we continue
+    std::atomic<bool> move_on = false; // Did we continue
     int process_cnt; // Process number
     std::atomic<double> pre_clock{}; // System clock
 
     // Quality set
+    double qlt_update_factor;
     std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight; // A quality map for each voxel
-    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_quality_weight; // A quality map for each voxel
-    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_sample_quality_weight; // A quality map for each voxel
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_quality_weight{}; // A quality map for each voxel
+    std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *gt_sample_quality_weight{}; // A quality map for each voxel
 
     // Position matrices
     Eigen::Matrix4d now_camera_pose_world; // The current camera pose considered as the NBV
@@ -111,9 +113,9 @@ public:
     double map_size{}; // The radius of the octomap
 
     //Pipeline parameters
-    int method_of_IG; // Method of Information Gain computation
-    int num_of_max_iteration; // Number of maximum iteration
-    int num_of_views; // Number of views sampled around the object
+    std::atomic<int> method_of_IG{}; // Method of Information Gain computation
+    int num_of_max_iteration{}; // Number of maximum iteration
+    int num_of_views{}; // Number of views sampled around the object
     double cost_weight{}; // Gamma in Information Gain computation
     double skip_coefficient{}; // A coefficient to skip some pixels in the projected image
     double sum_local_information{}; // The sum of all local information
@@ -121,10 +123,10 @@ public:
     double sum_robot_cost{}; // The sum of robot cost
     std::vector<View> best_views{}; // A list containing the successive best views
     bool show{}; // To show the interface or not
-    bool move_wait{}; //TODO
+    bool move_wait{}; // User input to say if we continue between each iteration or not
     bool robot_cost_negative{}; //TODO
     int num_of_max_flow_node; // The maximum number of nodes for the max flow algorithm.
-    double interesting_threshold{}; // The threshold to determine if it's interesting or not //TODO
+    double interesting_threshold{}; // The threshold to determine if it's interesting or not in the MCMF
 
 
     // Camera parameters
@@ -134,7 +136,7 @@ public:
     // A visualizer for the octomaps and clouds
     pcl::visualization::PCLVisualizer::Ptr viewer;
 
-    // An sfm Data to store the results
+    // A sfm Data to store the results
     aliceVision::sfmData::SfMData sfm_data{};
 
     // Unused variables

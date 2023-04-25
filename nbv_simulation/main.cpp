@@ -13,8 +13,9 @@ NBV_Planner *nbv_plan;
 
 void get_command() { // Read command strings from the console
     string cmd;
+    string cmd2;
     while (!stop && !share_data->over) {
-        cout << "Input command 1.stop 2.over 3.next_iteration :" << endl;
+        cout << "Input command 1.stop 2.over 3.next_iteration 4.change_method:" << endl;
         cin >> cmd;
         if (cmd == "1")
             stop = true;
@@ -22,7 +23,15 @@ void get_command() { // Read command strings from the console
             share_data->over = true;
         else if (cmd == "3")
             share_data->move_on = true;
-        else
+        else if (cmd == "4") {
+            cout << "Choose your next method iteration" << endl;
+            cin >> cmd2;
+            int method_number = stoi(cmd2);
+            share_data->method_of_IG = method_number;
+            cout << "The method number is:" << method_number << endl;
+            cout << "The new method is: " << share_data->method_of_IG << endl;
+            // TODO: Check if the method exists and the correct input
+        } else
             cout << "Wrong command. Retry :" << endl;
     }
     cout << "get_command over." << endl;

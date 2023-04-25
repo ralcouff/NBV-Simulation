@@ -1,6 +1,9 @@
 #ifndef NBV_SIMULATION_NBV_PLANNER_H
 #define NBV_SIMULATION_NBV_PLANNER_H
 
+#include "octomap/ColorOcTree.h"
+#include "octomap/OcTree.h"
+
 #pragma once
 
 #include <memory>
@@ -106,6 +109,16 @@ void create_views_information(Views_Information **now_views_information,
  * @param nbv_plan The NBV Planner
  */
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
+
+/**
+ * Add in the visualizer the octomap
+ * @param visualizer The visualizer into which we will plot the octomap
+ * @param octo_model The octomap to plot
+ * @param object_center_world The center of mass of the object
+ * @param predicted_size Size of the object
+ */
+void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const octomap::ColorOcTree &octo_model,
+                       Eigen::Matrix<double, 3, 1> object_center_world, double predicted_size);
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 

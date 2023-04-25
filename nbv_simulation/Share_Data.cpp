@@ -11,7 +11,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs.open(yamlConfigFilePath, cv::FileStorage::READ);
     fs["model_path"] >> objectFolderPath;
     fs["name_of_pcd"] >> nameOfObject;
-    fs["method_of_IG"] >> method_of_IG;
+    method_of_IG = fs["method_of_IG"];
     fs["octomap_resolution"] >> octomap_resolution;
     fs["ground_truth_resolution"] >> ground_truth_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
@@ -39,6 +39,7 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p1"] >> color_intrinsics.coeffs[3];
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
+    fs["qlt_update"] >> qlt_update_factor;
     fs.release();
 
     // Building the different file paths

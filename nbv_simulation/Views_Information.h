@@ -8,6 +8,7 @@
 #include "Share_Data.h"
 #include "View_Space.h"
 #include "Information.h"
+#include "octomap/OcTreeKey.h"
 
 #include <unordered_map>
 #include <vector>

@@ -21,18 +21,30 @@ public:
      * @param _ray_set A pointer to the set containing all the voxels traversed by the Ray - TODO : To check
      * @param _start An iterator on the first element - TODO : To check
      * @param _stop An iterator on the last element - TODO : To check
+     * @param _end_unknown
+     * @param _ray_set_unknown
+     * @param _start_unknown
+     * @param _stop_unknown
      */
     Ray(octomap::OcTreeKey _origin,
         octomap::OcTreeKey _end,
         octomap::KeyRay* _ray_set,
         octomap::KeyRay::iterator _start,
-        octomap::KeyRay::iterator _stop);
+        octomap::KeyRay::iterator _stop,
+        octomap::OcTreeKey _end_unknown,
+        octomap::KeyRay* _ray_set_unknown,
+        octomap::KeyRay::iterator _start_unknown,
+        octomap::KeyRay::iterator _stop_unknown);
 
     octomap::OcTreeKey origin;
     octomap::OcTreeKey end;
     octomap::KeyRay* ray_set;
     octomap::KeyRay::iterator start;
     octomap::KeyRay::iterator stop;
+    octomap::OcTreeKey end_unknown;
+    octomap::KeyRay* ray_set_unknown;
+    octomap::KeyRay::iterator start_unknown;
+    octomap::KeyRay::iterator stop_unknown;
 
 };
 
