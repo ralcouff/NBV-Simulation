@@ -1,11 +1,11 @@
 %YAML:1.0
-model_path: "../study/"
+model_path: "study/"
 folder_name: "sphere_qlt"
 name_of_pcd: "sphere_quality_colored"
 method_of_IG : 0
 octomap_resolution: 0.01
 ground_truth_resolution: 0.002
-num_of_max_iteration: 10
+num_of_max_iteration: 2
 show: 1
 move_wait : 0
 nbv_net_path: "D:/jupyter_pytorch_cpu/nbv-net"

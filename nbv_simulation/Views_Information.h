@@ -58,4 +58,6 @@ public:
 
 };
 
+void save_quality_map(Share_Data *share_data, std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight);
+
 #endif //NBV_SIMULATION_VIEWS_INFORMATION_H

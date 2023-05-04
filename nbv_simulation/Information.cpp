@@ -310,8 +310,10 @@ void ray_information_thread_process(
         double on_object = Voxel_Information::voxel_object(*it, object_weight);
         // Read the quality of the voxel
         double qlt = Voxel_Information::voxel_quality(*it, quality_weight);
-        if (qlt !=1)
-            cout << "Quality " << qlt << endl;
+//        if (qlt !=1) {
+//            cout << it->k << endl;
+//            cout << "Quality " << qlt << endl;
+//        }
         // If it is occupied, it is the last node
         if (voxel_occupied)
             last = it;

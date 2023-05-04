@@ -58,9 +58,9 @@ Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size,
     objectFilePath = objectFolderPath + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size);
     qualityFilePath = objectFilePath + ".qlt";
     viewSpaceFilePath = objectFolderPath + folder_name + ".txt";
-    savePath = "../results/" + string_test_time + '/' + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size) + '_' + std::to_string(reconstructionIterations) + '_' + std::to_string(method_of_IG);
+    savePath = "results/" + string_test_time + '/' + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size) + '_' + std::to_string(reconstructionIterations) + '_' + std::to_string(method_of_IG);
     access_directory(savePath);
-    test_base_filename = "../results/" + string_test_time + "/results.csv";
+    test_base_filename = "results/" + string_test_time + "/results.csv";
 
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,

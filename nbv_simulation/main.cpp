@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <omp.h>
 
 #include "Share_Data.h"
 #include "NBV_Planner.h"
@@ -73,36 +74,56 @@ void get_run() {
 }
 
 int main(int argc, char **argv) {
-    const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
+//    const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
+    omp_set_num_threads(8);
+    const auto config_file = std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
-    std::vector<int> tests{0,101,102};
-    std::vector<int> models{0, 1, 2, 3, 4};
-    std::vector<int> sizes{1024, 4096};
-    std::vector<int> reconstructionIterations{1, 2, 3, 4, 5};
+    int n_model = std::stoi(argv[2]);
+    int n_size = std::stoi(argv[3]);
+//    cout << "Size: " << n_size << endl;
+    int n_iter = std::stoi(argv[4]);
+    int method = get_method(std::stoi(argv[5]));
+    std::string string_test_time = std::string(argv[6]);
 
-    char str_time [80];
-    std::time_t rawTime;
-    struct tm * timeInfo;
 
-    time (&rawTime);
-    timeInfo = std::localtime(&rawTime);
-    std::strftime(str_time, 80, "%F-%H-%M", timeInfo);
-    std:: string string_test_time = std::string(str_time);
+    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
+    thread runner(get_run);
+    runner.join();
+    cout << "System over." << endl;
 
-    for (int n_test: tests) {
-        short method = get_method(n_test);
-        for (int n_model: models){
-            for (int n_size: sizes) {
-                for (int n_iter: reconstructionIterations) {
-                    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
-                    thread runner(get_run);
-                    runner.join();
-                    cout << "System over." << endl;
-                }
-            }
-        }
-    }
+
+
+
+
+//    std::vector<int> tests{0, 101, 102};
+//    std::vector<int> models{0, 1, 2, 3, 4};
+//    std::vector<int> models{0};
+//    std::vector<int> sizes{1024};
+//    std::vector<int> reconstructionIterations{1};
+//
+//    char str_time [80];
+//    std::time_t rawTime;
+//    struct tm * timeInfo;
+//
+//    time (&rawTime);
+//    timeInfo = std::localtime(&rawTime);
+//    std::strftime(str_time, 80, "%F-%H-%M", timeInfo);
+//    std:: string string_test_time = std::string(str_time);
+//
+//    for (int n_test: tests) {
+//        short method = get_method(n_test);
+//        for (int n_model: models){
+//            for (int n_size: sizes) {
+//                for (int n_iter: reconstructionIterations) {
+//                    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
+//                    thread runner(get_run);
+//                    runner.join();
+//                    cout << "System over." << endl;
+//                }
+//            }
+//        }
+//    }
 
     // Data area initialisation
 //    share_data = new Share_Data(config_file);
