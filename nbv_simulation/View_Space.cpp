@@ -75,11 +75,11 @@ View_Space::View_Space(int _id,
     share_data->map_size = map_size;
 
     /* Filling the octo_model with empty nodes based on the BBOX of the model. */
-    for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
+    for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size - octomap_resolution;
          x += octomap_resolution)
-        for (double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size;
+        for (double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size - octomap_resolution;
              y += octomap_resolution)
-            for (double z = object_center_world(2) - predicted_size; z <= object_center_world(2) + predicted_size;
+            for (double z = object_center_world(2) - predicted_size; z <= object_center_world(2) + predicted_size - octomap_resolution;
                  z += octomap_resolution)
                 octo_model->setNodeValue(x, y, z, (float) 0, true);
     octo_model->updateInnerOccupancy();
@@ -288,19 +288,22 @@ void View_Space::update(int _id,
                     } else {
 //                        (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
 //                                                                      (*share_data->quality_weight)[key]);
-                        if (share_data->method_of_IG == Test_one) {
+/*                        if (share_data->method_of_IG == Test_one) {*/
                             if ((*share_data->gt_quality_weight)[gt_key] == 1) {
                                 (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
                                                                               (*share_data->quality_weight)[key]);
                             } else {
+//                                (*share_data->quality_weight)[key] = std::min(
+//                                        sqrt((*share_data->quality_weight)[key]),
+//                                        1.0);
                                 (*share_data->quality_weight)[key] = std::min(
-                                        share_data->qlt_update_factor * (*share_data->quality_weight)[key],
+                                        pow((*share_data->quality_weight)[key], 0.9),
                                         1.0);
                             }
-                        } else {
+/*                        } else {
                             (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
                                                                           (*share_data->quality_weight)[key]);
-                        }
+                        }*/
                     }
                 }
                 key_seen[key] = 1;

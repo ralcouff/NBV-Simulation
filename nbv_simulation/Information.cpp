@@ -335,7 +335,7 @@ void ray_information_thread_process(
                                                                    qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG || method == Test_one || method == Test_two)
+        if (method == OursIG || method == Test_one || method == Test_two || method == Test_o || method == Test_e)
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         else
             rays_info[ray_id]->visible *= occupancy;
@@ -373,16 +373,25 @@ inline double information_function(short &method,
                 final_information = ray_information;
             }
             break;
-        case Test_one:
-            final_information = ray_information + visible * (1 - qlt);
+        case Test_o:
+            final_information = 0;
             break;
-        case Test_two:
+        case Test_e:
             if (is_unknown) {
                 final_information = ray_information + object * visible * voxel_information;
             } else {
                 final_information = ray_information;
             }
             break;
+        case Test_one:
+            final_information = ray_information + visible * (1 - qlt);
+            break;
+        case Test_two:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information * (2 - qlt);
+            } else {
+                final_information = ray_information + visible * (1 - qlt);
+            }
         case OA:
             final_information = ray_information + visible * voxel_information;
             break;

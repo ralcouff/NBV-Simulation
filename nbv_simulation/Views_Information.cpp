@@ -1,6 +1,9 @@
 #include "Views_Information.h"
 #include "Information.h"
+#include "Share_Data.h"
 #include "octomap/OcTreeKey.h"
+#include <iomanip>
+#include <string>
 #include <unordered_map>
 
 Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *_voxel_information,
@@ -110,7 +113,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     // Initial subscripts for rays start from 0
     ray_num = 0;
 //#pragma omp parallel default(shared)
-    #pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
     for (int i = 0; i < view_space->views.size(); i++) {
         ray_cast_thread_process(&ray_num,
                                 rays_info,
@@ -146,7 +149,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     /* Allocate a thread to each ray. */
     now_time = clock();
 //    auto **rays_process = new std::thread *[ray_num];
-    #pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
     for (int i = 0; i < ray_num; i++) {
         ray_information_thread_process(i,
                                        rays_info,
@@ -194,7 +197,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
     // Displaying the repartition of quality in the octomap
-    save_quality_map(share_data, quality_weight);
+    save_quality_map(share_data, quality_weight, iterations);
+    save_occupancy_map(share_data, iterations);
 //    std::map<double, int> qlt_map{};
 //    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
 //         it != end; ++it) {
@@ -214,6 +218,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     voxel_information->octomap_resolution = octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
     alpha = 0.1 / octomap_resolution;
+    method = share_data->method_of_IG;
     auto now_time = clock();
 
     /* Initializing all the maps and lists needed */
@@ -276,7 +281,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                         p_obj *= distance_function(pointNKNSquaredDistance[j], alpha);
                     }
                     (*object_weight)[key] = p_obj;
-                    octo_model->integrateNodeColor(key, (1-p_obj)*255, 0, p_obj*255);
+                    octo_model->integrateNodeColor(key, (1 - p_obj) * 255, 0, p_obj * 255);
                 }
             }
         }
@@ -328,7 +333,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         voxel_information->convex = convex_3d;
         // Ray generators for assigning viewpoints
 //        auto **ray_caster = new std::thread *[view_space->views.size()];
-        #pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
         for (int i = 0; i < view_space->views.size(); i++) {
             // Threads that divide into rays for this viewpoint
             ray_cast_thread_process(&ray_num,
@@ -364,7 +369,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     // Allocate a thread to each ray
     now_time = clock();
 //    auto **rays_process = new std::thread *[ray_num];
-    #pragma omp parallel for default(shared)
+#pragma omp parallel for default(shared)
     for (int i = 0; i < ray_num; i++) {
         rays_info[i]->clear();
 //        rays_process[i] = new std::thread(ray_information_thread_process,
@@ -410,7 +415,8 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
 
-    save_quality_map(share_data, quality_weight);
+    save_quality_map(share_data, quality_weight, iterations);
+    save_occupancy_map(share_data, iterations);
 //    std::map<double, int> qlt_map{};
 //    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
 //         it != end; ++it) {
@@ -424,15 +430,39 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
 
 }
 
-void save_quality_map(Share_Data *share_data, std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight) {
+void save_quality_map(Share_Data *share_data,
+                      std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
+                      int iteration) {
     std::map<double, int> qlt_map{};
     for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
          it != end; ++it) {
         double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()), quality_weight);
         qlt_map[qltt]++;
     }
-    cout << "Quality in octo_model" << endl;
+    Share_Data::access_directory(share_data->savePath + "/quality/");
+    std::ofstream QltOut(
+            share_data->savePath + "/quality/quality_" + std::to_string(iteration) + ".csv");
+    cout << "Saving the quality of the octomap" << endl;
     for (auto &it: qlt_map) {
-        std::cout << it.first << " - " << it.second << endl;
+        cout << std::setprecision(20) << it.first << endl;
+        QltOut << std::setprecision(20) << it.first << "," << it.second << endl;
     }
+    QltOut.close();
+}
+
+void save_occupancy_map(Share_Data *share_data, int iteration) {
+    std::map<double, int> occ_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double occ = it->getOccupancy();
+        occ_map[occ]++;
+    }
+    Share_Data::access_directory(share_data->savePath + "/occupancy/");
+    std::ofstream OccOut(
+            share_data->savePath + "/occupancy/occupancy_" + std::to_string(iteration) + ".csv");
+    cout << "Saving the occupancy of the octomap" << endl;
+    for (auto &it: occ_map) {
+        OccOut << it.first << "," << it.second << endl;
+    }
+    OccOut.close();
 }

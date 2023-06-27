@@ -58,6 +58,21 @@ public:
 
 };
 
-void save_quality_map(Share_Data *share_data, std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight);
+/**
+ * Save the repartition of quality in the octomap
+ * @param share_data The data shared among the whole project
+ * @param quality_weight A map containing the quality of each voxel of the octomap
+ * @param iterations The current iteration number
+ */
+void save_quality_map(Share_Data *share_data,
+                      std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
+                      int iterations);
+
+/**
+ * SAve the occupancy map of the model
+ * @param share_data The data shared among the whole project
+ * @param iterations The current iteration number
+ */
+void save_occupancy_map(Share_Data *share_data, int iteration);
 
 #endif //NBV_SIMULATION_VIEWS_INFORMATION_H

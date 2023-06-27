@@ -19,6 +19,12 @@ short get_method(int n_test) {
         case 0:
             method = OursIG;
             break;
+        case 10:
+            method = Test_o;
+            break;
+        case 11:
+            method = Test_e;
+            break;
         case 101:
             method = Test_one;
             break;
@@ -85,9 +91,10 @@ int main(int argc, char **argv) {
     int n_iter = std::stoi(argv[4]);
     int method = get_method(std::stoi(argv[5]));
     std::string string_test_time = std::string(argv[6]);
+    std::string save_folder = std::string(argv[7]);
 
-
-    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time);
+    cout << save_folder << endl;
+    share_data = new Share_Data(config_file, n_model, n_size, n_iter, method, string_test_time, save_folder);
     thread runner(get_run);
     runner.join();
     cout << "System over." << endl;

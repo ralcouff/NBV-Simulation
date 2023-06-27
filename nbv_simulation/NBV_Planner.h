@@ -130,6 +130,8 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data);
  */
 void save_rescaled(double scale, double unit, Share_Data *share_data);
 
+double compute_completeness(Share_Data *share_data);
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

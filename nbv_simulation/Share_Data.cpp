@@ -4,7 +4,7 @@
 #include <utility>
 
 Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_iter, short _method,
-                       std::string _string_test_time) {
+                       std::string _string_test_time, const std::string& save_folder) {
     process_cnt = -1;
 
     // Reading yaml files
@@ -50,7 +50,8 @@ Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size,
     // Test parameters
     n_model = _n_model;
     n_size = _n_size;
-    method_of_IG = _method;
+    alt_method_of_IG = _method;
+    method_of_IG = 0;
     string_test_time = std::move(_string_test_time);
     reconstructionIterations = _n_iter;
 
@@ -58,10 +59,14 @@ Share_Data::Share_Data(std::string _config_file_path, int _n_model, int _n_size,
     objectFilePath = objectFolderPath + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size);
     qualityFilePath = objectFilePath + ".qlt";
     viewSpaceFilePath = objectFolderPath + folder_name + ".txt";
-    savePath = "results/" + string_test_time + '/' + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size) + '_' + std::to_string(reconstructionIterations) + '_' + std::to_string(method_of_IG);
+    savePath = save_folder + '/' + string_test_time + '/' + std::to_string(n_model) + '_' + folder_name + '/' + std::to_string(n_model) + '_' + nameOfObject + '_' + std::to_string(n_size) + '_' + std::to_string(reconstructionIterations) + '_' + std::to_string(alt_method_of_IG);
+    cout << savePath << endl;
     access_directory(savePath);
-    test_base_filename = "results/" + string_test_time + "/results.csv";
-
+    test_base_filename = save_folder + '/' + string_test_time + "/results.csv";
+    cout << "The global saving file will be saved in : " << test_base_filename << endl;
+    std::ofstream result(test_base_filename, std::ios_base::app);
+    result << "alt_method_of_IG,method_of_IG,n_model,n_size,reconstructionIterations,iterations,id_best_view,x,y,z,final_utility,completeness" << endl;
+    result.close();
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
                                                                                        color_intrinsics.height,

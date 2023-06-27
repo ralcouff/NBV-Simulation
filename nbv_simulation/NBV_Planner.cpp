@@ -180,8 +180,9 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Add the initial PC to the sfm_data pipeline. */
     //TODO : Re_add the Sfm pipeline and save a rescaled_model of the object
     float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points){
-        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+    for (auto &pt: share_data->cloud_ground_truth->points) {
+        share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
+                Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
         index++;
     }
     /* Convert and save a version of the rescaled model */
@@ -295,11 +296,27 @@ int NBV_Planner::plan() {
         case Over:
             break;
         case WaitData:
+            cout << "***************************************************************************" << endl;
+            cout << "The current method is : " << endl;
+            cout << NBV_Planner::share_data->method_of_IG << endl;
+            cout << "***************************************************************************" << endl;
             if (percept->percept(now_best_view)) {
                 thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
                 next_view_space.detach();
                 status = WaitViewSpace;
             }
+            if (iterations == share_data->reconstructionIterations) {
+                cout
+                        << "------------------------------------------------------------------------------------------------"
+                        << endl;
+                cout << "Changing the method of information gain from : " << share_data->method_of_IG << " to "
+                     << share_data->alt_method_of_IG << '.' << endl;
+                cout
+                        << "------------------------------------------------------------------------------------------------"
+                        << endl;
+                share_data->method_of_IG = share_data->alt_method_of_IG;
+            }
+//            compute_completeness(share_data);
             break;
         case WaitViewSpace:
             if (share_data->now_view_space_processed) {
@@ -565,10 +582,13 @@ int NBV_Planner::plan() {
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
                     cout << " Next best view final_utility is: " << now_best_view->final_utility << endl;
                     std::ofstream result(share_data->test_base_filename, std::ios_base::app);
-                    result << share_data->method_of_IG << ',' << share_data->n_model << ',' << share_data->n_size << ','
+                    result << share_data->alt_method_of_IG << ',' << share_data->method_of_IG << ','
+                           << share_data->n_model << ',' << share_data->n_size << ','
+                           << share_data->reconstructionIterations << ','
                            << std::to_string(iterations) << ',' << now_best_view->id << ','
                            << now_best_view->init_pos(0) << ',' << now_best_view->init_pos(1) << ','
-                           << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << endl;
+                           << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << ','
+                           << compute_completeness(share_data) << endl;
                     result.close();
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
@@ -699,7 +719,7 @@ void create_views_information(Views_Information **now_views_information,
                     new Views_Information(share_data, nbv_plan->voxel_information, now_view_space, iterations);
         else
             (*now_views_information)->update(share_data, now_view_space, iterations);
-        if (share_data->method_of_IG == OursIG) {
+        if (share_data->method_of_IG == OursIG || share_data->method_of_IG == Test_e) {
             // Handling network streams and obtaining global optimisation functions
             auto *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
                                                          now_view_space,
@@ -732,6 +752,10 @@ void create_views_information(Views_Information **now_views_information,
                         share_data->sum_local_information +
                         share_data->cost_weight * view.get_global_information() /
                         share_data->sum_global_information;
+            else if (share_data->method_of_IG == Test_e)
+                view.final_utility = (share_data->sum_local_information == 0 ? 0 : (1 - share_data->cost_weight) * view.information_gain / share_data->sum_local_information);
+            else if (share_data->method_of_IG == Test_o)
+                view.final_utility = (share_data->sum_global_information == 0 ? 0 : share_data->cost_weight * view.get_global_information() / share_data->sum_global_information);
             else if (share_data->method_of_IG == APORA)
                 view.final_utility = view.information_gain;
             else if (share_data->method_of_IG == Test_one || share_data->method_of_IG == Test_two)
@@ -862,6 +886,41 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
         std::string command = python_interpreter + " " + script_name + " " + parameters;
         system(command.c_str());
     }
+}
+
+double compute_completeness(Share_Data *share_data) {
+    std::map<double, int> occ_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(), end = share_data->GT_sample->end_leafs();
+         it != end; ++it) {
+        double occ = it->getOccupancy();
+        occ_map[occ]++;
+    }
+    int tot_gt = 0;
+    cout << "GT cpout" << endl;
+    for (auto &it: occ_map) {
+        if (it.first > 0.5) {
+            tot_gt += it.second;
+        }
+//        cout << it.first << "," << it.second << endl;
+    }
+
+    std::map<double, int> occ_map_working{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double occ_work = it->getOccupancy();
+        occ_map_working[occ_work]++;
+    }
+    int tot_work = 0;
+    cout << "Octo cpout" << endl;
+    for (auto &it: occ_map_working) {
+        if (it.first > 0.5) {
+            tot_work += it.second;
+        }
+//        cout << it.first << "," << it.second << endl;
+    }
+    double ratio = (double)tot_work / (double) tot_gt * 100;
+    cout << "The object is reconstructed at : " << ratio << '%' << endl;
+    return ratio;
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

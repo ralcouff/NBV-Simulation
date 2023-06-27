@@ -53,8 +53,11 @@ using Views = aliceVision::HashMap<aliceVision::IndexT, std::shared_ptr<View> >;
 #define NBVNET 6
 #define PCNBV 7
 #define NewOurs 8
+#define Test_o 10
+#define Test_e 11
 #define Test_one 101
 #define Test_two 102
+
 
 /**
  * The class that contains all the data needed for the NBV algorithm.
@@ -114,6 +117,7 @@ public:
 
     //Pipeline parameters
     std::atomic<int> method_of_IG{}; // Method of Information Gain computation
+    int alt_method_of_IG; // Method of Information Gain computation
     int num_of_max_iteration{}; // Number of maximum iteration
     int num_of_views{}; // Number of views sampled around the object
     double cost_weight{}; // Gamma in Information Gain computation
@@ -164,7 +168,7 @@ public:
      * @param _model
      * @param string_test_time
      */
-    explicit Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_iter, short _model, std::string string_test_time);
+    explicit Share_Data(std::string _config_file_path, int _n_model, int _n_size, int _n_iter, short _model, std::string string_test_time, const std::string& save_folder);
 
     /**
      * Destructor of the object Share_Data
