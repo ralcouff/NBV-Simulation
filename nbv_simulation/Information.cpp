@@ -74,10 +74,14 @@ void ray_cast_thread_process(int *ray_num,
                 // pcl::PointXYZ(end(0), end(1), end(2)), rr, gg, bb, "line" + to_string(pos) + "-" + to_string(x) + "-"
                 // + to_string(y));
                 octomap::OcTreeKey key_end;
+                octomap::OcTreeKey key_end_unknown;
                 octomap::point3d direction = end - origin;
                 octomap::point3d end_point;
+                octomap::point3d end_point_unknown;
                 // Crossing unknown areas and finding the end
-                bool found_end_point = octo_model->castRay(origin, direction, end_point, true, max_range);
+//                bool found_end_point = octo_model->castRay(origin, direction, end_point, true, max_range);
+                bool found_end_point = castRay(*octo_model, origin, direction, end_point, end_point_unknown, true, max_range, voxel_information->p_unknown_lower_bound, voxel_information->p_unknown_upper_bound);
+
                 if (!found_end_point) {
                     // End point not found, set end point as maximum distance
                     end_point =
@@ -87,17 +91,27 @@ void ray_cast_thread_process(int *ray_num,
                 }
                 // Check that the end is within the map limits and hits BBX
                 bool key_end_have = octo_model->coordToKeyChecked(end_point, key_end);
+                bool key_end_unknown_have = octo_model->coordToKeyChecked(end_point_unknown, key_end_unknown);
+                if (!key_end_unknown_have)
+                    cout << "Banana" << endl;
                 if (key_end_have) {
                     // Generation of rays
                     auto *ray_set = new octomap::KeyRay();
+                    auto *ray_set_unknown = new octomap::KeyRay();
                     // Get the ray array, without the end node
                     bool point_on_ray_getted = octo_model->computeRayKeys(origin, end_point, *ray_set);
+                    bool point_on_ray_got_unknown = octo_model->computeRayKeys(origin, end_point_unknown, *ray_set_unknown);
                     if (!point_on_ray_getted)
                         cout << "Warning. ray cast with wrong max_range." << endl;
+                    if (!point_on_ray_got_unknown)
+                        cout << "Warning. ray cast with wrong max_range on unknown." << endl;
                     if (ray_set->size() > 950)
                         cout << ray_set->size() << " rewrite the vector size in Octreekey.h." << endl;
+                    if (ray_set_unknown->size() > 950)
+                        cout << ray_set_unknown->size() << " rewrite the vector size in Octreekey.h. unknown" << endl;
                     // Putting the end point into the ray group
                     ray_set->addKey(key_end);
+                    ray_set_unknown->addKey(key_end_unknown);
                     // The first non-empty node is used as the start of the ray and the last non-empty element from the
                     // tail is used as the end of the ray
                     auto last = ray_set->end();
@@ -370,4 +384,189 @@ int frontier_check(octomap::point3d node,
         return 1;
     // Nothing
     return 0;
+}
+
+bool castRay(octomap::ColorOcTree& octo_model, const octomap::point3d& origin, const octomap::point3d& directionP, octomap::point3d& end,
+             octomap::point3d& end_unknown, bool ignoreUnknown, double maxRange, double p_unknown_lower_bound, double p_unknown_upper_bound) {
+
+    /// ----------  see OcTreeBase::computeRayKeys  -----------
+    // Initialization phase -------------------------------------------------------
+    octomap::OcTreeKey current_key;
+    if ( !octo_model.coordToKeyChecked(origin, current_key) ) {
+        OCTOMAP_WARNING_STR("Coordinates out of bounds during ray casting");
+        return false;
+    }
+
+    octomap::ColorOcTreeNode* startingNode = octo_model.search(current_key);
+    if (startingNode){
+        if (octo_model.isNodeOccupied(startingNode) && startingNode->getOccupancy() > p_unknown_upper_bound){
+            // Occupied node found at origin
+            // (need to convert from key, since origin does not need to be a voxel center)
+            end = octo_model.keyToCoord(current_key);
+            end_unknown = octo_model.keyToCoord(current_key);
+            return true;
+        }
+    } else if(!ignoreUnknown){
+        end = octo_model.keyToCoord(current_key);
+        end_unknown = octo_model.keyToCoord(current_key);
+        return false;
+    }
+
+    octomap::point3d direction = directionP.normalized();
+    bool max_range_set = (maxRange > 0.0);
+
+    int step[3];
+    double tMax[3];
+    double tDelta[3];
+
+    for(unsigned int i=0; i < 3; ++i) {
+        // compute step direction
+        if (direction(i) > 0.0) step[i] =  1;
+        else if (direction(i) < 0.0)   step[i] = -1;
+        else step[i] = 0;
+
+        // compute tMax, tDelta
+        if (step[i] != 0) {
+            // corner point of voxel (in direction of ray)
+            double voxelBorder = octo_model.keyToCoord(current_key[i]);
+            voxelBorder += double(step[i] * octo_model.getResolution() * 0.5);
+
+            tMax[i] = ( voxelBorder - origin(i) ) / direction(i);
+            tDelta[i] = octo_model.getResolution() / fabs( direction(i) );
+        }
+        else {
+            tMax[i] =  std::numeric_limits<double>::max();
+            tDelta[i] = std::numeric_limits<double>::max();
+        }
+    }
+
+    if (step[0] == 0 && step[1] == 0 && step[2] == 0){
+        OCTOMAP_ERROR("Raycasting in direction (0,0,0) is not possible!");
+        return false;
+    }
+
+    // for speedup:
+    double maxrange_sq = maxRange *maxRange;
+
+    // Incremental phase  ---------------------------------------------------------
+
+    bool done = false;
+
+    while (!done) {
+        unsigned int dim;
+
+        // find minimum tMax:
+        if (tMax[0] < tMax[1]){
+            if (tMax[0] < tMax[2]) dim = 0;
+            else                   dim = 2;
+        }
+        else {
+            if (tMax[1] < tMax[2]) dim = 1;
+            else                   dim = 2;
+        }
+
+        // check for overflow:
+
+        unsigned int tree_max_val(32768);
+        if ((step[dim] < 0 && current_key[dim] == 0)
+            || (step[dim] > 0 && current_key[dim] == 2 * tree_max_val-1))
+        {
+            OCTOMAP_WARNING("Coordinate hit bounds in dim %d, aborting ray cast\n", dim);
+            // return border point nevertheless:
+            end = octo_model.keyToCoord(current_key);
+            return false;
+        }
+
+        // advance in direction "dim"
+        current_key[dim] += step[dim];
+        tMax[dim] += tDelta[dim];
+
+
+        // generate world coords from key
+        end = octo_model.keyToCoord(current_key);
+
+
+        // check for max range:
+        if (max_range_set){
+            double dist_from_origin_sq(0.0);
+            for (unsigned int j = 0; j < 3; j++) {
+                dist_from_origin_sq += ((end(j) - origin(j)) * (end(j) - origin(j)));
+            }
+            if (dist_from_origin_sq > maxrange_sq)
+                return false;
+
+        }
+
+        octomap::ColorOcTreeNode* currentNode = octo_model.search(current_key);
+        if (currentNode){
+            if (octo_model.isNodeOccupied(currentNode)) {
+                done = true;
+                break;
+            }
+            // otherwise: node is free and valid, ray casting continues
+        } else if (!ignoreUnknown){ // no node found, this usually means we are in "unknown" areas
+            return false;
+        }
+    } // end while
+
+    bool done_two = false;
+    octomap::OcTreeKey current_key_two;
+    octo_model.coordToKeyChecked(origin, current_key_two);
+
+    while (!done_two) {
+        unsigned int dim;
+
+        // find minimum tMax:
+        if (tMax[0] < tMax[1]){
+            if (tMax[0] < tMax[2]) dim = 0;
+            else                   dim = 2;
+        }
+        else {
+            if (tMax[1] < tMax[2]) dim = 1;
+            else                   dim = 2;
+        }
+
+        // check for overflow:
+        unsigned int tree_max_val(32768);
+        if ((step[dim] < 0 && current_key_two[dim] == 0)
+            || (step[dim] > 0 && current_key_two[dim] == 2 * tree_max_val-1))
+        {
+            OCTOMAP_WARNING("Coordinate hit bounds in dim %d, aborting ray cast\n", dim);
+            // return border point nevertheless:
+            end_unknown = octo_model.keyToCoord(current_key_two);
+            break;
+        }
+
+        // advance in direction "dim"
+        current_key_two[dim] += step[dim];
+        tMax[dim] += tDelta[dim];
+
+
+        // generate world coords from key
+        end_unknown = octo_model.keyToCoord(current_key_two);
+
+
+        // check for max range:
+        if (max_range_set){
+            double dist_from_origin_sq(0.0);
+            for (unsigned int j = 0; j < 3; j++) {
+                dist_from_origin_sq += ((end_unknown(j) - origin(j)) * (end_unknown(j) - origin(j)));
+            }
+            if (dist_from_origin_sq > maxrange_sq)
+                break;
+
+        }
+
+        octomap::ColorOcTreeNode* currentNode_two = octo_model.search(current_key_two);
+        if (currentNode_two){
+            if (octo_model.isNodeOccupied(currentNode_two) && currentNode_two->getOccupancy() > p_unknown_upper_bound) {
+                done_two = true;
+                break;
+            }
+            // otherwise: node is free and valid, ray casting continues
+        } else if (!ignoreUnknown){ // no node found, this usually means we are in "unknown" areas
+            break;
+        }
+    } // end while
+    return true;
 }

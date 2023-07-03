@@ -135,3 +135,6 @@ void information_gain_thread_process(Ray_Information **rays_info,
                                      unordered_map<int, vector<int>> *views_to_rays_map,
                                      View_Space *view_space,
                                      int pos);
+
+bool castRay(octomap::ColorOcTree& octo_model, const octomap::point3d& origin, const octomap::point3d& directionP, octomap::point3d& end,
+             octomap::point3d& end_unknown, bool ignoreUnknown, double maxRange, double p_unknown_lower_bound, double p_unknown_upper_bound);
