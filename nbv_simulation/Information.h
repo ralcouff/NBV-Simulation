@@ -27,18 +27,6 @@
 
 using namespace std;
 
-void ray_expand_thread_process(int *ray_num,
-                               Ray_Information **rays_info,
-                               unordered_map<Ray, int, Ray_Hash> *rays_map,
-                               unordered_map<int, vector<int>> *views_to_rays_map,
-                               unordered_map<int, vector<int>> *rays_to_views_map,
-                               octomap::ColorOcTree *octo_model,
-                               Voxel_Information *voxel_information,
-                               View_Space *view_space,
-                               rs2_intrinsics *color_intrinsics,
-                               pcl::PointCloud<pcl::PointXYZ>::Ptr frontier,
-                               int pos);
-
 /**
  * Casting and creating all the Rays going from the views to the model
  * @param ray_num
@@ -135,6 +123,28 @@ void information_gain_thread_process(Ray_Information **rays_info,
                                      unordered_map<int, vector<int>> *views_to_rays_map,
                                      View_Space *view_space,
                                      int pos);
-
+/**
+ * Cast a ray in the octomap taking into account the occupancy of each voxel and not only the occupied
+ * @param octo_model The octomap into which we will cast a ray
+ * @param origin The origin of the ray
+ * @param directionP The direction of the ray
+ * @param end_unknown The end of the ray that we are looking for
+ * @param ignoreUnknown If the unknown are have to be ignored or not
+ * @param maxRange The maximum range of the ray
+ * @param p_unknown_upper_bound The upper bound to consider a voxel unknown or occupied according to its occupancy
+ * @return true if an endpoint has been found
+ */
 bool castRay(const octomap::ColorOcTree *octo_model, const octomap::point3d& origin, const octomap::point3d& directionP,
              octomap::point3d& end_unknown, bool ignoreUnknown, double maxRange, double p_unknown_upper_bound);
+
+[[maybe_unused]] void ray_expand_thread_process(int *ray_num,
+                                                Ray_Information **rays_info,
+                                                unordered_map<Ray, int, Ray_Hash> *rays_map,
+                                                unordered_map<int, vector<int>> *views_to_rays_map,
+                                                unordered_map<int, vector<int>> *rays_to_views_map,
+                                                octomap::ColorOcTree *octo_model,
+                                                Voxel_Information *voxel_information,
+                                                View_Space *view_space,
+                                                rs2_intrinsics *color_intrinsics,
+                                                pcl::PointCloud<pcl::PointXYZ>::Ptr frontier,
+                                                int pos);
