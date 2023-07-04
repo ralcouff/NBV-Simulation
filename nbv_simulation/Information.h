@@ -123,6 +123,7 @@ void information_gain_thread_process(Ray_Information **rays_info,
                                      unordered_map<int, vector<int>> *views_to_rays_map,
                                      View_Space *view_space,
                                      int pos);
+
 /**
  * Cast a ray in the octomap taking into account the occupancy of each voxel and not only the occupied
  * @param octo_model The octomap into which we will cast a ray
