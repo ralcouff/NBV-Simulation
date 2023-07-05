@@ -1,21 +1,24 @@
 #include "Share_Data.h"
 
-Share_Data::Share_Data(std::string _config_file_path) {
+Share_Data::Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path,
+                       short _method, int _n_iter, const std::string& _save_folder, const std::string& _string_test_time) {
+
     process_cnt = -1;
-    yaml_file_path = std::move(_config_file_path);
-    cout << yaml_file_path << endl;
     // Reading yaml files
+    yamlConfigFilePath = _config_file_path;
+    cout << "---------------------------------------------------------" << endl;
+    cout << "Reading the configuration file: " << yamlConfigFilePath << endl;
     cv::FileStorage fs;
-    fs.open(yaml_file_path, cv::FileStorage::READ);
-    fs["model_path"] >> pcd_file_path;
-    fs["name_of_pcd"] >> name_of_pcd;
-    fs["method_of_IG"] >> method_of_IG;
+    fs.open(yamlConfigFilePath, cv::FileStorage::READ);
+    fs["model_path"] >> objectFolderPath;
+    fs["name_of_pcd"] >> nameOfObject;
+//    fs["method_of_IG"] >> method_of_IG;
     fs["octomap_resolution"] >> octomap_resolution;
     fs["ground_truth_resolution"] >> ground_truth_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
     fs["show"] >> show;
     fs["move_wait"] >> move_wait;
-    fs["nbv_net_path"] >> nbv_net_path;
+    fs["nbvNetPath"] >> nbvNetPath;
     fs["p_unknown_upper_bound"] >> p_unknown_upper_bound;
     fs["p_unknown_lower_bound"] >> p_unknown_lower_bound;
     fs["num_of_views"] >> num_of_views;
@@ -38,6 +41,13 @@ Share_Data::Share_Data(std::string _config_file_path) {
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
     fs.release();
+
+    // Test parameters
+    alt_method_of_IG = get_method(_method);
+    method_of_IG = get_method(0);
+    string_test_time = _string_test_time;
+    reconstructionIterations = _n_iter;
+
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
                                                                                        color_intrinsics.height,
@@ -56,8 +66,8 @@ Share_Data::Share_Data(std::string _config_file_path) {
     // Read the pcd file of the converted model
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
     cloud_pcd = temp_pcd;
-    cout << pcd_file_path + name_of_pcd + ".pcd" << endl;
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>(pcd_file_path + name_of_pcd + ".pcd", *cloud_pcd) == -1) {
+    cout << objectFolderPath + nameOfObject + ".pcd" << endl;
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>(objectFolderPath + nameOfObject + ".pcd", *cloud_pcd) == -1) {
         cout << "Can not read 3d model file. Check." << endl;
     }
 /*    *//* Add the initial PC to the sfm_data pipeline. *//*
@@ -82,11 +92,11 @@ Share_Data::Share_Data(std::string _config_file_path) {
     cloud_final = temp;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_ground_truth = temp_gt;
-    save_path = "../" + name_of_pcd + '_' + std::to_string(method_of_IG);
+    savePath = "../" + nameOfObject + '_' + std::to_string(method_of_IG);
     if (method_of_IG == 0)
-        save_path += '_' + std::to_string(cost_weight);
+        savePath += '_' + std::to_string(cost_weight);
     cout << "pcd and yaml files read." << endl;
-    cout << "save_path is: " << save_path << endl;
+    cout << "savePath is: " << savePath << endl;
     srand(clock());
 }
 
@@ -151,12 +161,37 @@ void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr
                                     const std::string &name) const {
     std::stringstream cloud_stream, path_stream;
     std::string cloud_file, path;
-    path_stream << save_path << cd;
+    path_stream << savePath << cd;
     path_stream >> path;
     access_directory(path);
-    cloud_stream << save_path << cd << "/" << name << ".pcd";
+    cloud_stream << savePath << cd << "/" << name << ".pcd";
     cloud_stream >> cloud_file;
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
+}
+
+short get_method(int _n_test) {
+    short method;
+    switch (_n_test){
+        case 0:
+            method = OursIG;
+            break;
+        case 10:
+            method = Test_o;
+            break;
+        case 11:
+            method = Test_e;
+            break;
+        case 101:
+            method = Test_one;
+            break;
+        case 102:
+            method = Test_two;
+            break;
+        default:
+            cout << "This method does not exists, choosing the default one (0).";
+            method = OursIG;
+    }
+    return method;
 }
 
 [[maybe_unused]] void

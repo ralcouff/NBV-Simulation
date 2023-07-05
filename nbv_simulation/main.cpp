@@ -1,6 +1,8 @@
 #include <atomic>
 #include <iostream>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include "Share_Data.h"
 #include "NBV_Planner.h"
@@ -13,8 +15,9 @@ NBV_Planner *nbv_plan;
 
 void get_command() { // Read command strings from the console
     string cmd;
+    string cmd2;
     while (!stop && !share_data->over) {
-        cout << "Input command 1.stop 2.over 3.next_iteration :" << endl;
+        cout << "Input command 1.stop 2.over 3.next_iteration 4.change_method:" << endl;
         cin >> cmd;
         if (cmd == "1")
             stop = true;
@@ -22,8 +25,15 @@ void get_command() { // Read command strings from the console
             share_data->over = true;
         else if (cmd == "3")
             share_data->move_on = true;
-        else
-            cout << "Wrong command. Retry :" << endl;
+        else if (cmd == "4") {
+            cout << "Choose your next method iteration" << endl;
+            cin >> cmd2;
+            int method_number = stoi(cmd2);
+            share_data->method_of_IG = get_method(method_number);
+            cout << "The method number is:" << method_number << endl;
+            cout << "The new method is: " << share_data->method_of_IG << endl;
+        } else
+            cout << "Wrong command. Retry:" << endl;
     }
     cout << "get_command over." << endl;
 }
@@ -44,11 +54,27 @@ void get_run() {
 }
 
 int main(int argc, char **argv) {
-    const auto config_file = argc == 1 ? "../DefaultConfiguration.yaml" : std::string(argv[1]);
+
+    const auto config_file = std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
+    std::string model_path = std::string(argv[2]);
+    std::string model_qlt_path = std::string(argv[3]);
+    short method = get_method(std::stoi(argv[4]));
+    int n_iter = std::stoi(argv[5]);
+    std::string save_folder = std::string(argv[6]);
+    std::string string_test_time = std::string(argv[7]);
+
+    cout << "---***--- Launching the NBV algorithm ---***--- " << endl;
+    cout << "Model: "<< model_path << endl;
+    cout << "Model Quality: " << model_qlt_path << endl;
+    cout << "Method: " << method << endl;
+    cout << "Reconstruction iterations: " << n_iter << endl;
+    cout << "Save folder: " << save_folder << endl;
+    cout << "Start time: " << string_test_time << endl;
+
     // Data area initialisation
-    share_data = new Share_Data(config_file);
+    share_data = new Share_Data(config_file, "", "", 0, 10, "", "");
     // Console read command threads
     thread cmd(get_command);
     // NBV system run threads

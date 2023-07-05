@@ -143,8 +143,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     }
     auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
-    Share_Data::access_directory(share_data->save_path + "/run_time");
-    std::ofstream fout(share_data->save_path + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
+    Share_Data::access_directory(share_data->savePath + "/run_time");
+    std::ofstream fout(share_data->savePath + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
     fout << cost_time << endl;
     // Information counters for assigning viewpoints
     now_time = clock();
@@ -320,8 +320,8 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     }
     auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
-    Share_Data::access_directory(share_data->save_path + "/run_time");
-    std::ofstream fout(share_data->save_path + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
+    Share_Data::access_directory(share_data->savePath + "/run_time");
+    std::ofstream fout(share_data->savePath + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
     fout << cost_time << endl;
     now_time = clock();
     auto **view_gain = new std::thread *[view_space->views.size()];

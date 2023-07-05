@@ -15,7 +15,7 @@ View_Space::View_Space(int _id,
     viewer = share_data->viewer;
     views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
     /* Check if the View Space has already been generated */
-    ifstream fin(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
+    ifstream fin(share_data->objectFolderPath + share_data->nameOfObject + ".txt");
     /* If it has been generated, we read the View Space file*/
     if (fin.is_open()) {
         /* Presence of a collection of read-on viewpoints for documents. */
@@ -56,8 +56,8 @@ View_Space::View_Space(int _id,
         /* Viewpoint Generator. */
         get_view_space(points);
         /* Writing in file the generated View Space. */
-        Share_Data::access_directory(share_data->pcd_file_path);
-        ofstream fout(share_data->pcd_file_path + share_data->name_of_pcd + ".txt");
+        Share_Data::access_directory(share_data->objectFolderPath);
+        ofstream fout(share_data->objectFolderPath + share_data->nameOfObject + ".txt");
         fout << num_of_views << '\n';
         fout << object_center_world(0) << ' ' << object_center_world(1) << ' ' << object_center_world(2) << '\n';
         fout << predicted_size << '\n';
@@ -93,8 +93,8 @@ View_Space::View_Space(int _id,
     voxel_information->init_mutex_voxels(share_data->voxels_in_BBX);
     cout << "Map_init has " << share_data->voxels_in_BBX << " voxels(in BBX), and "
          << share_data->init_entropy << " entropy" << endl;
-    Share_Data::access_directory(share_data->save_path + "/quantitative");
-    ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(-1) + ".txt");
+    Share_Data::access_directory(share_data->savePath + "/quantitative");
+    ofstream fout(share_data->savePath + "/quantitative/Map" + to_string(-1) + ".txt");
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
 }
 
@@ -292,16 +292,16 @@ void View_Space::update(int _id,
                             occupied_voxels++;
             }
     }*/
-    Share_Data::access_directory(share_data->save_path + "/octomaps");
-    share_data->octo_model->write(share_data->save_path + "/octomaps/octomap" + to_string(id) + ".ot");
+    Share_Data::access_directory(share_data->savePath + "/octomaps");
+    share_data->octo_model->write(share_data->savePath + "/octomaps/octomap" + to_string(id) + ".ot");
     // share_data->access_directory(share_data->save_path + "/octocloud");
     // share_data->cloud_model->write(share_data->save_path + "/octocloud/octocloud"+to_string(id)+".ot");
     cout << "Map " << id << " has voxels " << occupied_voxels << ". Map " << id << " has entropy " << map_entropy
          << endl;
     cout << "Map " << id << " has voxels(rate) " << 1.0 * occupied_voxels / share_data->init_voxels << ". Map "
          << id << " has entropy(rate) " << map_entropy / share_data->init_entropy << endl;
-    Share_Data::access_directory(share_data->save_path + "/quantitative");
-    ofstream fout(share_data->save_path + "/quantitative/Map" + to_string(id) + ".txt");
+    Share_Data::access_directory(share_data->savePath + "/quantitative");
+    ofstream fout(share_data->savePath + "/quantitative/Map" + to_string(id) + ".txt");
     fout << occupied_voxels << '\t' << map_entropy << '\t' << 1.0 * occupied_voxels / share_data->init_voxels
          << '\t' << map_entropy / share_data->init_entropy << endl;
 }
