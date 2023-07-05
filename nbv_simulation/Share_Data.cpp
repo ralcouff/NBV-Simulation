@@ -6,13 +6,8 @@ Share_Data::Share_Data(const std::string& _config_file_path, const std::string& 
     process_cnt = -1;
     // Reading yaml files
     yamlConfigFilePath = _config_file_path;
-    cout << "---------------------------------------------------------" << endl;
-    cout << "Reading the configuration file: " << yamlConfigFilePath << endl;
     cv::FileStorage fs;
     fs.open(yamlConfigFilePath, cv::FileStorage::READ);
-    fs["model_path"] >> objectFolderPath;
-    fs["name_of_pcd"] >> nameOfObject;
-//    fs["method_of_IG"] >> method_of_IG;
     fs["octomap_resolution"] >> octomap_resolution;
     fs["ground_truth_resolution"] >> ground_truth_resolution;
     fs["num_of_max_iteration"] >> num_of_max_iteration;
@@ -48,6 +43,22 @@ Share_Data::Share_Data(const std::string& _config_file_path, const std::string& 
     string_test_time = _string_test_time;
     reconstructionIterations = _n_iter;
 
+    objectFilePath = _model_path;
+    objectFolderPath = objectFilePath.substr(0, objectFilePath.find_last_of('/')) + '/';
+    std::string fullNameOfObject = objectFilePath.substr(objectFilePath.find_last_of('/') + 1, objectFilePath.length());
+    nameOfObject = fullNameOfObject.substr(0, fullNameOfObject.find_last_of('.'));
+    qualityFilePath = _model_qlt_path;
+    viewSpaceFilePath = objectFilePath + ".txt";
+    savePath = _save_folder;
+    access_directory(savePath);
+
+    test_base_filename = savePath + "/results.csv";
+    std::ofstream result(test_base_filename, std::ios_base::app);
+    result
+            << "alt_method_of_IG,method_of_IG,n_model,n_size,reconstructionIterations,iterations,id_best_view,x,y,z,final_utility,completeness"
+            << endl;
+    result.close();
+
     /* Populating the SfM_Data from AliceVision */
     sfm_data.getIntrinsics().emplace(0, std::make_shared<aliceVision::camera::Pinhole>(color_intrinsics.width,
                                                                                        color_intrinsics.height,
@@ -66,37 +77,52 @@ Share_Data::Share_Data(const std::string& _config_file_path, const std::string& 
     // Read the pcd file of the converted model
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_pcd(new pcl::PointCloud<pcl::PointXYZ>);
     cloud_pcd = temp_pcd;
-    cout << objectFolderPath + nameOfObject + ".pcd" << endl;
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>(objectFolderPath + nameOfObject + ".pcd", *cloud_pcd) == -1) {
-        cout << "Can not read 3d model file. Check." << endl;
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>(objectFilePath + ".pcd", *cloud_pcd) == -1) {
+        cout << "3D PCD File not found. Trying to open OBJ file." << endl;
+        if (pcl::io::loadOBJFile<pcl::PointXYZ>(objectFilePath + ".obj", *cloud_pcd) == -1) {
+            cout << "3D OBJ File not found. Trying to open PLY file." << endl;
+            if (pcl::io::loadPLYFile<pcl::PointXYZ>(objectFilePath + ".ply", *cloud_pcd) == -1) {
+                cout << "3D PLY File not found." << endl;
+                cout << "No 3D file where found there. Check your input name : " << objectFilePath << endl;
+            }
+        }
     }
-/*    *//* Add the initial PC to the sfm_data pipeline. *//*
+    /* Add the initial PC to the sfm_data pipeline. */
     float i = 0;
-    for (auto &pt: cloud_pcd->points){
-        sfm_data.getLandmarks().emplace(i,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+    for (auto &pt: cloud_pcd->points) {
+        sfm_data.getLandmarks().emplace(i, aliceVision::sfmData::Landmark(Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z),
+                                                                          aliceVision::feature::EImageDescriberType::SIFT));
         i++;
     }
-    aliceVision::sfmDataIO::saveJSON(sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
-    cout << "pcl_loaded" << endl;*/
-//    sfm_data.getLandmarks().emplace(0, aliceVision::sfmData::Landmark() {x, y, z})
+    aliceVision::sfmDataIO::saveJSON(sfm_data, savePath + "/scene.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
+    cout << "The sfmData file has been saved" << endl;
+
+    // Generating the octomaps
     octo_model = new octomap::ColorOcTree(octomap_resolution);
     ground_truth_model = new octomap::ColorOcTree(ground_truth_resolution);
     GT_sample = new octomap::ColorOcTree(octomap_resolution);
+
+    // Generating the quality weight map for octo_model
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+
+    // Initializing the camera pose world to identity
+    now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
+
+    // Initializing parameters
     if (num_of_max_flow_node == -1)
         num_of_max_flow_node = num_of_views;
-    now_camera_pose_world = Eigen::Matrix4d::Identity(4, 4);
     over = false;
     pre_clock = (double) clock();
     valid_clouds = 0;
+
+    // Initializing the Point Clouds
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_final = temp;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_gt(new pcl::PointCloud<pcl::PointXYZRGB>);
     cloud_ground_truth = temp_gt;
-    savePath = "../" + nameOfObject + '_' + std::to_string(method_of_IG);
-    if (method_of_IG == 0)
-        savePath += '_' + std::to_string(cost_weight);
-    cout << "pcd and yaml files read." << endl;
-    cout << "savePath is: " << savePath << endl;
+
+    cout << "3D object and YAML files have been read." << endl;
+    cout << "The input cloud has: " << cloud_pcd->points.size() << " points." << endl;
     srand(clock());
 }
 

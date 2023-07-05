@@ -66,6 +66,7 @@ int main(int argc, char **argv) {
     std::string string_test_time = std::string(argv[7]);
 
     cout << "---***--- Launching the NBV algorithm ---***--- " << endl;
+    cout << "Configuration file: " << config_file << endl;
     cout << "Model: "<< model_path << endl;
     cout << "Model Quality: " << model_qlt_path << endl;
     cout << "Method: " << method << endl;
@@ -74,7 +75,7 @@ int main(int argc, char **argv) {
     cout << "Start time: " << string_test_time << endl;
 
     // Data area initialisation
-    share_data = new Share_Data(config_file, "", "", 0, 10, "", "");
+    share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, save_folder, string_test_time);
     // Console read command threads
     thread cmd(get_command);
     // NBV system run threads
