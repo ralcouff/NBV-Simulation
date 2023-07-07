@@ -2,32 +2,36 @@
 
 Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *_voxel_information,
                                      View_Space *view_space, int iterations) {
-    // Update internal data
-    voxel_information = _voxel_information;
+    /* Initializing the parameters */
     cost_weight = share_data->cost_weight;
     color_intrinsics = share_data->color_intrinsics;
     method = share_data->method_of_IG;
     octo_model = share_data->octo_model;
     octomap_resolution = share_data->octomap_resolution;
+    voxel_information = _voxel_information;
     voxel_information->octomap_resolution = octomap_resolution;
-    alpha = 0.1 / octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
-    // Note that the viewpoints need to be sorted by id to create the mapping
-    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
+    alpha = 0.1 / octomap_resolution;
     auto now_time = clock();
+
+    /* Initializing all the maps and list needed */
+    // Sorting the views by id to create the mapping
+    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
     views_to_rays_map = new std::unordered_map<int, std::vector<int>>();
     rays_to_views_map = new std::unordered_map<int, std::vector<int>>();
     rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     occupancy_map = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
-    // Define frontier
-    std::vector <octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
+    quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    quality_weight = share_data->quality_weight;
+
+    /* Computing the frontier voxels */
+    std::vector<octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
     double map_size = view_space->predicted_size;
     // Find edges in the map
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
-         it != end;
-         ++it) {
+         it != end; ++it) {
         double occupancy = (*it).getOccupancy();
         // Record the mapping of key to occ rate in bbx for repeated queries
         (*occupancy_map)[it.getKey()] = occupancy;
@@ -48,8 +52,8 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     pre_edge_cnt = 0x3f3f3f3f;
     edge_cnt = edge->points.size();
     // Calculate the probability that the point in the map is the surface of an object based on the nearest frontier
-    if (edge->points.size() != 0) {
-        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
+    if (!edge->points.empty()) {
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
@@ -65,13 +69,14 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                         p_obj *= distance_function(pointNKNSquaredDistance[j], alpha);
                     }
                     (*object_weight)[key] = p_obj;
+                    octo_model->integrateNodeColor(key, 0, 0, 255);
                 }
             }
         }
     }
-    cout << "occupancy_map is " << occupancy_map->size() << endl;
-    cout << "edge is " << edge->points.size() << endl;
-    cout << "object_map is " << object_weight->size() << endl;
+    cout << "Size of occupancy_map: " << occupancy_map->size() << endl;
+    cout << "Size of edge: " << edge->points.size() << endl;
+    cout << "Size of object_weight: " << object_weight->size() << endl;
     // Calculate the maximum number of rays according to BBX, the maximum number of rays is the size of the
     //  surface area * volume, used to allocate pointer memory
     double pre_line_point = 2.0 * map_size / octomap_resolution;
@@ -79,9 +84,9 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     long long volume = ceil(pre_line_point * pre_line_point * pre_line_point);
     max_num_of_rays = superficial * volume;
     rays_info = new Ray_Information *[max_num_of_rays];
-    cout << "full rays num is " << max_num_of_rays << endl;
+    cout << "There will be at most: " << max_num_of_rays << " rays" << endl;
     // Calculate the eight vertices of BBX for delineating the ray range
-    std::vector <Eigen::Vector4d> convex_3d;
+    std::vector<Eigen::Vector4d> convex_3d;
     double x1 = view_space->object_center_world(0) - map_size;
     double x2 = view_space->object_center_world(0) + map_size;
     double y1 = view_space->object_center_world(1) - map_size;
@@ -132,6 +137,7 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,
@@ -158,22 +164,26 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
         (*view_gain[i]).join();
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
+    // Saving teh repartition of quality and occupancy in the model
+    save_quality_map(share_data, quality_weight, iterations);
+    save_occupancy_map(share_data, iterations);
 }
 
 void Views_Information::update(Share_Data *share_data, View_Space *view_space, int iterations) {
-    // Update internal data
-    auto now_time = clock();
-    double map_size = view_space->predicted_size;
-    // Note that the viewpoints need to be sorted by id to create the mapping
-    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
-    // Re-recording the octree
+    /* Re-setting the parameters */
     octo_model = share_data->octo_model;
     octomap_resolution = share_data->octomap_resolution;
-    alpha = 0.1 / octomap_resolution;
     voxel_information->octomap_resolution = octomap_resolution;
     voxel_information->skip_coefficient = share_data->skip_coefficient;
+    alpha = 0.1 / octomap_resolution;
+    method = share_data->method_of_IG;
+    auto now_time = clock();
+
+    /* Initializing all the maps and lists needed */
+    // Sorting the views by id to create the mapping
+    sort(view_space->views.begin(), view_space->views.end(), view_id_compare);
     // Clear viewpoint information
-    for (auto & view : view_space->views) {
+    for (auto &view: view_space->views) {
         view.information_gain = 0;
         view.voxel_num = 0;
     }
@@ -183,8 +193,11 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
     delete object_weight;
     object_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
     // Update frontier
-    std::vector <octomap::point3d> points;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud <pcl::PointXYZ>);
+    quality_weight = share_data->quality_weight;
+    /* Computing the frontier voxels */
+    std::vector<octomap::point3d> points;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr edge(new pcl::PointCloud<pcl::PointXYZ>);
+    double map_size = view_space->predicted_size;
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
          ++it) {
@@ -225,6 +238,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                         p_obj *= distance_function(pointNKNSquaredDistance[j], alpha);
                     }
                     (*object_weight)[key] = p_obj;
+                    octo_model->integrateNodeColor(key, (1 - p_obj) * 255, 0, 0);
                 }
             }
         }
@@ -309,6 +323,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
                                           rays_map,
                                           occupancy_map,
                                           object_weight,
+                                          quality_weight,
                                           octo_model,
                                           voxel_information,
                                           view_space,
@@ -334,4 +349,44 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         (*view_gain[i]).join();
     }
     cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
+
+    save_quality_map(share_data, quality_weight, iterations);
+    save_occupancy_map(share_data, iterations);
+}
+
+void save_quality_map(Share_Data *share_data,
+                      std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
+                      int iteration) {
+    std::map<double, int> qlt_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double qltt = Voxel_Information::voxel_quality(const_cast<octomap::OcTreeKey &>(it.getKey()), quality_weight);
+        qlt_map[qltt]++;
+    }
+    Share_Data::access_directory(share_data->savePath + "/quality/");
+    std::ofstream QltOut(
+            share_data->savePath + "/quality/quality_" + std::to_string(iteration) + ".csv");
+    cout << "Saving the quality of the octomap" << endl;
+    for (auto &it: qlt_map) {
+        cout << std::setprecision(20) << it.first << endl;
+        QltOut << std::setprecision(20) << it.first << "," << it.second << endl;
+    }
+    QltOut.close();
+}
+
+void save_occupancy_map(Share_Data *share_data, int iteration) {
+    std::map<double, int> occ_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double occ = it->getOccupancy();
+        occ_map[occ]++;
+    }
+    Share_Data::access_directory(share_data->savePath + "/occupancy/");
+    std::ofstream OccOut(
+            share_data->savePath + "/occupancy/occupancy_" + std::to_string(iteration) + ".csv");
+    cout << "Saving the occupancy of the octomap" << endl;
+    for (auto &it: occ_map) {
+        OccOut << it.first << "," << it.second << endl;
+    }
+    OccOut.close();
 }

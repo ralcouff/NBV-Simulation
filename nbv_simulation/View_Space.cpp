@@ -4,21 +4,28 @@ View_Space::View_Space(int _id,
                        Share_Data *_share_data,
                        Voxel_Information *_voxel_information,
                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud) {
-    share_data = _share_data;
-    object_changed = false;
     id = _id;
+    share_data = _share_data;
+    voxel_information = _voxel_information;
+
+    object_changed = false;
     num_of_views = share_data->num_of_views;
     now_camera_pose_world = share_data->now_camera_pose_world;
-    octo_model = share_data->octo_model;
     octomap_resolution = share_data->octomap_resolution;
-    voxel_information = _voxel_information;
+    octo_model = share_data->octo_model;
+
+    /* Getting the visualizer. */
     viewer = share_data->viewer;
+
+    /* Initializing the set containing the OctreeKeys for each view. */
     views_key_set = new unordered_set<octomap::OcTreeKey, octomap::OcTreeKey::KeyHash>();
+
     /* Check if the View Space has already been generated */
-    ifstream fin(share_data->objectFolderPath + share_data->nameOfObject + ".txt");
+    ifstream fin(share_data->viewSpaceFilePath);
     /* If it has been generated, we read the View Space file*/
     if (fin.is_open()) {
-        /* Presence of a collection of read-on viewpoints for documents. */
+        /* The view space has already been generated */
+        // Reading the View Space from file
         int num;
         fin >> num;
         if (num != num_of_views)
@@ -43,11 +50,10 @@ View_Space::View_Space(int _id,
             views.push_back(view);
             views_key_set->insert(octo_model->coordToKey(init_pos[0], init_pos[1], init_pos[2]));
         }
-        cout << "View Space read." << endl;
+        cout << "View Space acquired." << endl;
     } else {
         /* The View Space file hasn't been generated, we generate it. */
-        /* Get Point Cloud BBOX. */
-        /* Generate a point vector containing the points of the input cloud. */
+        // Generating a vector containing the points of the input cloud
         vector<Eigen::Vector3d> points;
         for (auto &ptr: cloud->points) {
             Eigen::Vector3d pt(ptr.x, ptr.y, ptr.z);
@@ -68,8 +74,11 @@ View_Space::View_Space(int _id,
     // Update the data area data
     share_data->object_center_world = object_center_world;
     share_data->predicted_size = predicted_size;
+    share_data->init_entropy = 0;
+    share_data->voxels_in_BBX = 0;
     double map_size = predicted_size + 3.0 * octomap_resolution;
     share_data->map_size = map_size;
+
     /* Filling the octo_model with empty nodes based on the BBOX of the model. */
     auto now_time = clock();
     for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
@@ -80,8 +89,7 @@ View_Space::View_Space(int _id,
                  z += octomap_resolution)
                 octo_model->setNodeValue(x, y, z, (float) 0, true);
     octo_model->updateInnerOccupancy();
-    share_data->init_entropy = 0;
-    share_data->voxels_in_BBX = 0;
+
     /* Update the entropy of the model. */
     for (octomap::ColorOcTree::leaf_iterator it = octo_model->begin_leafs(), end = octo_model->end_leafs();
          it != end;
@@ -90,51 +98,15 @@ View_Space::View_Space(int _id,
         share_data->init_entropy += Voxel_Information::entropy(occupancy);
         share_data->voxels_in_BBX++;
     }
+
+    /* Initialize the list of mutex for each voxel */
     voxel_information->init_mutex_voxels(share_data->voxels_in_BBX);
+
     cout << "Map_init has " << share_data->voxels_in_BBX << " voxels(in BBX), and "
          << share_data->init_entropy << " entropy" << endl;
     Share_Data::access_directory(share_data->savePath + "/quantitative");
     ofstream fout(share_data->savePath + "/quantitative/Map" + to_string(-1) + ".txt");
     fout << 0 << '\t' << share_data->init_entropy << '\t' << 0 << '\t' << 1 << endl;
-}
-
-bool View_Space::valid_view(View &view) {
-    double x = view.init_pos(0);
-    double y = view.init_pos(1);
-    double z = view.init_pos(2);
-    bool valid = true;
-    // Object bbx does not create a point of view within 2 times expansion
-    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
-        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
-        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
-        valid = false;
-    // In a ball of radius 4 times the size of BBX
-    if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
-        pow2(4 * predicted_size) >
-        0)
-        valid = false;
-    // Exists in the octree index and not in the hash table
-    octomap::OcTreeKey key;
-    bool key_have = octo_model->coordToKeyChecked(x, y, z, key);
-    if (!key_have)
-        valid = false;
-    if (key_have && views_key_set->find(key) != views_key_set->end())
-        valid = false;
-    return valid;
-}
-
-double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
-    int valid_points = 0;
-    for (auto &ptr: points) {
-        if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
-            continue;
-        if (ptr(1) < object_center_world(1) - predicted_size || ptr(1) > object_center_world(1) + predicted_size)
-            continue;
-        if (ptr(2) < object_center_world(2) - predicted_size || ptr(2) > object_center_world(2) + predicted_size)
-            continue;
-        valid_points++;
-    }
-    return (double) valid_points / (double) points.size();
 }
 
 void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
@@ -171,19 +143,23 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
             break;
         pre_percent = percent;
     }
+
     predicted_size = 1.2 * mid;
-    cout << "object's bbx solved within percentage " << percent << " with executed time " << clock() - now_time
+    cout << "Computed object BBOX within percentage: " << percent << " ; with executed time " << clock() - now_time
          << " ms." << endl;
-    cout << "object's pos is (" << object_center_world(0) << "," << object_center_world(1) << ","
+    cout << "Object position is: (" << object_center_world(0) << ", " << object_center_world(1) << ", "
          << object_center_world(2) << ") and size is " << predicted_size << endl;
-    int sample_num = 0;
-    int viewnum = 0;
-    // The first point of view is fixed to the centre of the model
-    View view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
-    if (!valid_view(view))
-        cout << "check init view." << endl;
-    views.push_back(view);
-    views_key_set->insert(octo_model->coordToKey(view.init_pos(0), view.init_pos(1), view.init_pos(2)));
+
+    /* Generating a set of random views */
+    int sample_num = 0; // The number of samples made to achieve the correct number of views.
+    int viewnum = 0; // The init_view number
+    // The first point of init_view is fixed to the centre of the model
+    View init_view(Eigen::Vector3d(object_center_world(0) - predicted_size * 2.5, 0, 0));
+    if (!valid_view(init_view)) {
+        cout << "There might be a problem with the initial view." << endl;
+    }
+    views.push_back(init_view);
+    views_key_set->insert(octo_model->coordToKey(init_view.init_pos(0), init_view.init_pos(1), init_view.init_pos(2)));
     viewnum++;
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
@@ -216,21 +192,62 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
             break;
         }
     }
-    cout << "view set is " << views_key_set->size() << endl;
-    cout << views.size() << " views getted with sample_times " << sample_num << endl;
-    cout << "view_space getted form octomap with executed time " << clock() - now_time << " ms." << endl;
+    cout << "There are " << views_key_set->size() << " views in View Set" << endl;
+    cout << views.size() << " views got with " << sample_num << " samples" << endl;
+    cout << "View Space got from octomap in " << clock() - now_time << " ms." << endl;
+}
+
+double View_Space::check_size(double predicted_size, vector<Eigen::Vector3d> &points) {
+    int valid_points = 0;
+    for (auto &ptr: points) {
+        if (ptr(0) < object_center_world(0) - predicted_size || ptr(0) > object_center_world(0) + predicted_size)
+            continue;
+        if (ptr(1) < object_center_world(1) - predicted_size || ptr(1) > object_center_world(1) + predicted_size)
+            continue;
+        if (ptr(2) < object_center_world(2) - predicted_size || ptr(2) > object_center_world(2) + predicted_size)
+            continue;
+        valid_points++;
+    }
+    return (double) valid_points / (double) points.size();
+}
+
+bool View_Space::valid_view(View &view) {
+    double x = view.init_pos(0);
+    double y = view.init_pos(1);
+    double z = view.init_pos(2);
+    bool valid = true;
+    // Object bbx does not create a point of view within 2 times expansion
+    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
+        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
+        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
+        valid = false;
+    // In a ball of radius 4 times the size of BBX
+    if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
+        pow2(4 * predicted_size) >
+        0)
+        valid = false;
+    // Exists in the octree index and not in the hash table
+    octomap::OcTreeKey key;
+    bool key_have = octo_model->coordToKeyChecked(x, y, z, key);
+    if (!key_have)
+        valid = false;
+    if (key_have && views_key_set->find(key) != views_key_set->end())
+        valid = false;
+    return valid;
 }
 
 void View_Space::update(int _id,
                         Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
                         const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& update_cloud) {
-    share_data = _share_data;
-    object_changed = false;
     id = _id;
+    share_data = _share_data;
+
+    object_changed = false;
     now_camera_pose_world = share_data->now_camera_pose_world;
+
     // Update viewpoint markers
-    for (auto & view : views) {
+    for (auto &view: views) {
         view.space_id = id;
         view.robot_cost =
                 (Eigen::Vector3d(now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3))
@@ -238,6 +255,7 @@ void View_Space::update(int _id,
                  view.init_pos)
                         .norm();
     }
+
     // Insert point cloud to intermediate data structure
     auto now_time = clock();
     double map_size = predicted_size + 3.0 * octomap_resolution;
@@ -256,7 +274,43 @@ void View_Space::update(int _id,
         octo_model->integrateNodeColor(p.x, p.y, p.z, p.r, p.g, p.b);
     }
     octo_model->updateInnerOccupancy();
-    cout << "Octomap updated via cloud with executed time " << clock() - now_time << " ms." << endl;
+
+    /* Updating the quality of each voxel */
+    std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash> key_seen{};
+    for (auto p: update_cloud->points) {
+        octomap::OcTreeKey key;
+        octomap::OcTreeKey gt_key;
+        bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
+        bool key_have_gt = share_data->ground_truth_model->coordToKeyChecked(p.x, p.y, p.z, gt_key);
+        if (key_have) {
+            if (key_seen.find(key) == key_seen.end()) {
+                if (key_have_gt) {
+                    if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
+                        (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
+                    } else {
+                        if ((*share_data->gt_quality_weight)[gt_key] == 1) {
+                            (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+                                                                          (*share_data->quality_weight)[key]);
+                        } else {
+                            (*share_data->quality_weight)[key] = std::min(
+                                    pow((*share_data->quality_weight)[key], 0.9),
+                                    1.0);
+                        }
+                    }
+                }
+                key_seen[key] = 1;
+            } else {
+                key_seen[key] += 1;
+            }
+        }
+        if ((*share_data->quality_weight)[key] == 1)
+            octo_model->integrateNodeColor(key, 0, 0, 0);
+        else
+            octo_model->integrateNodeColor(key, 0, (int) (*share_data->quality_weight)[key] * 255, 0);
+    }
+    octo_model->updateInnerOccupancy();
+    cout << "Octomap updated via cloud in: " << clock() - now_time << " ms." << endl;
+
     // On the map, statistical information entropy
     map_entropy = 0;
     occupied_voxels = 0;
@@ -294,9 +348,10 @@ void View_Space::update(int _id,
     }*/
     Share_Data::access_directory(share_data->savePath + "/octomaps");
     share_data->octo_model->write(share_data->savePath + "/octomaps/octomap" + to_string(id) + ".ot");
-    // share_data->access_directory(share_data->save_path + "/octocloud");
-    // share_data->cloud_model->write(share_data->save_path + "/octocloud/octocloud"+to_string(id)+".ot");
-    cout << "Map " << id << " has voxels " << occupied_voxels << ". Map " << id << " has entropy " << map_entropy
+    // share_data->access_directory(share_data->savePath + "/octocloud");
+    // share_data->cloud_model->write(share_data->savePath + "/octocloud/octocloud"+to_string(id)+".ot");
+    cout << "Map " << id << " has " << occupied_voxels << " occupied voxels. Map " << id << " has an entropy of: "
+         << map_entropy
          << endl;
     cout << "Map " << id << " has voxels(rate) " << 1.0 * occupied_voxels / share_data->init_voxels << ". Map "
          << id << " has entropy(rate) " << map_entropy / share_data->init_entropy << endl;

@@ -107,6 +107,14 @@ void create_views_information(Views_Information **now_views_information,
  */
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
 
+/**
+ * Save a rescaled model of the original model, using blender
+ * @param scale The scale used to rescale the model
+ * @param unit The unit with which we resize the model if it's too big
+ * @param share_data The shared data alongside the whole project
+ */
+void save_rescaled(double scale, double unit, Share_Data *share_data);
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

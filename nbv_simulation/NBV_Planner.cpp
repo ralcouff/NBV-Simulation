@@ -1,4 +1,5 @@
 #include "NBV_Planner.h"
+#include "Share_Data.h"
 
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
@@ -11,6 +12,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Making sure the savePath exists. */
     Share_Data::access_directory(share_data->savePath);
 
+    /* Initializing the Voxel Information */
     voxel_information = new Voxel_Information(share_data->p_unknown_lower_bound, share_data->p_unknown_upper_bound);
 
     /* Initializing GT cloud */
@@ -19,7 +21,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data->cloud_ground_truth->width = share_data->cloud_pcd->points.size();
     share_data->cloud_ground_truth->height = 1;
 
-    /* Creating iterators to the points of GT_cloud (ptr) and PCD_cloud (p). */
+    /* Creating iterators to the points of GT_cloud (ptr) and pcd_cloud (p). */
     auto ptr = share_data->cloud_ground_truth->points.begin();
     auto p = share_data->cloud_pcd->points.begin();
 
@@ -39,7 +41,7 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         points.push_back(pt);
     }
 
-    /* Initializing the center of mass of the point cloud. */
+    /* Computing and initializing the center of mass of the point cloud. */
     Eigen::Vector3d object_center_world = Eigen::Vector3d(0, 0, 0);
     /* Calculating point cloud center of mass. */
     for (auto &point: points) {
@@ -80,15 +82,32 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
         cout << "Object large. Change scale to about 0.1 m." << endl;
         cout << "Scale = " << scale << endl;
     }
-    /* Converting the Point. */
+
+    /* Initializing the quality sets */
+    share_data->gt_quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+    share_data->gt_sample_quality_weight = new std::unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash>();
+
+    /* Converting the points. */
+    ifstream quality_file(share_data->qualityFilePath);
     for (int i = 0; i < share_data->cloud_pcd->points.size(); i++, p++) {
+        std::string line = "1";
         (*ptr).x = (*p).x * scale * unit;
         (*ptr).y = (*p).y * scale * unit;
         (*ptr).z = (*p).z * scale * unit;
         (*ptr).b = 168;
         (*ptr).g = 168;
         (*ptr).r = 168;
-        /* Filling the GT octree. */
+        /* If we have a quality file, we color the points in the octomap that have a "bad" quality. */
+        if (quality_file.is_open()) {
+            if (getline(quality_file, line)) {
+                if (std::stod(line) != 1) {
+                    (*ptr).b = 0;
+                    (*ptr).g = 0;
+                    (*ptr).r = 255;
+                }
+            }
+        }
+        /* Filling the GT octree and filling the quality map*/
         octomap::OcTreeKey key;
         bool key_have =
                 share_data->ground_truth_model->coordToKeyChecked(octomap::point3d((*ptr).x, (*ptr).y, (*ptr).z), key);
@@ -99,7 +118,13 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                         key, share_data->ground_truth_model->getProbHitLog(), true);
                 share_data->ground_truth_model->integrateNodeColor(key, (*ptr).r, (*ptr).g, (*ptr).b);
             }
+            if ((*share_data->gt_quality_weight).find(key) == (*share_data->gt_quality_weight).end())
+                (*share_data->gt_quality_weight)[key] = std::stod(line);
+            else
+                (*share_data->gt_quality_weight)[key] = std::min((*share_data->gt_quality_weight)[key],
+                                                                 std::stod(line));
         }
+
         /* Filling the GT_Sample octree. */
         octomap::OcTreeKey key_sp;
         bool key_have_sp =
@@ -110,33 +135,45 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
                 share_data->GT_sample->setNodeValue(key_sp, share_data->GT_sample->getProbHitLog(), true);
                 share_data->GT_sample->integrateNodeColor(key_sp, (*ptr).r, (*ptr).g, (*ptr).b);
             }
+            if ((*share_data->gt_sample_quality_weight).find(key_sp) == (*share_data->gt_sample_quality_weight).end())
+                (*share_data->gt_sample_quality_weight)[key_sp] = std::stod(line);
+            else
+                (*share_data->gt_sample_quality_weight)[key_sp] = std::min(
+                        (*share_data->gt_sample_quality_weight)[key_sp], std::stod(line));
         }
         ptr++;
     }
+    quality_file.close();
     /* Convert and save a version of the rescaled model */
 
     /* Add the initial PC to the sfm_data pipeline. */
     float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points){
-        share_data->sfm_data.getLandmarks().emplace(index,aliceVision::sfmData::Landmark(Eigen::Matrix<double,3,1>(pt.x, pt.y, pt.z),aliceVision::feature::EImageDescriberType::SIFT));
+    for (auto &pt: share_data->cloud_ground_truth->points) {
+        share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
+                Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
         index++;
     }
-    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
-    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-    transform_1(0,0) = scale*unit;
-    transform_1(1,1) = -scale*unit;
-    transform_1(2,2) = -scale*unit;
-    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
-    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
-    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
-    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
-    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
+    /* Convert and save a version of the rescaled model */
+    save_rescaled(scale, unit, share_data);
+//    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
+//    Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+//    transform_1(0,0) = scale*unit;
+//    transform_1(1,1) = -scale*unit;
+//    transform_1(2,2) = -scale*unit;
+//    pcl::transformPointCloud(*(share_data->cloud_pcd), *scaled_cloud,transform_1);
+//    pcl::io::savePLYFile("rescaled_model.ply", *scaled_cloud);
+//    pcl::PolygonMesh::Ptr mesh (new pcl::PolygonMesh ());
+//    pcl::io::loadPLYFile("rescaled_model.ply", *mesh);
+//    pcl::io::saveOBJFile("rescaled_model.obj",*mesh);
+
     /* GT voxels update. */
     share_data->ground_truth_model->updateInnerOccupancy();
     share_data->ground_truth_model->write(share_data->savePath + "/GT.ot");
+
     /* GT_sample_voxels update. */
     share_data->GT_sample->updateInnerOccupancy();
     share_data->GT_sample->write(share_data->savePath + "/GT_sample.ot");
+
     /* Determine the number of voxels in the octree. */
     share_data->init_voxels = 0;
     for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(),
@@ -147,16 +184,19 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     }
     cout << "Octree GT_sample has " << share_data->init_voxels << " voxels" << endl;
     ofstream fout(share_data->savePath + "/GT_sample_voxels.txt");
-    fout << share_data->init_voxels << endl;
-    /* Initialize View Space. */
+//    fout << share_data->init_voxels << endl;
+
+/* Initialize View Space. */
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
+
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
     now_best_view = new View(now_view_space->views[0]);
     now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
     Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     // Camera class initialization
+
     percept = new Perception_3D(share_data);
     if (share_data->show) {
         // Show BBX, camera position, GT
@@ -226,10 +266,25 @@ int NBV_Planner::plan() {
         case Over:
             break;
         case WaitData:
+            cout << "***************************************************************************" << endl;
+            cout << "The current method is : " << endl;
+            cout << NBV_Planner::share_data->method_of_IG << endl;
+            cout << "***************************************************************************" << endl;
             if (percept->percept(now_best_view)) {
                 thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
                 next_view_space.detach();
                 status = WaitViewSpace;
+            }
+            if (iterations == share_data->reconstructionIterations) {
+                cout
+                        << "------------------------------------------------------------------------------------------------"
+                        << endl;
+                cout << "Changing the method of information gain from : " << share_data->method_of_IG << " to "
+                     << share_data->alt_method_of_IG << '.' << endl;
+                cout
+                        << "------------------------------------------------------------------------------------------------"
+                        << endl;
+                share_data->method_of_IG = get_method(share_data->alt_method_of_IG);
             }
             break;
         case WaitViewSpace:
@@ -613,6 +668,37 @@ void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *sha
         share_data->over = true;
     if (!share_data->move_wait)
         share_data->move_on = true;
+}
+
+void save_rescaled(double scale, double unit, Share_Data *share_data) {
+    /* Convert and save a version of the rescaled model */
+    std::string filename = share_data->nameOfObject + "_rescaled";
+
+    /* Saving the rescaled cloud with Python */
+    // TODO : Add python variables to the Share Data object
+    // TODO : Problem if no mtl given
+    std::string path_to_obj = share_data->objectFilePath + ".obj";
+    std::string path_to_obj_rescaled = share_data->savePath + '/' + filename + ".obj";
+    if (std::filesystem::exists(path_to_obj_rescaled)) {
+        cout << "The object has already been rescaled" << endl;
+    } else if (unit * scale == 1) {
+        cout << "The object doesn't need to be rescaled" << endl;
+        std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
+        system(command.c_str());
+        command = "cp " + share_data->objectFilePath + ".mtl " + share_data->savePath + "/" +
+                  filename + ".mtl";
+        system(command.c_str());
+    } else {
+        cout << "The object needs to be rescaled" << endl;
+        std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+        std::string python_script_folder = "Python_blender_API/";
+        std::string script_name = python_script_folder + "rescale_obj.py";
+        std::string parameters =
+                "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
+                to_string(scale) + " -s " + path_to_obj_rescaled;
+        std::string command = python_interpreter + " " + script_name + " " + parameters;
+        system(command.c_str());
+    }
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

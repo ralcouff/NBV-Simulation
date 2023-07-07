@@ -267,15 +267,28 @@ void ray_information_thread_process(
         unordered_map<Ray, int, Ray_Hash> *rays_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *occupancy_map,
         unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *object_weight,
+        unordered_map<octomap::OcTreeKey, double, octomap::OcTreeKey::KeyHash> *quality_weight,
         octomap::ColorOcTree *octo_model,
         Voxel_Information *voxel_information,
         View_Space *view_space,
         short method) {
     // Since it is checked, the first node is a non-empty node
-    auto first = rays_info[ray_id]->ray->start;
-    auto last = rays_info[ray_id]->ray->stop;
+    // Since it is checked, the first node is a non-empty node
+    octomap::KeyRay::iterator last;
+    octomap::KeyRay::iterator first;
+    octomap::KeyRay::iterator end;
+    if (method == Test_one || method == Test_two) {
+        cout << "Patate" << endl;
+        first = rays_info[ray_id]->ray->start_unknown;
+        last = rays_info[ray_id]->ray->stop_unknown;
+        end = rays_info[ray_id]->ray->stop_unknown;
+    } else {
+        first = rays_info[ray_id]->ray->start;
+        last = rays_info[ray_id]->ray->stop;
+        end = rays_info[ray_id]->ray->stop;
+    }
     last--;
-    for (auto it = rays_info[ray_id]->ray->start; it != rays_info[ray_id]->ray->stop; ++it) {
+    for (auto it = rays_info[ray_id]->ray->start; it != end; ++it) {
         // Look up the key from the hash table
         auto hash_this_key = (*occupancy_map).find(*it);
         // Next if you can't find a node
@@ -292,6 +305,8 @@ void ray_information_thread_process(
         bool voxel_unknown = voxel_information->is_unknown(occupancy);
         // Read the node for the surface rate of the object
         double on_object = Voxel_Information::voxel_object(*it, object_weight);
+        // Read the quality of the voxel
+        double qlt = Voxel_Information::voxel_quality(*it, quality_weight);
         // If it is occupied, it is the last node
         if (voxel_occupied)
             last = it;
@@ -310,6 +325,7 @@ void ray_information_thread_process(
                                                                    is_end,
                                                                    voxel_occupied,
                                                                    on_object,
+                                                                   qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
         if (method == OursIG)
@@ -324,10 +340,17 @@ void ray_information_thread_process(
     while (last - first < -1)
         first--;
     last++;
-    // Update stop to one iterator after the last node
-    rays_info[ray_id]->ray->stop = last;
-    // Update start to the first iterator
-    rays_info[ray_id]->ray->start = first;
+    if (method == Test_one || method == Test_two) {
+        // Update stop to one iterator after the last node
+        rays_info[ray_id]->ray->stop_unknown = last;
+        // Update start to the first iterator
+        rays_info[ray_id]->ray->start_unknown = first;
+    } else {
+        // Update stop to one iterator after the last node
+        rays_info[ray_id]->ray->stop = last;
+        // Update start to the first iterator
+        rays_info[ray_id]->ray->start = first;
+    }
 }
 
 inline double information_function(short &method,
@@ -339,6 +362,7 @@ inline double information_function(short &method,
                                    bool &is_endpoint,
                                    bool &is_occupied,
                                    double &object,
+                                   double &qlt,
                                    double &object_visible) {
     double final_information = 0;
     switch (method) {
@@ -348,6 +372,19 @@ inline double information_function(short &method,
             } else {
                 final_information = ray_information;
             }
+            break;
+        case Test_o:
+            final_information = 0;
+            break;
+        case Test_e:
+            if (is_unknown) {
+                final_information = ray_information + object * visible * voxel_information;
+            } else {
+                final_information = ray_information;
+            }
+            break;
+        case Test_one:
+            final_information = ray_information + visible * (1 - qlt);
             break;
         case OA:
             final_information = ray_information + visible * voxel_information;
