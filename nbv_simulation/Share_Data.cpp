@@ -202,13 +202,13 @@ short get_method(int _n_test) {
             method = OursIG;
             break;
         case 10:
-            method = Test_o;
+            method = Test_local;
             break;
         case 11:
-            method = Test_e;
+            method = Test_flow;
             break;
         case 101:
-            method = Test_one;
+            method = Test_qlt;
             break;
         case 102:
             method = Test_two;

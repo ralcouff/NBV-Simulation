@@ -184,9 +184,9 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     }
     cout << "Octree GT_sample has " << share_data->init_voxels << " voxels" << endl;
     ofstream fout(share_data->savePath + "/GT_sample_voxels.txt");
-//    fout << share_data->init_voxels << endl;
+//  fout << share_data->init_voxels << endl;
 
-/* Initialize View Space. */
+    /* Initialize View Space. */
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
 
@@ -195,55 +195,57 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     now_best_view = new View(now_view_space->views[0]);
     now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
     Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-    // Camera class initialization
 
+    // Camera class initialization
     percept = new Perception_3D(share_data);
-    if (share_data->show) {
-        // Show BBX, camera position, GT
-        pcl::visualization::PCLVisualizer::Ptr visualizer =
-                std::make_shared<pcl::visualization::PCLVisualizer>("Iteration");
-        visualizer->setBackgroundColor(0, 0, 0);
-        visualizer->addCoordinateSystem(0.1);
-        visualizer->initCameraParameters();
-        /* First frame camera position. */
-        Eigen::Vector4d X(0.05, 0, 0, 1);
-        Eigen::Vector4d Y(0, 0.05, 0, 1);
-        Eigen::Vector4d Z(0, 0, 0.05, 1);
-        Eigen::Vector4d O(0, 0, 0, 1);
-        X = view_pose_world * X;
-        Y = view_pose_world * Y;
-        Z = view_pose_world * Z;
-        O = view_pose_world * O;
-        /* Drawing the camera axis. */
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) X(0), (float) X(1), (float) X(2)), 255, 0, 0, "X" + to_string(-1));
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) Y(0), (float) Y(1), (float) Y(2)), 0, 255, 0, "Y" + to_string(-1));
-        visualizer->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
-                pcl::PointXYZ((float) Z(0), (float) Z(1), (float) Z(2)), 0, 0, 255, "Z" + to_string(-1));
-        /* Creating a point cloud containing the potential viewpoints, and displaying it in white in the frame. */
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(new pcl::PointCloud<pcl::PointXYZRGB>);
-        test_view_space->is_dense = false;
-        test_view_space->points.resize(now_view_space->views.size());
-        auto pt = test_view_space->points.begin();
-        for (int i = 0; i < now_view_space->views.size(); i++, pt++) {
-            (*pt).x = (float) now_view_space->views[i].init_pos(0);
-            (*pt).y = (float) now_view_space->views[i].init_pos(1);
-            (*pt).z = (float) now_view_space->views[i].init_pos(2);
-            /* Setting color to white */
-            (*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
-        }
-        visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
-        now_view_space->add_bbx_to_cloud(visualizer);
-        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
-        while (!visualizer->wasStopped()) {
-            visualizer->spin();
-            boost::this_thread::sleep(boost::posix_time::microseconds(100000));
-        }
-    }
+
+    /* Displaying the correct initialization. */
+//    if (share_data->show) {
+//        // Show BBX, camera position, GT
+//        pcl::visualization::PCLVisualizer::Ptr visualizer =
+//                std::make_shared<pcl::visualization::PCLVisualizer>("Iteration");
+//        visualizer->setBackgroundColor(0, 0, 0);
+//        visualizer->addCoordinateSystem(0.1);
+//        visualizer->initCameraParameters();
+//        /* First frame camera position. */
+//        Eigen::Vector4d X(0.05, 0, 0, 1);
+//        Eigen::Vector4d Y(0, 0.05, 0, 1);
+//        Eigen::Vector4d Z(0, 0, 0.05, 1);
+//        Eigen::Vector4d O(0, 0, 0, 1);
+//        X = view_pose_world * X;
+//        Y = view_pose_world * Y;
+//        Z = view_pose_world * Z;
+//        O = view_pose_world * O;
+//        /* Drawing the camera axis. */
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) X(0), (float) X(1), (float) X(2)), 255, 0, 0, "X" + to_string(-1));
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) Y(0), (float) Y(1), (float) Y(2)), 0, 255, 0, "Y" + to_string(-1));
+//        visualizer->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ((float) O(0), (float) O(1), (float) O(2)),
+//                pcl::PointXYZ((float) Z(0), (float) Z(1), (float) Z(2)), 0, 0, 255, "Z" + to_string(-1));
+//        /* Creating a point cloud containing the potential viewpoints, and displaying it in white in the frame. */
+//        pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(new pcl::PointCloud<pcl::PointXYZRGB>);
+//        test_view_space->is_dense = false;
+//        test_view_space->points.resize(now_view_space->views.size());
+//        auto pt = test_view_space->points.begin();
+//        for (int i = 0; i < now_view_space->views.size(); i++, pt++) {
+//            (*pt).x = (float) now_view_space->views[i].init_pos(0);
+//            (*pt).y = (float) now_view_space->views[i].init_pos(1);
+//            (*pt).z = (float) now_view_space->views[i].init_pos(2);
+//            /* Setting color to white */
+//            (*pt).r = 255, (*pt).g = 255, (*pt).b = 255;
+//        }
+//        visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
+//        now_view_space->add_bbx_to_cloud(visualizer);
+//        visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_ground_truth, "cloud_ground_truth");
+//        while (!visualizer->wasStopped()) {
+//            visualizer->spin();
+//            boost::this_thread::sleep(boost::posix_time::microseconds(100000));
+//        }
+//    }
 }
 
 double NBV_Planner::check_size(double predicted_size, Eigen::Vector3d object_center_world,
@@ -266,15 +268,6 @@ int NBV_Planner::plan() {
         case Over:
             break;
         case WaitData:
-            cout << "***************************************************************************" << endl;
-            cout << "The current method is : " << endl;
-            cout << NBV_Planner::share_data->method_of_IG << endl;
-            cout << "***************************************************************************" << endl;
-            if (percept->percept(now_best_view)) {
-                thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
-                next_view_space.detach();
-                status = WaitViewSpace;
-            }
             if (iterations == share_data->reconstructionIterations) {
                 cout
                         << "------------------------------------------------------------------------------------------------"
@@ -285,6 +278,15 @@ int NBV_Planner::plan() {
                         << "------------------------------------------------------------------------------------------------"
                         << endl;
                 share_data->method_of_IG = get_method(share_data->alt_method_of_IG);
+            }
+            cout << "***************************************************************************" << endl;
+            cout << "The current method is : " << endl;
+            cout << NBV_Planner::share_data->method_of_IG << endl;
+            cout << "***************************************************************************" << endl;
+            if (percept->percept(now_best_view)) {
+                thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
+                next_view_space.detach();
+                status = WaitViewSpace;
             }
             break;
         case WaitViewSpace:
@@ -355,6 +357,11 @@ int NBV_Planner::plan() {
                         visualizer->setBackgroundColor(0, 0, 0);
                         visualizer->addCoordinateSystem(0.1);
                         visualizer->initCameraParameters();
+                        std::vector<pcl::visualization::Camera> cameras{};
+                        visualizer->getCameras(cameras);
+                        auto pos = cameras[0].pos;
+                        auto view = cameras[0].view;
+                        visualizer->setCameraPosition(pos[0], pos[1], pos[2] - 0.9, view[0], view[1], view[2]);
                         // test_view_space
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr test_view_space(
                                 new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -427,7 +434,6 @@ int NBV_Planner::plan() {
                                 Eigen::Matrix4d view_pose_world =
                                         (share_data->now_camera_pose_world * now_view_space->views[i].pose.inverse())
                                                 .eval();
-                                // cout << "VP_World : " << view_pose_world << endl;
                                 Eigen::Vector4d X(0.08, 0, 0, 1);
                                 Eigen::Vector4d Y(0, 0.08, 0, 1);
                                 Eigen::Vector4d Z(0, 0, 0.08, 1);
@@ -436,14 +442,20 @@ int NBV_Planner::plan() {
                                 Y = view_pose_world * Y;
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
-                                // cout << "O : " << O << endl;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
                                 // TODO : Give a significative name to the view
-                                share_data->sfm_data.getViews().emplace(nb_nbv,std::make_shared<aliceVision::sfmData::View>("",nb_nbv,0,nb_nbv,share_data->color_intrinsics.width, share_data->color_intrinsics.height));
-                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(view_pose_world.block<3,3>(0,0).transpose(), O.block<3,1>(0,0));
-                                share_data->sfm_data.getPoses().emplace(nb_nbv, aliceVision::sfmData::CameraPose(transform, false));
-//                                cout << "Views : " << share_data->sfm_data.getViews() << endl;
-//                                cout << "Poses : " << share_data->sfm_data.getPoses().size() << endl;
+                                share_data->sfm_data.getViews().emplace(nb_nbv,
+                                                                        std::make_shared<aliceVision::sfmData::View>("",
+                                                                                                                     nb_nbv,
+                                                                                                                     0,
+                                                                                                                     nb_nbv,
+                                                                                                                     share_data->color_intrinsics.width,
+                                                                                                                     share_data->color_intrinsics.height));
+                                aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
+                                        view_pose_world.block<3, 3>(0, 0).transpose(), O.block<3, 1>(0, 0));
+                                share_data->sfm_data.getPoses().emplace(nb_nbv,
+                                                                        aliceVision::sfmData::CameraPose(transform,
+                                                                                                         false));
                                 visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
                                                                    pcl::PointXYZ(X(0), X(1), X(2)),
                                                                    255,
@@ -463,24 +475,49 @@ int NBV_Planner::plan() {
                                                                    255,
                                                                    "Z" + to_string(i));
                                 best_have = true;
+                                std::vector<int> rays_id = (*now_views_information->views_to_rays_map)[now_view_space->views[i].id];
+                                for (int r_id: rays_id) {
+                                    auto start = now_views_information->rays_info[r_id]->ray->origin;
+                                    auto stop = now_views_information->rays_info[r_id]->ray->end;
+                                    auto stop_unknown = now_views_information->rays_info[r_id]->ray->end_unknown;
+                                    octomap::point3d ss = share_data->octo_model->keyToCoord(start);
+                                    octomap::point3d ee = share_data->octo_model->keyToCoord(stop);
+                                    octomap::point3d ee_u = share_data->octo_model->keyToCoord(stop_unknown);
+                                    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)),
+                                                                       pcl::PointXYZ(ee(0), ee(1), ee(2)),
+                                                                       255,
+                                                                       0,
+                                                                       255,
+                                                                       "Ray" + to_string(r_id));
+                                    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(ss(0), ss(1), ss(2)),
+                                                                       pcl::PointXYZ(ee_u(0), ee_u(1), ee_u(2)),
+                                                                       168,
+                                                                       168,
+                                                                       0,
+                                                                       "Ray" + to_string(r_id) + "_unknown");
+
+                                }
+                                cout << "There are: " << rays_id.size() << " rays projected in the octomap." << endl;
                             }
                         }
+                        visualize_octomap(visualizer, *share_data->octo_model, share_data->object_center_world,
+                                          share_data->predicted_size);
                         visualizer->addPointCloud<pcl::PointXYZRGB>(share_data->cloud_final, "cloud_now_iteration");
-                        while (!visualizer->wasStopped()) {
-                            visualizer->spin();
-                            boost::this_thread::sleep(boost::posix_time::microseconds(100000));
-                        }
+                        visualizer->saveScreenshot(
+                                share_data->savePath + '/' + std::to_string(iterations) + "_screenshot.png");
+                        visualizer->spinOnce(1);
+                        visualizer->close();
                     }
                     double max_utility = -1;
                     for (int i = 0; i < now_view_space->views.size(); i++) {
-                        cout << "checking view " << i << endl;
+                        cout << "Checking view " << i << endl;
                         if (now_view_space->views[i].vis)
                             continue;
                         now_best_view = new View(now_view_space->views[i]);
                         max_utility = now_best_view->final_utility;
                         now_view_space->views[i].vis++;
                         share_data->best_views.push_back(*now_best_view);
-                        cout << "Best_Views : " << share_data->best_views.size() << " - Prout" << endl;
+                        cout << "Best_Views : " << share_data->best_views.size() << endl;
                         now_view_space->views[i].can_move = true;
                         cout << "View " << i << " has been chosen." << endl;
                         break;
@@ -490,14 +527,28 @@ int NBV_Planner::plan() {
                         status = Over;
                         break;
                     }
-                    cout << " Next best view position is:(" << now_best_view->init_pos(0) << ", "
+                    cout << " Next best view position is: (" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
-                    cout << " Next best view final_utility is " << now_best_view->final_utility << endl;
+                    cout << " Next best view final_utility is: " << now_best_view->final_utility << endl;
+                    std::ofstream result(share_data->test_base_filename, std::ios_base::app);
+                    result << share_data->alt_method_of_IG << ',' << share_data->method_of_IG << ','
+                           << share_data->n_model << ',' << share_data->n_size << ','
+                           << share_data->reconstructionIterations << ','
+                           << std::to_string(iterations) << ',' << now_best_view->id << ','
+                           << now_best_view->init_pos(0) << ',' << now_best_view->init_pos(1) << ','
+                           << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << ','
+                           << compute_completeness(share_data) << endl;
+                    result.close();
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data, "tartuffe.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
-                aliceVision::sfmDataIO::Save(share_data->sfm_data, "plop.abc", aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+                                                 share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+                                                 aliceVision::sfmDataIO::ESfMData::ALL);
+                aliceVision::sfmDataIO::Save(share_data->sfm_data,
+                                             share_data->savePath + '/' + share_data->nameOfObject + ".abc",
+                                             aliceVision::sfmDataIO::ESfMData::ALL);
+                generate_images(iterations, false, share_data);
                 status = WaitMoving;
             }
             break;
@@ -617,8 +668,9 @@ void create_views_information(Views_Information **now_views_information,
                     new Views_Information(share_data, nbv_plan->voxel_information, now_view_space, iterations);
         else
             (*now_views_information)->update(share_data, now_view_space, iterations);
-        if (share_data->method_of_IG == OursIG) {
+        if (share_data->method_of_IG == OursIG || share_data->method_of_IG == Test_flow) {
             // Handling network streams and obtaining global optimisation functions
+            cout << "Set Cover Solver -- Launching -- Method: " << share_data->method_of_IG << endl;
             auto *set_cover_solver = new views_voxels_MF(share_data->num_of_max_flow_node,
                                                          now_view_space,
                                                          *now_views_information,
@@ -640,7 +692,9 @@ void create_views_information(Views_Information **now_views_information,
             share_data->sum_robot_cost += view.robot_cost;
         }
         if (share_data->sum_local_information == 0)
-            cout << "Full information is zero." << endl;
+            cout << "Local information is zero." << endl;
+        if (share_data->sum_global_information == 0)
+            cout << "Flow information is zero." << endl;
         for (auto &view: now_view_space->views) {
             if (share_data->method_of_IG == OursIG)
                 view.final_utility =
@@ -648,6 +702,14 @@ void create_views_information(Views_Information **now_views_information,
                         share_data->sum_local_information +
                         share_data->cost_weight * view.get_global_information() /
                         share_data->sum_global_information;
+            else if (share_data->method_of_IG == Test_qlt || share_data->method_of_IG == Test_local)
+                view.final_utility = (share_data->sum_local_information == 0 ? 0 : (1 - share_data->cost_weight) *
+                                                                                   view.information_gain /
+                                                                                   share_data->sum_local_information);
+            else if (share_data->method_of_IG == Test_flow)
+                view.final_utility = (share_data->sum_global_information == 0 ? 0 : share_data->cost_weight *
+                                                                                    view.get_global_information() /
+                                                                                    share_data->sum_global_information);
             else if (share_data->method_of_IG == APORA)
                 view.final_utility = view.information_gain;
             else
@@ -670,6 +732,80 @@ void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *sha
         share_data->move_on = true;
 }
 
+void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const octomap::ColorOcTree &octo_model,
+                       Eigen::Matrix<double, 3, 1> object_center_world, double predicted_size) {
+    double half_resolution = octo_model.getResolution() / 2;
+    int n = 1245;
+    double rr = 0.25;
+    double gg = 0.25;
+    double bb = 0.25;
+    for (auto it = octo_model.begin_leafs(), end = octo_model.end_leafs(); it != end; ++it) {
+        if (it->getOccupancy() > 0.5) {
+            auto coord = it.getCoordinate();
+            visualizer->addCube(coord.x() - half_resolution, coord.x() + half_resolution, coord.y() - half_resolution,
+                                coord.y() + half_resolution, coord.z() - half_resolution, coord.z() + half_resolution,
+                                rr, gg, bb, "cube" + to_string(++n));
+//            pcl::PointXYZ pt1(coord.x() - half_resolution, coord.y() + half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt2(coord.x() - half_resolution, coord.y() - half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt3(coord.x() + half_resolution, coord.y() - half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt4(coord.x() + half_resolution, coord.y() + half_resolution, coord.z() + half_resolution);
+//            pcl::PointXYZ pt5(coord.x() - half_resolution, coord.y() + half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt6(coord.x() - half_resolution, coord.y() - half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt7(coord.x() + half_resolution, coord.y() - half_resolution, coord.z() - half_resolution);
+//            pcl::PointXYZ pt8(coord.x() + half_resolution, coord.y() + half_resolution, coord.z() - half_resolution);
+
+//            visualizer->addLine<pcl::PointXYZ>(pt1, pt2, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt2, pt3, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt3, pt4, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt4, pt1, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt1, pt5, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt2, pt6, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt3, pt7, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt4, pt8, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt5, pt6, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt6, pt7, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt7, pt8, rr, gg, bb, "line" + to_string(++n));
+//            visualizer->addLine<pcl::PointXYZ>(pt8, pt5, rr, gg, bb, "line" + to_string(++n));
+        }
+    }
+    double x1 = object_center_world(0) - predicted_size;
+    double x2 = object_center_world(0) + predicted_size;
+    double y1 = object_center_world(1) - predicted_size;
+    double y2 = object_center_world(1) + predicted_size;
+    double z1 = object_center_world(2) - predicted_size;
+    double z2 = object_center_world(2) + predicted_size;
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube13");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube14");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y1, z1), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube15");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x1, y2, z2), 0, 255, 0, "cube16");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y1, z2), 0, 255, 0, "cube17");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z2), pcl::PointXYZ(x2, y2, z1), 0, 255, 0, "cube18");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube19");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y1, z2), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube20");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y1, z2), 0, 255, 0, "cube21");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x1, y2, z2), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube22");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x1, y2, z1), 0, 255, 0, "cube23");
+    visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(x2, y2, z1), pcl::PointXYZ(x2, y1, z1), 0, 255, 0, "cube24");
+    cout << "Finished generating the octomap" << endl;
+}
+
+void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
+    // TODO : Make global variables in Share Data Object
+    std::string path_to_abc = share_data->savePath + "/" + share_data->nameOfObject + ".abc";
+    std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
+    std::string path_to_img_folder = share_data->savePath + "/img2/";
+    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+    std::string python_script_folder = "Python_blender_API/";
+
+    std::string script_name = python_script_folder + "load_render_abc.py";
+    std::string parameters =
+            "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
+            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
+    std::string command = python_interpreter + " " + script_name + " " + parameters;
+    cout << "Generating the image " << iteration << endl;
+    system(command.c_str());
+}
+
 void save_rescaled(double scale, double unit, Share_Data *share_data) {
     /* Convert and save a version of the rescaled model */
     std::string filename = share_data->nameOfObject + "_rescaled";
@@ -690,8 +826,8 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
         system(command.c_str());
     } else {
         cout << "The object needs to be rescaled" << endl;
-        std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
-        std::string python_script_folder = "Python_blender_API/";
+        std::string python_interpreter = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/python_env/bin/python";
+        std::string python_script_folder = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/";
         std::string script_name = python_script_folder + "rescale_obj.py";
         std::string parameters =
                 "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
@@ -699,6 +835,37 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
         std::string command = python_interpreter + " " + script_name + " " + parameters;
         system(command.c_str());
     }
+}
+
+double compute_completeness(Share_Data *share_data) {
+    cout << "Computing the completeness of the model" << endl;
+    std::map<double, int> occ_map{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->GT_sample->begin_leafs(), end = share_data->GT_sample->end_leafs();
+         it != end; ++it) {
+        double occ = it->getOccupancy();
+        occ_map[occ]++;
+    }
+    int tot_gt = 0;
+    for (auto &it: occ_map) {
+        if (it.first > 0.5) {
+            tot_gt += it.second;
+        }
+    }
+    std::map<double, int> occ_map_working{};
+    for (octomap::ColorOcTree::leaf_iterator it = share_data->octo_model->begin_leafs(), end = share_data->octo_model->end_leafs();
+         it != end; ++it) {
+        double occ_work = it->getOccupancy();
+        occ_map_working[occ_work]++;
+    }
+    int tot_work = 0;
+    for (auto &it: occ_map_working) {
+        if (it.first > 0.5) {
+            tot_work += it.second;
+        }
+    }
+    double ratio = (double) tot_work / (double) tot_gt * 100;
+    cout << "The object is reconstructed at : " << ratio << '%' << endl;
+    return ratio;
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

@@ -277,8 +277,7 @@ void ray_information_thread_process(
     octomap::KeyRay::iterator last;
     octomap::KeyRay::iterator first;
     octomap::KeyRay::iterator end;
-    if (method == Test_one || method == Test_two) {
-        cout << "Patate" << endl;
+    if (method == Test_qlt || method == Test_two) {
         first = rays_info[ray_id]->ray->start_unknown;
         last = rays_info[ray_id]->ray->stop_unknown;
         end = rays_info[ray_id]->ray->stop_unknown;
@@ -288,7 +287,7 @@ void ray_information_thread_process(
         end = rays_info[ray_id]->ray->stop;
     }
     last--;
-    for (auto it = rays_info[ray_id]->ray->start; it != end; ++it) {
+    for (auto it = first; it != end; ++it) {
         // Look up the key from the hash table
         auto hash_this_key = (*occupancy_map).find(*it);
         // Next if you can't find a node
@@ -340,7 +339,7 @@ void ray_information_thread_process(
     while (last - first < -1)
         first--;
     last++;
-    if (method == Test_one || method == Test_two) {
+    if (method == Test_qlt || method == Test_two) {
         // Update stop to one iterator after the last node
         rays_info[ray_id]->ray->stop_unknown = last;
         // Update start to the first iterator
@@ -373,17 +372,17 @@ inline double information_function(short &method,
                 final_information = ray_information;
             }
             break;
-        case Test_o:
-            final_information = 0;
-            break;
-        case Test_e:
+        case Test_local:
             if (is_unknown) {
                 final_information = ray_information + object * visible * voxel_information;
             } else {
                 final_information = ray_information;
             }
             break;
-        case Test_one:
+        case Test_flow:
+            final_information = 0;
+            break;
+        case Test_qlt:
             final_information = ray_information + visible * (1 - qlt);
             break;
         case OA:

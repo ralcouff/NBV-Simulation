@@ -77,32 +77,32 @@ bool Perception_3D::percept(View *now_best_view) {
     *share_data->cloud_final += *cloud;
     cout << "Virtual cloud got in: " << clock() - now_time << " ms." << endl;
     cout << valid_point << " points were acquired" << endl;
-    if (share_data->show) {
-        // Display imaging point clouds
-        pcl::visualization::PCLVisualizer::Ptr viewer1(new pcl::visualization::PCLVisualizer("Camera"));
-        viewer1->setBackgroundColor(0, 0, 0);
-        viewer1->addCoordinateSystem(0.1);
-        viewer1->initCameraParameters();
-        viewer1->addPointCloud<pcl::PointXYZRGB>(cloud, "cloud");
-        Eigen::Vector4d X(0.05, 0, 0, 1);
-        Eigen::Vector4d Y(0, 0.05, 0, 1);
-        Eigen::Vector4d Z(0, 0, 0.05, 1);
-        Eigen::Vector4d O(0, 0, 0, 1);
-        X = view_pose_world * X;
-        Y = view_pose_world * Y;
-        Z = view_pose_world * Z;
-        O = view_pose_world * O;
-        viewer1->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(X(0), X(1), X(2)), 255, 0, 0, "X" + std::to_string(-1));
-        viewer1->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Y(0), Y(1), Y(2)), 0, 255, 0, "Y" + std::to_string(-1));
-        viewer1->addLine<pcl::PointXYZ>(
-                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Z(0), Z(1), Z(2)), 0, 0, 255, "Z" + std::to_string(-1));
-        while (!viewer1->wasStopped()) {
-            viewer1->spin();
-            boost::this_thread::sleep(boost::posix_time::microseconds(100000));
-        }
-    }
+//    if (share_data->show) {
+//        // Display imaging point clouds
+//        pcl::visualization::PCLVisualizer::Ptr viewer1(new pcl::visualization::PCLVisualizer("Camera"));
+//        viewer1->setBackgroundColor(0, 0, 0);
+//        viewer1->addCoordinateSystem(0.1);
+//        viewer1->initCameraParameters();
+//        viewer1->addPointCloud<pcl::PointXYZRGB>(cloud, "cloud");
+//        Eigen::Vector4d X(0.05, 0, 0, 1);
+//        Eigen::Vector4d Y(0, 0.05, 0, 1);
+//        Eigen::Vector4d Z(0, 0, 0.05, 1);
+//        Eigen::Vector4d O(0, 0, 0, 1);
+//        X = view_pose_world * X;
+//        Y = view_pose_world * Y;
+//        Z = view_pose_world * Z;
+//        O = view_pose_world * O;
+//        viewer1->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(X(0), X(1), X(2)), 255, 0, 0, "X" + std::to_string(-1));
+//        viewer1->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Y(0), Y(1), Y(2)), 0, 255, 0, "Y" + std::to_string(-1));
+//        viewer1->addLine<pcl::PointXYZ>(
+//                pcl::PointXYZ(O(0), O(1), O(2)), pcl::PointXYZ(Z(0), Z(1), Z(2)), 0, 0, 255, "Z" + std::to_string(-1));
+//        while (!viewer1->wasStopped()) {
+//            viewer1->spin();
+//            boost::this_thread::sleep(boost::posix_time::microseconds(100000));
+//        }
+//    }
     iterations++;
     return true;
 }

@@ -54,9 +54,9 @@ using Views = aliceVision::HashMap<aliceVision::IndexT, std::shared_ptr<View> >;
 #define NBVNET 6
 #define PCNBV 7
 #define NewOurs 8
-#define Test_o 10
-#define Test_e 11
-#define Test_one 101
+#define Test_local 10
+#define Test_flow 11
+#define Test_qlt 101
 #define Test_two 102
 
 /**

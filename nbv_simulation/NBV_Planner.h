@@ -108,12 +108,37 @@ void create_views_information(Views_Information **now_views_information,
 void move_robot(View *now_best_view, View_Space *now_view_space, Share_Data *share_data, NBV_Planner *nbv_plan);
 
 /**
+ * Add in the visualizer the octomap
+ * @param visualizer The visualizer into which we will plot the octomap
+ * @param octo_model The octomap to plot
+ * @param object_center_world The center of mass of the object
+ * @param predicted_size Size of the object
+ */
+void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const octomap::ColorOcTree &octo_model,
+                       Eigen::Matrix<double, 3, 1> object_center_world, double predicted_size);
+
+/**
+ * Generates a render view of the 3D object viewed from the chosen camera
+ * @param iteration The number of iteration
+ * @param save_mode Either save all the images or only the latest one
+ * @param share_data The shares data among the whole project
+ */
+void generate_images(int iteration, bool save_mode, Share_Data *share_data);
+
+/**
  * Save a rescaled model of the original model, using blender
  * @param scale The scale used to rescale the model
  * @param unit The unit with which we resize the model if it's too big
  * @param share_data The shared data alongside the whole project
  */
 void save_rescaled(double scale, double unit, Share_Data *share_data);
+
+/**
+ * Compute the completeness rate of the model
+ * @param share_data The shared data among the whole project
+ * @return The completeness rate
+ */
+double compute_completeness(Share_Data *share_data);
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
