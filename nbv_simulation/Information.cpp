@@ -327,7 +327,7 @@ void ray_information_thread_process(
                                                                    qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG)
+        if (method == OursIG || method == Test_local || method == Test_flow || method == Test_qlt)
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         else
             rays_info[ray_id]->visible *= occupancy;

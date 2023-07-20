@@ -1,5 +1,11 @@
 #include "NBV_Planner.h"
 #include "Share_Data.h"
+#include "octomap/ColorOcTree.h"
+#include "octomap/OcTreeKey.h"
+#include "octomap/OcTreeNode.h"
+#include "octomap/octomap_types.h"
+#include <Eigen/src/Core/Matrix.h>
+#include <iterator>
 
 NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     share_data = _share_data;
@@ -195,7 +201,6 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     now_best_view = new View(now_view_space->views[0]);
     now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
     Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-
     // Camera class initialization
     percept = new Perception_3D(share_data);
 
@@ -283,6 +288,7 @@ int NBV_Planner::plan() {
             cout << "The current method is : " << endl;
             cout << NBV_Planner::share_data->method_of_IG << endl;
             cout << "***************************************************************************" << endl;
+            compare_octomaps(share_data, iterations);
             if (percept->percept(now_best_view)) {
                 thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
                 next_view_space.detach();
@@ -866,6 +872,201 @@ double compute_completeness(Share_Data *share_data) {
     double ratio = (double) tot_work / (double) tot_gt * 100;
     cout << "The object is reconstructed at : " << ratio << '%' << endl;
     return ratio;
+}
+
+void compare_octomaps(Share_Data *share_data, int iterations) {
+
+    std::string savePathOT = share_data->savePath + '/' + "OT_Comparison/";
+    std::string saveResultOT = savePathOT + "evolution.csv";
+
+    Share_Data::access_directory(savePathOT);
+
+    std::list<tuple<float, float, float>> unknown;
+    std::list<tuple<float, float, float>> unknown_but_occupied;
+    std::list<tuple<float, float, float>> occupied_but_unknown;
+    std::list<tuple<float, float, float>> occupied;
+    std::list<tuple<float, float, float>> free_but_unknown;
+    std::list<tuple<float, float, float>> free_but_occupied;
+    std::list<tuple<float, float, float>> occupiedUnknown_but_unknown;
+    std::list<tuple<float, float, float>> occupiedUnknown_but_occupied;
+
+
+    std::map<double, int> occ_map{};
+
+    double x_max_octo, y_max_octo, z_max_octo, x_min_octo, y_min_octo, z_min_octo;
+    double x_max_gt, y_max_gt, z_max_gt, x_min_gt, y_min_gt, z_min_gt;
+
+    share_data->octo_model->getMetricMax(x_max_octo, y_max_octo, z_max_octo);
+    share_data->octo_model->getMetricMin(x_min_octo, y_min_octo, z_min_octo);
+    share_data->GT_sample->getMetricMax(x_max_gt, y_max_gt, z_max_gt);
+    share_data->GT_sample->getMetricMin(x_min_gt, y_min_gt, z_min_gt);
+
+    cout << x_max_octo << ", " << y_max_octo << ", " << z_max_octo << endl;
+    cout << x_min_octo << ", " << y_min_octo << ", " << z_min_octo << endl;
+    cout << x_max_gt << ", " << y_max_gt << ", " << z_max_gt << endl;
+    cout << x_min_gt << ", " << y_min_gt << ", " << z_min_gt << endl;
+
+    for (double x = std::min(x_min_gt, x_min_octo) + share_data->octomap_resolution / 2;
+         x <= std::max(x_max_gt, x_max_octo); x += share_data->octomap_resolution) {
+        for (double y = std::min(y_min_gt, y_min_octo) + share_data->octomap_resolution / 2;
+             y <= std::max(y_max_gt, y_max_octo); y += share_data->octomap_resolution) {
+            for (double z = std::min(z_min_gt, z_min_octo) + share_data->octomap_resolution / 2;
+                 z <= std::max(z_max_gt, z_max_octo); z += share_data->octomap_resolution) {
+                octomap::OcTreeKey octo_key;
+                bool exists_octo = share_data->octo_model->coordToKeyChecked(x, y, z, octo_key);
+                octomap::OcTreeKey gt_key;
+                bool exists_gt = share_data->GT_sample->coordToKeyChecked(x, y, z, gt_key);
+                if (exists_octo && exists_gt) {
+                    octomap::ColorOcTreeNode *voxel_octo = share_data->octo_model->search(octo_key);
+                    octomap::ColorOcTreeNode *voxel_gt = share_data->GT_sample->search(gt_key);
+                    if (voxel_octo == nullptr && voxel_gt == nullptr) {
+                        unknown.emplace_back(x, y, z);
+                    } else if (voxel_octo == nullptr && voxel_gt->getOccupancy() > 0.5) {
+                        unknown_but_occupied.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt == nullptr) {
+                        occupiedUnknown_but_unknown.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt->getOccupancy() > 0.5) {
+                        occupiedUnknown_but_occupied.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt == nullptr) {
+                        occupied_but_unknown.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt->getOccupancy() > 0.5) {
+                        occupied.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt == nullptr) {
+                        free_but_unknown.emplace_back(x, y, z);
+                    } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt->getOccupancy() > 0.5) {
+                        free_but_occupied.emplace_back(x, y, z);
+                    } else {
+                        cout << "Voxel Octo Occupancy: " << voxel_octo->getOccupancy() << endl;
+                        cout << "Voxel GT Occupancy: " << voxel_gt->getOccupancy() << endl;
+                    }
+                }
+            }
+        }
+    }
+    cout << "Unknown voxels in both octomaps: " << unknown.size() << endl;
+    cout << "Unknown voxels in working model but Occupied in GT: " << unknown_but_occupied.size() << endl;
+    cout << "Occupied voxels in working model but Unknown in GT: " << occupied_but_unknown.size() << endl;
+    cout << "Occupied voxels in both octomaps: " << occupied.size() << endl;
+    cout << "Free voxels in working model but Unknown in GT: " << free_but_unknown.size() << endl;
+    cout << "Free voxels in working model but Occupied in GT: " << free_but_occupied.size() << endl;
+    cout << "'Occupied Unknown' voxels in working model but Unknown in GT: " << occupiedUnknown_but_unknown.size()
+         << endl;
+    cout << "'Occupied Unknown' voxels in working model but Occupied in GT: " << occupiedUnknown_but_occupied.size()
+         << endl;
+
+    std::ofstream saveFile;
+    if (iterations == 0) {
+        saveFile.open(saveResultOT);
+        saveFile
+                << "iteration,unknown,unknown_but_occupied,occupied_but_unknown,occupied,free_but_unknown,free_but_occupied,occupiedUnknown_but_unknown,occupiedUnknown_but_occupied"
+                << endl;
+    } else {
+        saveFile.open(saveResultOT, std::ios_base::app);
+    }
+    saveFile << iterations << ',' << unknown.size() << ',' << unknown_but_occupied.size() << ','
+             << occupied_but_unknown.size() << ',' << occupied.size() << ',' << free_but_unknown.size() << ','
+             << free_but_occupied.size() << ',' << occupiedUnknown_but_unknown.size() << ','
+             << occupiedUnknown_but_occupied.size() << endl;
+    saveFile.close();
+
+    std::vector<std::list<tuple<float, float, float>>> statesList{unknown,
+                                                                  unknown_but_occupied,
+                                                                  occupied_but_unknown,
+                                                                  occupied,
+                                                                  free_but_unknown,
+                                                                  free_but_occupied,
+                                                                  occupiedUnknown_but_unknown,
+                                                                  occupiedUnknown_but_occupied};
+
+    /* Filling the difference octomaps */
+    auto *U = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *UbO = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *ObU = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *O = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *FbU = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *FbO = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *OubU = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *OubO = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *allOT = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *myOT = new octomap::ColorOcTree(share_data->octomap_resolution);
+    std::vector<octomap::ColorOcTree *> OTList{U, UbO, ObU, O, FbU, FbO, OubU, OubO};
+
+    std::vector<std::string> OTNames{"U", "UbO", "ObU", "O", "FbU", "FbO", "OubU", "OubO"};
+    std::vector<tuple<int, int, int>> OTColors{std::make_tuple(255, 255, 255),
+                                               std::make_tuple(0, 0, 0),
+                                               std::make_tuple(0, 0, 0),
+                                               std::make_tuple(0, 255, 0),
+                                               std::make_tuple(0, 0, 255),
+                                               std::make_tuple(0, 0, 255),
+                                               std::make_tuple(0, 0, 0),
+                                               std::make_tuple(255, 0, 0)};
+
+    for (int i = 0; i < OTList.size(); ++i) {
+        octomap::ColorOcTree *current_OT = OTList[i];
+        std::string OTName = OTNames[i];
+        std::tuple<int, int, int> OTcolor = OTColors[i];
+        std::list<tuple<float, float, float>> OTPoints = statesList[i];
+        for (auto p: OTPoints) {
+            double x = get<0>(p);
+            double y = get<1>(p);
+            double z = get<2>(p);
+            current_OT->setNodeValue(x, y, z, (float) 0, true);
+            current_OT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+            allOT->setNodeValue(x, y, z, (float) 0, true);
+            allOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+            if (OTName == "OubO" || OTName == "FbO" || OTName == "O") {
+                myOT->setNodeValue(x, y, z, (float) 0, true);
+                myOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+                myOT->updateInnerOccupancy();
+            }
+        }
+        if (!OTPoints.empty())
+            current_OT->updateInnerOccupancy();
+        current_OT->write(savePathOT + OTName + '_' + to_string(iterations) + ".ot");
+    }
+    allOT->updateInnerOccupancy();
+    allOT->write(savePathOT + "all_" + to_string(iterations) + ".ot");
+    myOT->write(savePathOT + "my_" + to_string(iterations) + ".ot");
+
+
+//    list<tuple<int, int, int>> octo_keys;
+//    list<tuple<int, int, int>> gt_keys;
+//    list<tuple<int, int, int>> out;
+////    list<tuple<int, int, int, octomap::OcTreeKey>> octo_keys;
+////    list<tuple<int, int, int, octomap::OcTreeKey>> gt_keys;
+////    list<tuple<int, int, int, octomap::OcTreeKey>> out;
+//
+//    cout << share_data->octo_model->calcNumNodes() << endl;
+//    cout << share_data->GT_sample->calcNumNodes() << endl;
+////    for (std::pair<octomap::ColorOcTree::tree_iterator, octomap::ColorOcTree::tree_iterator> i(share_data->octo_model->begin_tree(), share_data->GT_sample->begin_tree());
+////         i.first != share_data->octo_model->end_tree() && i.second != share_data->GT_sample->end_tree();
+////         ++i.first, ++i.second)
+////    {
+////        auto it_octo = i.first;
+////        auto it_gt = i.second;
+////        cout << "Octo_model : " << it_octo.getKey()[0] << ", " << it_octo.getKey()[1] << ", " << it_octo.getKey()[2] << endl;
+////        cout << "GT_sample : " << it_gt.getKey()[0] << ", " << it_gt.getKey()[1] << ", " << it_gt.getKey()[2] << endl;
+////    }
+//
+//    for (auto it = share_data->octo_model->begin_tree(), end = share_data->octo_model->end_tree();
+//         it != end; ++it) {
+////        cout << "Octo_model : " << it.getKey()[0] << ", " << it.getKey()[1] << ", " << it.getKey()[2] << endl;
+////        share_data->GT_sample->search(it.getKey());
+//        octo_keys.emplace_back(it.getKey()[0], it.getKey()[1], it.getKey()[2]);
+////        octo_keys.emplace_back(it.getKey()[0], it.getKey()[1], it.getKey()[2], it.getKey());
+//    }
+//    for (auto it = share_data->GT_sample->begin_tree(), end = share_data->GT_sample->end_tree(); it != end; ++it) {
+////        cout << "GT_sample : " << it.getKey()[0] << ", " << it.getKey()[1] << ", " << it.getKey()[2] << endl;
+//        gt_keys.emplace_back(it.getKey()[0], it.getKey()[1], it.getKey()[2]);
+////        gt_keys.emplace_back(it.getKey()[0], it.getKey()[1], it.getKey()[2], it.getKey());
+//    }
+//    cout << "Octo_Keys size: " << octo_keys.size() << endl;
+//    cout << "GT_Keys size: " << gt_keys.size() << endl;
+//
+//    std::set_intersection(octo_keys.begin(), octo_keys.end(), gt_keys.begin(), gt_keys.end(),
+//                          std::back_inserter(out));
+//    cout << "out size: " << out.size() << endl;
+
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

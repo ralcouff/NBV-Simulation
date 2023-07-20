@@ -39,7 +39,7 @@ bool Perception_3D::percept(View *now_best_view) {
 //                    int i = x * share_data->color_intrinsics.height + y;
 //                    (*precept_process[i]).join();
 //                }
-        /* Traversing the imag plane. */
+        /* Traversing the image plane. */
         for (int x = 0; x < share_data->color_intrinsics.width; ++x)
             for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
                 int i = x * share_data->color_intrinsics.height + y;

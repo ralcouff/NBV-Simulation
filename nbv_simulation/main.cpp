@@ -86,3 +86,6 @@ int main(int argc, char **argv) {
     cout << "System over." << endl;
     return EXIT_SUCCESS;
 }
+
+//../DefaultConfiguration.yaml ../3d_models/sphere_quality_colored_1024 ../3d_models/sphere_quality_colored_1024.qlt 0 0 ../sphere_quality_colored_1024.0.500000 2023-07-05
+//../DefaultConfiguration.yaml ../3d_models/Armadillo ../3d_models/Armadillo.qlt 101 0 ../Armadillo_0_0.500000 2023-07-05

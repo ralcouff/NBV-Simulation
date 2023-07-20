@@ -1,6 +1,7 @@
 #ifndef NBV_SIMULATION_NBV_PLANNER_H
 #define NBV_SIMULATION_NBV_PLANNER_H
 
+#include "Share_Data.h"
 #pragma once
 
 #include <memory>
@@ -139,6 +140,12 @@ void save_rescaled(double scale, double unit, Share_Data *share_data);
  * @return The completeness rate
  */
 double compute_completeness(Share_Data *share_data);
+
+/**
+ * Make a comparison of the ground truth octomap and the working octomap.
+ * @param share_data  The shared data among the whole project
+ */
+void compare_octomaps(Share_Data *share_data, int iterations);
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 

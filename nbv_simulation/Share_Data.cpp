@@ -1,7 +1,10 @@
 #include "Share_Data.h"
+#include <pcl/io/ply_io.h>
 
-Share_Data::Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path,
-                       short _method, int _n_iter, const std::string& _save_folder, const std::string& _string_test_time) {
+Share_Data::Share_Data(const std::string &_config_file_path, const std::string &_model_path,
+                       const std::string &_model_qlt_path,
+                       short _method, int _n_iter, const std::string &_save_folder,
+                       const std::string &_string_test_time) {
 
     process_cnt = -1;
     // Reading yaml files
@@ -193,11 +196,12 @@ void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr
     cloud_stream << savePath << cd << "/" << name << ".pcd";
     cloud_stream >> cloud_file;
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
+    pcl::io::savePLYFile<pcl::PointXYZRGB>(savePath + cd + "/" + name + ".ply", *cloud);
 }
 
 short get_method(int _n_test) {
     short method;
-    switch (_n_test){
+    switch (_n_test) {
         case 0:
             method = OursIG;
             break;
