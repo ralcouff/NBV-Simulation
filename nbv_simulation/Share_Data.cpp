@@ -1,4 +1,5 @@
 #include "Share_Data.h"
+#include <pcl/PolygonMesh.h>
 #include <pcl/io/ply_io.h>
 
 Share_Data::Share_Data(const std::string &_config_file_path, const std::string &_model_path,
@@ -197,6 +198,9 @@ void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr
     cloud_stream >> cloud_file;
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
     pcl::io::savePLYFile<pcl::PointXYZRGB>(savePath + cd + "/" + name + ".ply", *cloud);
+    pcl::PolygonMesh mesh_obj;
+    pcl::toPCLPointCloud2(*cloud, mesh_obj.cloud);
+    pcl::io::saveOBJFile(savePath + cd + "/" + name + ".obj", mesh_obj);
 }
 
 short get_method(int _n_test) {
