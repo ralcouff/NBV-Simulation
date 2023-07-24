@@ -9,7 +9,7 @@ import errno
 
 class IntrinsicMetrics:
 
-    def __init__(self, obj_name: str, points: np.ndarray, normals: np.ndarray, n_neighbors: int = 20,
+    def __init__(self, obj_name: str, points: np.ndarray, normals: np.ndarray, n_neighbors: int = 10,
                  edges: np.ndarray = []):
         self._n_neighbors = n_neighbors
         self._coords = pd.DataFrame(data=points, columns=['x', 'y', 'z'])
@@ -23,8 +23,8 @@ class IntrinsicMetrics:
         self.set_params_param('n_neighbors', n_neighbors)
         self.set_params_param('ctime', time.time())
         self._edges = edges
-        # self._knn = self.compute_knn(n_neighbors)
-        self._neighbors, self._knn = self.compute_knn_from_edges(n_neighbors)
+        self._knn = self.compute_knn(n_neighbors)
+        # self._neighbors, self._knn = self.compute_knn_from_edges(n_neighbors)
 
     @property
     def coords(self):
@@ -60,7 +60,7 @@ class IntrinsicMetrics:
 
     @property
     def ctime(self):
-        return float(self.get_params_param('ctime'))
+        return float(self.get_params_param('ctime').iloc[0])
 
     @property
     def edges(self):
@@ -95,6 +95,7 @@ class IntrinsicMetrics:
         knn = NearestNeighbors(n_neighbors=n_neighbors + 1, algorithm='auto').fit(x_data)
         distances, indices = knn.kneighbors(x_data)
         knn_dict = {i: {ind: dst for ind, dst in zip(indices[i][1:], distances[i][1:])} for i in range(self.npoints)}
+        # print(knn_dict)
         return knn_dict
 
     def compute_knn_from_edges(self, n_ring: int):
@@ -134,7 +135,7 @@ class IntrinsicMetrics:
             current_point = points[i, :]
             neighbors = [points[j, :] for j in list(self.knn[i].keys())]
             if len(neighbors) < 6:
-                print("Error")
+                print("Error - mean")
             neighbors.append(current_point)
             _, _, new_coord, _ = utils.make_pca(np.array(neighbors), n_components=3)
             quadrics, residuals = utils.lstsq_quadrics_fitting(np.array(new_coord))
@@ -207,6 +208,8 @@ class IntrinsicMetrics:
         """
         filename = os.path.join(output_path,
                                 f"{metric}_{self.obj_name}.obj")
+        qlt_filename = os.path.join(output_path,
+                                    f"{metric}_{self.obj_name}.qlt")
         if not os.path.exists(os.path.dirname(output_path)):
             try:
                 os.makedirs(os.path.dirname(output_path))
@@ -222,6 +225,12 @@ class IntrinsicMetrics:
                 z = row['z']
                 color = colormap[index]
                 f.writelines(f"v {x} {y} {z} {color[0]} {color[1]} {color[2]}\n")
+
+        with open(qlt_filename, 'w+') as f:
+            distances = np.abs(self.get_points_column(metric))
+            metric_normalised = distances/np.max(distances)
+            for index, row in self._coords.iterrows():
+                f.writelines(f"{1-metric_normalised[index]}\n")
 
     def save_csv(self, output_path):
         if not os.path.exists(output_path):
