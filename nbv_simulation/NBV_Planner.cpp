@@ -881,14 +881,14 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 
     Share_Data::access_directory(savePathOT);
 
-    std::list<tuple<float, float, float>> unknown;
-    std::list<tuple<float, float, float>> unknown_but_occupied;
-    std::list<tuple<float, float, float>> occupied_but_unknown;
-    std::list<tuple<float, float, float>> occupied;
-    std::list<tuple<float, float, float>> free_but_unknown;
-    std::list<tuple<float, float, float>> free_but_occupied;
-    std::list<tuple<float, float, float>> occupiedUnknown_but_unknown;
-    std::list<tuple<float, float, float>> occupiedUnknown_but_occupied;
+    std::list<tuple<float, float, float, float>> unknown;
+    std::list<tuple<float, float, float, float>> unknown_but_occupied;
+    std::list<tuple<float, float, float, float>> occupied_but_unknown;
+    std::list<tuple<float, float, float, float>> occupied;
+    std::list<tuple<float, float, float, float>> free_but_unknown;
+    std::list<tuple<float, float, float, float>> free_but_occupied;
+    std::list<tuple<float, float, float, float>> occupiedUnknown_but_unknown;
+    std::list<tuple<float, float, float, float>> occupiedUnknown_but_occupied;
 
 
     std::map<double, int> occ_map{};
@@ -919,22 +919,23 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
                 if (exists_octo && exists_gt) {
                     octomap::ColorOcTreeNode *voxel_octo = share_data->octo_model->search(octo_key);
                     octomap::ColorOcTreeNode *voxel_gt = share_data->GT_sample->search(gt_key);
+                    float octo_occupancy = 0;
                     if (voxel_octo == nullptr && voxel_gt == nullptr) {
-                        unknown.emplace_back(x, y, z);
+                        unknown.emplace_back(x, y, z, octo_occupancy);
                     } else if (voxel_octo == nullptr && voxel_gt->getOccupancy() > 0.5) {
-                        unknown_but_occupied.emplace_back(x, y, z);
+                        unknown_but_occupied.emplace_back(x, y, z, octo_occupancy);
                     } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt == nullptr) {
-                        occupiedUnknown_but_unknown.emplace_back(x, y, z);
+                        occupiedUnknown_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        occupiedUnknown_but_occupied.emplace_back(x, y, z);
+                        occupiedUnknown_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt == nullptr) {
-                        occupied_but_unknown.emplace_back(x, y, z);
+                        occupied_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        occupied.emplace_back(x, y, z);
+                        occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt == nullptr) {
-                        free_but_unknown.emplace_back(x, y, z);
+                        free_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        free_but_occupied.emplace_back(x, y, z);
+                        free_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
                     } else {
                         cout << "Voxel Octo Occupancy: " << voxel_octo->getOccupancy() << endl;
                         cout << "Voxel GT Occupancy: " << voxel_gt->getOccupancy() << endl;
@@ -969,7 +970,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
              << occupiedUnknown_but_occupied.size() << endl;
     saveFile.close();
 
-    std::vector<std::list<tuple<float, float, float>>> statesList{unknown,
+    std::vector<std::list<tuple<float, float, float, float>>> statesList{unknown,
                                                                   unknown_but_occupied,
                                                                   occupied_but_unknown,
                                                                   occupied,
@@ -999,24 +1000,32 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
                                                std::make_tuple(0, 0, 255),
                                                std::make_tuple(0, 0, 255),
                                                std::make_tuple(0, 0, 0),
-                                               std::make_tuple(255, 0, 0)};
+                                               std::make_tuple(255, 0, 255)};
 
     for (int i = 0; i < OTList.size(); ++i) {
         octomap::ColorOcTree *current_OT = OTList[i];
         std::string OTName = OTNames[i];
         std::tuple<int, int, int> OTcolor = OTColors[i];
-        std::list<tuple<float, float, float>> OTPoints = statesList[i];
+        std::list<tuple<float, float, float, float>> OTPoints = statesList[i];
         for (auto p: OTPoints) {
             double x = get<0>(p);
             double y = get<1>(p);
             double z = get<2>(p);
+            float occ = get<3>(p);
             current_OT->setNodeValue(x, y, z, (float) 0, true);
             current_OT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
             allOT->setNodeValue(x, y, z, (float) 0, true);
             allOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
             if (OTName == "OubO" || OTName == "FbO" || OTName == "O") {
                 myOT->setNodeValue(x, y, z, (float) 0, true);
-                myOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+                if (OTName == "O") {
+//                    cout << occ << endl;
+//                    cout << ((1-occ)/0.5)*255 << endl;
+//                    cout << (occ/0.5 - 1)*255 << endl;
+                    myOT->setNodeColor(x, y, z, ((1-occ)/0.5)*255, (occ/0.5 - 1)*255, 0);
+                } else {
+                    myOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+                }
                 myOT->updateInnerOccupancy();
             }
         }
