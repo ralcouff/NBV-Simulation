@@ -39,6 +39,8 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
     fs["color_p1"] >> color_intrinsics.coeffs[3];
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
+    fs["path_to_python_metrics"] >> pythonMetricsPath;
+    fs["path_to_python_saves"] >> pythonSavesPath;
     fs.release();
 
     // Test parameters

@@ -800,14 +800,14 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
     std::string path_to_abc = share_data->savePath + "/" + share_data->nameOfObject + ".abc";
     std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
     std::string path_to_img_folder = share_data->savePath + "/img2/";
-    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
-    std::string python_script_folder = "Python_blender_API/";
+//    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
+    std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
 
     std::string script_name = python_script_folder + "load_render_abc.py";
     std::string parameters =
             "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
             " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
-    std::string command = python_interpreter + " " + script_name + " " + parameters;
+    std::string command = share_data->pythonSavesPath + " " + script_name + " " + parameters;
     cout << "Generating the image " << iteration << endl;
     system(command.c_str());
 }
@@ -817,7 +817,6 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
     std::string filename = share_data->nameOfObject + "_rescaled";
 
     /* Saving the rescaled cloud with Python */
-    // TODO : Add python variables to the Share Data object
     // TODO : Problem if no mtl given
     std::string path_to_obj = share_data->objectFilePath + ".obj";
     std::string path_to_obj_rescaled = share_data->savePath + '/' + filename + ".obj";
@@ -826,19 +825,20 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
     } else if (unit * scale == 1) {
         cout << "The object doesn't need to be rescaled" << endl;
         std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
+        cout << command << endl;
         system(command.c_str());
         command = "cp " + share_data->objectFilePath + ".mtl " + share_data->savePath + "/" +
                   filename + ".mtl";
         system(command.c_str());
     } else {
         cout << "The object needs to be rescaled" << endl;
-        std::string python_interpreter = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/python_env/bin/python";
-        std::string python_script_folder = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/";
+//        std::string python_interpreter = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/python_env/bin/python";
+        std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
         std::string script_name = python_script_folder + "rescale_obj.py";
         std::string parameters =
                 "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
                 to_string(scale) + " -s " + path_to_obj_rescaled;
-        std::string command = python_interpreter + " " + script_name + " " + parameters;
+        std::string command = share_data->pythonSavesPath + " " + script_name + " " + parameters;
         system(command.c_str());
     }
 }
@@ -901,10 +901,10 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
     share_data->GT_sample->getMetricMax(x_max_gt, y_max_gt, z_max_gt);
     share_data->GT_sample->getMetricMin(x_min_gt, y_min_gt, z_min_gt);
 
-    cout << x_max_octo << ", " << y_max_octo << ", " << z_max_octo << endl;
-    cout << x_min_octo << ", " << y_min_octo << ", " << z_min_octo << endl;
-    cout << x_max_gt << ", " << y_max_gt << ", " << z_max_gt << endl;
-    cout << x_min_gt << ", " << y_min_gt << ", " << z_min_gt << endl;
+//    cout << x_max_octo << ", " << y_max_octo << ", " << z_max_octo << endl;
+//    cout << x_min_octo << ", " << y_min_octo << ", " << z_min_octo << endl;
+//    cout << x_max_gt << ", " << y_max_gt << ", " << z_max_gt << endl;
+//    cout << x_min_gt << ", " << y_min_gt << ", " << z_min_gt << endl;
 
     for (double x = std::min(x_min_gt, x_min_octo) + share_data->octomap_resolution / 2;
          x <= std::max(x_max_gt, x_max_octo); x += share_data->octomap_resolution) {
