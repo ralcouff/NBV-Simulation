@@ -220,7 +220,7 @@ public:
      * @param cd The path to save the point cloud
      * @param name The name of the point cloud to save
      */
-    void save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const std::string &cd,
+    void save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud,
                             const std::string &name) const;
 
     /**

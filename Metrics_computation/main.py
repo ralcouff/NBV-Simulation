@@ -78,6 +78,7 @@ def ComputeMetrics2(filename, save_folder, n_neighbors):
     faces = ms.current_mesh().face_matrix()
 
     mesh = ms.current_mesh()
+    ms.apply_filter('meshing_remove_duplicate_vertices')
 
     # Computing normals
     # ms.apply_filter('compute_normals_for_point_sets')
@@ -103,10 +104,10 @@ def ComputeMetrics2(filename, save_folder, n_neighbors):
 
     print(f" Time elapsed: {int_met.ctime}")
 
-    if not os.path.exists(os.path.join(save_folder, 'test')):
-        os.makedirs(os.path.join(save_folder, 'test'))
+    if not os.path.exists(os.path.join(save_folder)):
+        os.makedirs(os.path.join(save_folder))
 
-    int_met.save(output_path=os.path.join(save_folder, 'test'))
+    int_met.save(output_path=os.path.join(save_folder))
 
 
 if __name__ == "__main__":

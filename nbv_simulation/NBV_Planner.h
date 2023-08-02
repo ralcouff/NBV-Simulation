@@ -147,6 +147,9 @@ double compute_completeness(Share_Data *share_data);
  */
 void compare_octomaps(Share_Data *share_data, int iterations);
 
+
+void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors);
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

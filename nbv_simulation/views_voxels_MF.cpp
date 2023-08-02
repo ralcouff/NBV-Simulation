@@ -30,6 +30,8 @@ views_voxels_MF::views_voxels_MF(int _nx, View_Space *_view_space, Views_Informa
                                                     views_information,
                                                     voxel_information,
                                                     share_data);
+//        adjacency_list_thread_process(i, &nz, nx, nx + ny, voxel_id_map, bipartite_list, view_space, views_information,
+//                                      voxel_information, share_data);
     }
     for (int i = 0; i < views_information->ray_num; i++) {
         (*adjacency_list_process[i]).join();
@@ -69,7 +71,7 @@ void views_voxels_MF::solve() {
 }
 
 vector<int> views_voxels_MF::get_view_id_set() const {
-    return view_id_set;;
+    return view_id_set;
 }
 
 void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int voxel_index_shift,
@@ -80,11 +82,11 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
     // Which viewpoints the ray is seen by, added to the diagram
     vector<int> views_id = (*views_information->rays_to_views_map)[ray_id];
     for (int &i: views_id)
-        (*bipartite_list)[ray_id + ray_index_shift].push_back(make_pair(i, 0.0));
+        (*bipartite_list)[ray_id + ray_index_shift].emplace_back(i, 0.0);
     // Retain only voxels of interest
     double visible = 1.0;
-    auto first = views_information->rays_info[ray_id]->ray->start;
-    auto last = views_information->rays_info[ray_id]->ray->stop;
+//    auto first = views_information->rays_info[ray_id]->ray->start;
+//    auto last = views_information->rays_info[ray_id]->ray->stop;
     for (auto it = views_information->rays_info[ray_id]->ray->start;
          it != views_information->rays_info[ray_id]->ray->stop;
          ++it) {
@@ -118,7 +120,7 @@ void adjacency_list_thread_process(int ray_id, int *nz, int ray_index_shift, int
             // For each viewpoint, count the id and value of the voxel
             for (int i = 0; i < views_id.size(); i++) {
                 (*voxel_information->mutex_voxels[voxel_id - voxel_index_shift]).lock();
-                (*bipartite_list)[voxel_id].push_back(make_pair(ray_id + ray_index_shift, information_gain));
+                (*bipartite_list)[voxel_id].emplace_back(ray_id + ray_index_shift, information_gain);
                 (*voxel_information->mutex_voxels[voxel_id - voxel_index_shift]).unlock();
             }
         }

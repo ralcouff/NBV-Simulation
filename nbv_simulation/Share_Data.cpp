@@ -189,20 +189,20 @@ Share_Data::save_octomap_log_to_disk(int voxels, double entropy, const std::stri
     fout << voxels << " " << entropy << endl;
 }
 
-void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const std::string &cd,
+void Share_Data::save_cloud_to_disk(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud,
                                     const std::string &name) const {
     std::stringstream cloud_stream, path_stream;
     std::string cloud_file, path;
-    path_stream << savePath << cd;
+    path_stream << savePath;
     path_stream >> path;
-    access_directory(path);
-    cloud_stream << savePath << cd << "/" << name << ".pcd";
+    access_directory(path + "/clouds/");
+    cloud_stream << savePath << "/clouds/" << name << ".pcd";
     cloud_stream >> cloud_file;
     pcl::io::savePCDFile<pcl::PointXYZRGB>(cloud_file, *cloud);
-    pcl::io::savePLYFile<pcl::PointXYZRGB>(savePath + cd + "/" + name + ".ply", *cloud);
+    pcl::io::savePLYFile<pcl::PointXYZRGB>(savePath + "/clouds/" + name + ".ply", *cloud);
     pcl::PolygonMesh mesh_obj;
     pcl::toPCLPointCloud2(*cloud, mesh_obj.cloud);
-    pcl::io::saveOBJFile(savePath + cd + "/" + name + ".obj", mesh_obj);
+    pcl::io::saveOBJFile(savePath + "/clouds/" + name + ".obj", mesh_obj);
 }
 
 short get_method(int _n_test) {

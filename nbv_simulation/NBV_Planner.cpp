@@ -602,20 +602,22 @@ string NBV_Planner::out_status() {
 void save_cloud_mid_thread_process(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud, const string &name,
                                    Share_Data *share_data) {
     /* FIXME : Check if the cloud is well saved. */
-    share_data->save_cloud_to_disk(cloud, "/clouds", name);
+    share_data->save_cloud_to_disk(cloud, name);
     cout << name << " saved" << endl;
 }
 
 void create_view_space(View_Space **now_view_space, View *now_best_view, Share_Data *share_data, int iterations) {
-    // Calculating keyframe camera poses
-    share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();;
-    // Handling view space
-    (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
     // Save the results of intermediate iterations
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_mid(new pcl::PointCloud<pcl::PointXYZRGB>);
     *cloud_mid = *share_data->cloud_final;
-    thread save_mid(save_cloud_mid_thread_process, cloud_mid, "pointcloud" + to_string(iterations), share_data);
-    save_mid.detach();
+    save_cloud_mid_thread_process(cloud_mid, "pointcloud" + to_string(iterations), share_data);
+//    thread save_mid(save_cloud_mid_thread_process, cloud_mid, "pointcloud" + to_string(iterations), share_data);
+//    save_mid.detach();
+    // Calculating keyframe camera poses
+    share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+    compute_quality(share_data, share_data->savePath + "/clouds/pointcloud" + to_string(iterations) + ".obj", 30);
+    // Handling view space
+    (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
     // Update flag bit
     share_data->now_view_space_processed = true;
 }
@@ -1077,6 +1079,17 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 //    cout << "out size: " << out.size() << endl;
 
 }
+
+void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors) {
+    cout << "Computing the quality of the partial point cloud" << endl;
+    std::string python_script = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Metrics_computation/main.py";
+    std::string saveFolder = share_data->savePath + "/metrics/";
+    std::string parameters = pathToCloud + " " + saveFolder + " " + to_string(neighbors);
+    std::string command = share_data->pythonMetricsPath + " -W ignore " + python_script + " " + parameters;
+    system(command.c_str());
+    cout << "Finished computing the quality of the partial point cloud" << endl;
+}
+
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {
     // pcl display point cloud

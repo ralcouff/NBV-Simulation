@@ -207,9 +207,9 @@ class IntrinsicMetrics:
         :return:
         """
         filename = os.path.join(output_path,
-                                f"{metric}_{self.obj_name}.obj")
+                                f"{self.obj_name}_{metric}.obj")
         qlt_filename = os.path.join(output_path,
-                                    f"{metric}_{self.obj_name}.qlt")
+                                    f"{self.obj_name}_{metric}.qlt")
         if not os.path.exists(os.path.dirname(output_path)):
             try:
                 os.makedirs(os.path.dirname(output_path))

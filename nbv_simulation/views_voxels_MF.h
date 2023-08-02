@@ -16,7 +16,7 @@
  */
 class views_voxels_MF {
 public:
-    /* Number of points on three sides, number of viewpoints nx, number of rays ny,number of voxels nz */
+    /* Number of points on three sides, number of viewpoints nx, number of rays ny, number of voxels nz */
     int nx, ny, nz;
     // Adjacency table
     std::vector<std::vector<std::pair<int, double>>> *bipartite_list;
