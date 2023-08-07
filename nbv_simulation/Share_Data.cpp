@@ -41,8 +41,7 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
     fs["depth_scale"] >> depth_scale;
     fs["path_to_nbv-blender-api"] >> blenderAPIPath;
     fs["path_to_python_env"] >> pythonPath;
-//    fs["path_to_python_metrics"] >> pythonMetricsPath;
-//    fs["path_to_python_saves"] >> pythonSavesPath;
+    fs["path_to_quality-estimator"] >> qualityAPIPath;
     fs.release();
 
     // Test parameters

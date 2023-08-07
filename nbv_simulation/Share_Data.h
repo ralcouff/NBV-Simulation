@@ -75,6 +75,7 @@ public:
     std::string qualityFilePath;
     std::string savePath;
     std::string blenderAPIPath;
+    std::string qualityAPIPath;
     std::string pythonPath;
 
     // Point cloud data

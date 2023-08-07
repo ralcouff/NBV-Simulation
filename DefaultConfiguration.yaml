@@ -31,6 +31,5 @@ color_p2: 0.
 depth_scale: 1.0000000474974513e-03
 
 path_to_nbv-blender-api: "../nbv-blender-api/"
+path_to_quality-estimator: "../quality_estimator"
 path_to_python_env: "../.venv/bin/python3"
-#path_to_python_metrics: "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Metrics_computation/.venv/bin/python"
-#path_to_python_saves: "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/.venv/bin/python3"
