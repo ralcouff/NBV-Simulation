@@ -153,12 +153,12 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Convert and save a version of the rescaled model */
 
     /* Add the initial PC to the sfm_data pipeline. */
-    float index = 0;
-    for (auto &pt: share_data->cloud_ground_truth->points) {
-        share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
-                Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
-        index++;
-    }
+//    float index = 0;
+//    for (auto &pt: share_data->cloud_ground_truth->points) {
+//        share_data->sfm_data.getLandmarks().emplace(index, aliceVision::sfmData::Landmark(
+//                Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z), aliceVision::feature::EImageDescriberType::SIFT));
+//        index++;
+//    }
     /* Convert and save a version of the rescaled model */
     save_rescaled(scale, unit, share_data);
 //    pcl::PointCloud<pcl::PointXYZ>::Ptr scaled_cloud (new pcl::PointCloud<pcl::PointXYZ> ());
@@ -803,13 +803,13 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
     std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
     std::string path_to_img_folder = share_data->savePath + "/img2/";
 //    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
-    std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
+//    std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
 
-    std::string script_name = python_script_folder + "load_render_abc.py";
+    std::string script_name = share_data->blenderAPIPath + "load_render_abc.py";
     std::string parameters =
             "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
             " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
-    std::string command = share_data->pythonSavesPath + " " + script_name + " " + parameters;
+    std::string command = share_data->pythonPath + " " + script_name + " " + parameters;
     cout << "Generating the image " << iteration << endl;
     system(command.c_str());
 }
@@ -835,12 +835,12 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
     } else {
         cout << "The object needs to be rescaled" << endl;
 //        std::string python_interpreter = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/python_env/bin/python";
-        std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
-        std::string script_name = python_script_folder + "rescale_obj.py";
+//        std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
+        std::string script_name = share_data->blenderAPIPath + "rescale_obj.py";
         std::string parameters =
                 "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
                 to_string(scale) + " -s " + path_to_obj_rescaled;
-        std::string command = share_data->pythonSavesPath + " " + script_name + " " + parameters;
+        std::string command = share_data->pythonPath + " " + script_name + " " + parameters;
         system(command.c_str());
     }
 }
@@ -1085,7 +1085,7 @@ void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int
     std::string python_script = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Metrics_computation/main.py";
     std::string saveFolder = share_data->savePath + "/metrics/";
     std::string parameters = pathToCloud + " " + saveFolder + " " + to_string(neighbors);
-    std::string command = share_data->pythonMetricsPath + " -W ignore " + python_script + " " + parameters;
+    std::string command = share_data->pythonPath + " -W ignore " + python_script + " " + parameters;
     system(command.c_str());
     cout << "Finished computing the quality of the partial point cloud" << endl;
 }

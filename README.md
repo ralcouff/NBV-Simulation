@@ -1,3 +1,27 @@
+# NBV based on quality
+This is a NBV Simulation system for comparative experiments.
+
+It is largely inspired by the NBV-Simulation system : https://github.com/psc0628/NBV-Simulation
+
+I adapted the previous code in order to integrate geometric quality of the 3D reconstructed object.
+
+## Requirements & Dependencies
+### Python Submodules
+### C++ NBV-Simulator
+## Installation
+## Usage
+### Parameters
+### Command Line
+### Example
+### Output
+## Limitations
+## Acknowledgements
+## Questions
+
+
+
+
+
 # NBV-Simulation
 This is a nbv simulation system for comparative experiment, supporting our paper "A Global Max-flow-based Multi-resolution Next-best-view Method for Reconstruction of 3D Unknown Objects" (doi: 10.1109/LRA.2021.3132430). Armadillo_example_Ours directory contains an result example of our code with sampled viewsapce (the file 3d_models/Armadillo.txt).
 ## Installion

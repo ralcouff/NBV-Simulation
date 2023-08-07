@@ -74,8 +74,8 @@ public:
     std::string viewSpaceFilePath;
     std::string qualityFilePath;
     std::string savePath;
-    std::string pythonMetricsPath;
-    std::string pythonSavesPath;
+    std::string blenderAPIPath;
+    std::string pythonPath;
 
     // Point cloud data
     std::atomic<int> valid_clouds{};

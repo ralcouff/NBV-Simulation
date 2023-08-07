@@ -1,0 +1,6 @@
+[submodule "nbv-blender-api"]
+	path = nbv-blender-api
+	url = git@github.com:ralcouff/nbv-blender-api.git
+[submodule "quality_estimator"]
+	path = quality_estimator
+	url = git@github.com:ralcouff/quality_estimator.git

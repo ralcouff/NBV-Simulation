@@ -39,8 +39,10 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
     fs["color_p1"] >> color_intrinsics.coeffs[3];
     fs["color_p2"] >> color_intrinsics.coeffs[4];
     fs["depth_scale"] >> depth_scale;
-    fs["path_to_python_metrics"] >> pythonMetricsPath;
-    fs["path_to_python_saves"] >> pythonSavesPath;
+    fs["path_to_nbv-blender-api"] >> blenderAPIPath;
+    fs["path_to_python_env"] >> pythonPath;
+//    fs["path_to_python_metrics"] >> pythonMetricsPath;
+//    fs["path_to_python_saves"] >> pythonSavesPath;
     fs.release();
 
     // Test parameters
@@ -94,12 +96,12 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
         }
     }
     /* Add the initial PC to the sfm_data pipeline. */
-    float i = 0;
-    for (auto &pt: cloud_pcd->points) {
-        sfm_data.getLandmarks().emplace(i, aliceVision::sfmData::Landmark(Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z),
-                                                                          aliceVision::feature::EImageDescriberType::SIFT));
-        i++;
-    }
+//    float i = 0;
+//    for (auto &pt: cloud_pcd->points) {
+//        sfm_data.getLandmarks().emplace(i, aliceVision::sfmData::Landmark(Eigen::Matrix<double, 3, 1>(pt.x, pt.y, pt.z),
+//                                                                          aliceVision::feature::EImageDescriberType::SIFT));
+//        i++;
+//    }
     aliceVision::sfmDataIO::saveJSON(sfm_data, savePath + "/scene.sfm", aliceVision::sfmDataIO::ESfMData::ALL);
     cout << "The sfmData file has been saved" << endl;
 
