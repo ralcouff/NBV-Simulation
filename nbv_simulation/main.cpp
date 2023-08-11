@@ -62,8 +62,9 @@ int main(int argc, char **argv) {
     std::string model_qlt_path = std::string(argv[3]);
     short method = get_method(std::stoi(argv[4]));
     int n_iter = std::stoi(argv[5]);
-    std::string save_folder = std::string(argv[6]);
-    std::string string_test_time = std::string(argv[7]);
+    int reconstruction_method = std::stoi(argv[6]);
+    std::string save_folder = std::string(argv[7]);
+    std::string string_test_time = std::string(argv[8]);
 
     cout << "---***--- Launching the NBV algorithm ---***--- " << endl;
     cout << "Configuration file: " << config_file << endl;
