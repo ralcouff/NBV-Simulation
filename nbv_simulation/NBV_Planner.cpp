@@ -1082,7 +1082,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 
 void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors) {
     cout << "Computing the quality of the partial point cloud" << endl;
-    std::string python_script = share_data->qualityAPIPath + "/main.py";
+    std::string python_script = share_data->qualityAPIPath + "main.py";
     std::string saveFolder = share_data->savePath + "/metrics/";
     std::string parameters = pathToCloud + " " + saveFolder + " " + to_string(neighbors);
     std::string command = share_data->pythonPath + " -W ignore " + python_script + " " + parameters;
