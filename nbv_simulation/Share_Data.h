@@ -127,6 +127,7 @@ public:
     double sum_local_information{}; // The sum of all local information
     double sum_global_information{}; // The sum of all global information
     double sum_robot_cost{}; // The sum of robot cost
+    int reconstructionMethod; // The reconstruction method used (0 for embedded LIDAR, 1 for external)
     std::vector<View> best_views{}; // A list containing the successive best views
     bool show{}; // To show the interface or not
     bool move_wait{}; // User input to say if we continue between each iteration or not
@@ -169,10 +170,11 @@ public:
      * @param _model_qlt_path
      * @param _method
      * @param _n_iter
+     * @param _rec_method
      * @param _save_folder
      * @param _string_test_time
      */
-    explicit Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path, short _method, int _n_iter, const std::string& _save_folder, const std::string& _string_test_time);
+    explicit Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path, short _method, int _n_iter, int _rec_method, const std::string& _save_folder, const std::string& _string_test_time);
 
 
     /**

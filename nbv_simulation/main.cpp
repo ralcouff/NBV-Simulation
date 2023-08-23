@@ -72,11 +72,12 @@ int main(int argc, char **argv) {
     cout << "Model Quality: " << model_qlt_path << endl;
     cout << "Method: " << method << endl;
     cout << "Reconstruction iterations: " << n_iter << endl;
+    cout << "Reconstruction method: " << reconstruction_method << endl;
     cout << "Save folder: " << save_folder << endl;
     cout << "Start time: " << string_test_time << endl;
 
     // Data area initialisation
-    share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, save_folder, string_test_time);
+    share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, reconstruction_method, save_folder, string_test_time);
     // Console read command threads
     thread cmd(get_command);
     // NBV system run threads

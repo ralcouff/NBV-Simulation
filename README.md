@@ -31,7 +31,7 @@ The NBV simulator has been written in C++ and needs various dependencies:
 - **The number of reconstruction iterations**: he number of iteration of the algorithm to use to reconstruct a first
   partial 3D model. This reconstruction is using the method 0 (default).
 - **The reconstruction method to use**: an integer corresponding to the reconstruction method to use (default i.e.
-  perfect LiDAR or meshroom).
+  embedded perfect LiDAR or external reconstruction).
 - **Path to the save folder**: the folder that will contain the results of the reconstruction.
 - **A string for a unique folder name**: unused
 

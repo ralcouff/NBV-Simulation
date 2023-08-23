@@ -801,14 +801,17 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
     // TODO : Make global variables in Share Data Object
     std::string path_to_abc = share_data->savePath + "/" + share_data->nameOfObject + ".abc";
     std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
-    std::string path_to_img_folder = share_data->savePath + "/img2/";
-//    std::string python_interpreter = "/home/alcoufr/dev/NBV-Simulation/Python_blender_API/python_env/bin/python";
-//    std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
+    std::string path_to_img_folder = share_data->savePath + "/img/";
 
     std::string script_name = share_data->blenderAPIPath + "load_render_abc.py";
     std::string parameters =
             "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
-            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
+            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".jpg";
+//    If the object comes with texture, read it !
+    struct stat buffer{};
+    std::string texture_file = share_data->objectFolderPath + share_data->nameOfObject + ".csv";
+    if (stat(texture_file.c_str(), &buffer) == 0)
+        parameters = parameters + " -f_tex " + texture_file;
     std::string command = share_data->pythonPath + " " + script_name + " " + parameters;
     cout << "Generating the image " << iteration << endl;
     system(command.c_str());
@@ -819,29 +822,29 @@ void save_rescaled(double scale, double unit, Share_Data *share_data) {
     std::string filename = share_data->nameOfObject + "_rescaled";
 
     /* Saving the rescaled cloud with Python */
-    // TODO : Problem if no mtl given
     std::string path_to_obj = share_data->objectFilePath + ".obj";
     std::string path_to_obj_rescaled = share_data->savePath + '/' + filename + ".obj";
     if (std::filesystem::exists(path_to_obj_rescaled)) {
         cout << "The object has already been rescaled" << endl;
-    } else if (unit * scale == 1) {
-        cout << "The object doesn't need to be rescaled" << endl;
-        std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
-        cout << command << endl;
-        system(command.c_str());
-        command = "cp " + share_data->objectFilePath + ".mtl " + share_data->savePath + "/" +
-                  filename + ".mtl";
-        system(command.c_str());
-    } else {
-        cout << "The object needs to be rescaled" << endl;
-//        std::string python_interpreter = "/home/alcoufr/dev/NBV-Base/NBV-Simulation_1/Python_blender_API/python_env/bin/python";
-//        std::string python_script_folder = "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/Python_blender_API/";
+    } else  {
+        if (unit * scale == 1) {
+            cout << "The object doesn't need to be rescaled" << endl;
+        } else {
+            cout << "The object needs to be rescaled" << endl;
+        }
         std::string script_name = share_data->blenderAPIPath + "rescale_obj.py";
         std::string parameters =
                 "-f_obj " + path_to_obj + " -u " + to_string(unit) + " -sc " +
                 to_string(scale) + " -s " + path_to_obj_rescaled;
         std::string command = share_data->pythonPath + " " + script_name + " " + parameters;
         system(command.c_str());
+
+//        std::string command = "cp " + path_to_obj + " " + path_to_obj_rescaled;
+//        cout << command << endl;
+//        system(command.c_str());
+//        command = "cp " + share_data->objectFilePath + ".mtl " + share_data->savePath + "/" +
+//                  filename + ".mtl";
+//        system(command.c_str());
     }
 }
 
@@ -973,13 +976,13 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
     saveFile.close();
 
     std::vector<std::list<tuple<float, float, float, float>>> statesList{unknown,
-                                                                  unknown_but_occupied,
-                                                                  occupied_but_unknown,
-                                                                  occupied,
-                                                                  free_but_unknown,
-                                                                  free_but_occupied,
-                                                                  occupiedUnknown_but_unknown,
-                                                                  occupiedUnknown_but_occupied};
+                                                                         unknown_but_occupied,
+                                                                         occupied_but_unknown,
+                                                                         occupied,
+                                                                         free_but_unknown,
+                                                                         free_but_occupied,
+                                                                         occupiedUnknown_but_unknown,
+                                                                         occupiedUnknown_but_occupied};
 
     /* Filling the difference octomaps */
     auto *U = new octomap::ColorOcTree(share_data->octomap_resolution);
@@ -1024,7 +1027,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 //                    cout << occ << endl;
 //                    cout << ((1-occ)/0.5)*255 << endl;
 //                    cout << (occ/0.5 - 1)*255 << endl;
-                    myOT->setNodeColor(x, y, z, ((1-occ)/0.5)*255, (occ/0.5 - 1)*255, 0);
+                    myOT->setNodeColor(x, y, z, ((1 - occ) / 0.5) * 255, (occ / 0.5 - 1) * 255, 0);
                 } else {
                     myOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
                 }
@@ -1080,7 +1083,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 
 }
 
-void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors) {
+void compute_quality(Share_Data *share_data, const std::string &pathToCloud, int neighbors) {
     cout << "Computing the quality of the partial point cloud" << endl;
     std::string python_script = share_data->qualityAPIPath + "main.py";
     std::string saveFolder = share_data->savePath + "/metrics/";

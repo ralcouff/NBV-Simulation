@@ -4,7 +4,8 @@
 
 Share_Data::Share_Data(const std::string &_config_file_path, const std::string &_model_path,
                        const std::string &_model_qlt_path,
-                       short _method, int _n_iter, const std::string &_save_folder,
+                       short _method, int _n_iter, int _rec_method,
+                       const std::string &_save_folder,
                        const std::string &_string_test_time) {
 
     process_cnt = -1;
@@ -49,6 +50,7 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
     method_of_IG = get_method(0);
     string_test_time = _string_test_time;
     reconstructionIterations = _n_iter;
+    reconstructionMethod = _rec_method;
 
     objectFilePath = _model_path;
     objectFolderPath = objectFilePath.substr(0, objectFilePath.find_last_of('/')) + '/';

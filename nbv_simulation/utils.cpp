@@ -229,18 +229,17 @@ inline vector<cv::Point2f> get_convex_on_image(vector<Eigen::Vector4d>& convex_3
     // Projection of the cube vertices to the image coordinate system
     double now_range = 0;
     vector<cv::Point2f> contours;
-    for(int i = 0; i < convex_3d.size(); i++)
+    for(const auto & i : convex_3d)
     {
-        Eigen::Vector4d vertex = now_camera_pose_world.inverse() * convex_3d[i];
+        Eigen::Vector4d vertex = now_camera_pose_world.inverse() * i;
         float point[3] = {static_cast<float>(vertex(0)), static_cast<float>(vertex(1)), static_cast<float>(vertex(2))};
         float pixel[2];
         rs2_project_point_to_pixel(pixel, &color_intrinsics, point);
         contours.emplace_back(pixel[0], pixel[1]);
-        // cout << pixel[0] << " " << pixel[1] << endl;
         // Calculate the distance of the furthest point from the viewpoint
         Eigen::Vector4d view_pos(
                 now_camera_pose_world(0, 3), now_camera_pose_world(1, 3), now_camera_pose_world(2, 3), 1);
-        now_range = max(now_range, (view_pos - convex_3d[i]).norm());
+        now_range = max(now_range, (view_pos - i).norm());
     }
     max_range = min(max_range, now_range);
     // Calculating convex packages
