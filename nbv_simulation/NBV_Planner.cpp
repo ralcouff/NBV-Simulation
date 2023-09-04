@@ -451,7 +451,6 @@ int NBV_Planner::plan() {
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
-                                // TODO : Give a significant name to the view
                                 std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(share_data->reconstructionIterations + iterations) + ".png";
                                 share_data->sfm_data.getViews().emplace(nb_nbv,
                                                                         std::make_shared<aliceVision::sfmData::View>(img_path,
