@@ -4,6 +4,9 @@
 #include <boost/thread/thread.hpp>
 #include <octomap/ColorOcTree.h>
 #include <pcl/point_cloud.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/icp_nl.h>
+#include <pcl/registration/incremental_registration.h>
 
 #include "Share_Data.h"
 #include "View.h"
