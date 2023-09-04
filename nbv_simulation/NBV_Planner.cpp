@@ -1108,15 +1108,15 @@ void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view
         v.get_next_camera_pos(share_data->now_camera_pose_world,share_data->object_center_world);
 
         std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(iter) + ".png";
-        auto toto = std::make_shared<aliceVision::sfmData::View>(img_path,
+        auto view = std::make_shared<aliceVision::sfmData::View>(img_path,
                                                                  nb_rec,
                                                                  0,
                                                                  nb_rec,
                                                                  share_data->color_intrinsics.width,
                                                                  share_data->color_intrinsics.height);
-        toto->setFrameId(iter);
+        view->setFrameId(iter);
         share_data->sfm_data.getViews().emplace(nb_rec,
-                                                toto);
+                                                view);
         Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * v.pose.inverse()).eval();
         aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
                 view_pose_world.block<3,3>(0,0).transpose(), view_pose_world.block<3,1>(0,3));
@@ -1137,14 +1137,8 @@ void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view
     aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
                                      share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
                                      aliceVision::sfmDataIO::ESfMData::ALL);
-//    std::string pathToIntermediateSfMData;
-//    aliceVision::sfmData::SfMData interSfm;
-//    cout << "Enter intermediate sfm data" << endl;
-//    std::cin >> pathToIntermediateSfMData;
-//    aliceVision::sfmDataIO::loadJSON(interSfm, pathToIntermediateSfMData, aliceVision::sfmDataIO::ESfMData::ALL);
-//    for (View v : interSfm.getViews())
-
 }
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {
     // pcl display point cloud
     while (!viewer->wasStopped()) {
