@@ -204,7 +204,7 @@ void percept_thread_process(int x,
     cloud->points[x * share_data->color_intrinsics.height + y] = point;
 }
 
-void icp_align_mesh(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_gt,
+[[maybe_unused]] void icp_align_mesh(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_gt,
                     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud) {
     pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB>::Ptr icp;
     icp.reset (new pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB> ());

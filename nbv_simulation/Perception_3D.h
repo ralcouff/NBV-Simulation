@@ -50,7 +50,7 @@ void percept_thread_process(int x,
                             Eigen::Matrix4d *_view_pose_world,
                             Share_Data *share_data);
 
-void icp_align_mesh(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_gt,
+[[maybe_unused]] void icp_align_mesh(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_gt,
                     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud);
 
 #endif //NBV_SIMULATION_PERCEPTION_3D_H
