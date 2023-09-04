@@ -79,11 +79,11 @@ int main(int argc, char **argv) {
     // Data area initialisation
     share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, reconstruction_method, save_folder, string_test_time);
     // Console read command threads
-    thread cmd(get_command);
+//    thread cmd(get_command);
     // NBV system run threads
     thread runner(get_run);
     // Waiting for the thread to finish
-    cmd.join();
+//    cmd.join();
     runner.join();
     cout << "System over." << endl;
     return EXIT_SUCCESS;
