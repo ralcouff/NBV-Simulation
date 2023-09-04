@@ -108,7 +108,6 @@ bool Perception_3D::percept(View *now_best_view) {
     } else {
         // Using and external reconstruction algorithm.
         // Loading the next partial 3D model.
-//        /home/alcoufr/Documents/Papiers/ICRA/MeshroomCache/Texturing/964b894b6a2d51a0decea307b4db0e076fc084df/texturedMesh.obj
         std::string pathTo3DModel;
         bool fileExist = false;
         bool is3DFile = false;
@@ -135,67 +134,12 @@ bool Perception_3D::percept(View *now_best_view) {
                 }
             }
         }
-        // Aligning the Pointcloud to the Original one
-        pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB>::Ptr icp;
-        icp.reset (new pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB> ());
-        icp->setMaximumIterations(100);
-        icp->setMaxCorrespondenceDistance (5);
-        icp->setRANSACOutlierRejectionThreshold (0.2);
-        pcl::registration::IncrementalRegistration<pcl::PointXYZRGB> iicp;
-        iicp.setRegistration (icp);
-
-        pcl::Indices dummyIndices;
-        pcl::removeNaNFromPointCloud(*share_data->cloud_ground_truth, *share_data->cloud_ground_truth, dummyIndices);
-
-        if (!iicp.registerCloud (share_data->cloud_ground_truth))
-        {
-            std::cout << "Registration failed. Resetting transform" << std::endl;
-            iicp.reset ();
-            iicp.registerCloud (share_data->cloud_ground_truth);
-        };
-
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::transformPointCloud(*share_data->cloud_ground_truth, *tmp, iicp.getAbsoluteTransform());
-
-        std::cout << iicp.getAbsoluteTransform () << std::endl;
-        std::string result_filename ("../Banane.pcd");
-
-        result_filename = result_filename.substr (result_filename.rfind ('/') + 1);
-        pcl::io::savePCDFileBinary (result_filename, *tmp);
-        pcl::PolygonMesh mesh_obj;
-        pcl::toPCLPointCloud2(*tmp, mesh_obj.cloud);
-        pcl::io::saveOBJFile("Banane.obj", mesh_obj);
-        std::cout << "saving result to " << result_filename << std::endl;
-
-        pcl::removeNaNFromPointCloud(*cloud, *cloud, dummyIndices);
-
-        if (!iicp.registerCloud (cloud))
-        {
-            std::cout << "Registration failed. Resetting transform" << std::endl;
-            iicp.reset ();
-            iicp.registerCloud (cloud);
-        };
-
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmptwo (new pcl::PointCloud<pcl::PointXYZRGB>);
-        pcl::transformPointCloud(*cloud, *tmptwo, iicp.getAbsoluteTransform());
-
-        std::cout << iicp.getAbsoluteTransform () << std::endl;
-        std::string result_filename_two ("../Pomme.pcd");
-
-        result_filename_two = result_filename_two.substr (result_filename_two.rfind ('/') + 1);
-        pcl::io::savePCDFileBinary (result_filename_two, *tmptwo);
-        pcl::PolygonMesh mesh_obj_two;
-        pcl::toPCLPointCloud2(*tmptwo, mesh_obj_two.cloud);
-        pcl::io::saveOBJFile("Pomme.obj", mesh_obj_two);
-        std::cout << "saving result to " << result_filename_two << std::endl;
-
         // Record the current collection point cloud
         share_data->valid_clouds++;
         share_data->clouds.push_back(cloud);
         // Rotate to the world coordinate system
         *share_data->cloud_final += *cloud;
         cout << "Virtual cloud got in: " << clock() - now_time << " ms." << endl;
-//        cout << valid_point << " points were acquired" << endl;
 
 
 //        std::string pathToQualityFile;
@@ -258,4 +202,60 @@ void percept_thread_process(int x,
         }
     }
     cloud->points[x * share_data->color_intrinsics.height + y] = point;
+}
+
+void icp_align_mesh(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud_gt,
+                    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &cloud) {
+    pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB>::Ptr icp;
+    icp.reset (new pcl::IterativeClosestPoint<pcl::PointXYZRGB,pcl::PointXYZRGB> ());
+    icp->setMaximumIterations(100);
+    icp->setMaxCorrespondenceDistance (5);
+    icp->setRANSACOutlierRejectionThreshold (0.2);
+    pcl::registration::IncrementalRegistration<pcl::PointXYZRGB> iicp;
+    iicp.setRegistration(icp);
+
+    pcl::Indices dummyIndices;
+    pcl::removeNaNFromPointCloud(*cloud_gt, *cloud_gt, dummyIndices);
+
+    if (!iicp.registerCloud (cloud_gt))
+    {
+        std::cout << "Registration failed. Resetting transform" << std::endl;
+        iicp.reset ();
+        iicp.registerCloud (cloud_gt);
+    };
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::transformPointCloud(*cloud_gt, *tmp, iicp.getAbsoluteTransform());
+
+    std::cout << iicp.getAbsoluteTransform () << std::endl;
+    std::string result_filename ("../Banane.pcd");
+
+    result_filename = result_filename.substr (result_filename.rfind ('/') + 1);
+    pcl::io::savePCDFileBinary (result_filename, *tmp);
+    pcl::PolygonMesh mesh_obj;
+    pcl::toPCLPointCloud2(*tmp, mesh_obj.cloud);
+    pcl::io::saveOBJFile("Banane.obj", mesh_obj);
+    std::cout << "saving result to " << result_filename << std::endl;
+
+    pcl::removeNaNFromPointCloud(*cloud, *cloud, dummyIndices);
+
+    if (!iicp.registerCloud (cloud))
+    {
+        std::cout << "Registration failed. Resetting transform" << std::endl;
+        iicp.reset ();
+        iicp.registerCloud (cloud);
+    };
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmptwo (new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::transformPointCloud(*cloud, *tmptwo, iicp.getAbsoluteTransform());
+
+    std::cout << iicp.getAbsoluteTransform () << std::endl;
+    std::string result_filename_two ("../Pomme.pcd");
+
+    result_filename_two = result_filename_two.substr (result_filename_two.rfind ('/') + 1);
+    pcl::io::savePCDFileBinary (result_filename_two, *tmptwo);
+    pcl::PolygonMesh mesh_obj_two;
+    pcl::toPCLPointCloud2(*tmptwo, mesh_obj_two.cloud);
+    pcl::io::saveOBJFile("Pomme.obj", mesh_obj_two);
+    std::cout << "saving result to " << result_filename_two << std::endl;
 }
