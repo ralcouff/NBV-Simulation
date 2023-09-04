@@ -150,6 +150,8 @@ void compare_octomaps(Share_Data *share_data, int iterations);
 
 void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors);
 
+void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view_space, int n_rec_views);
+
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 
 #endif //NBV_SIMULATION_NBV_PLANNER_H

@@ -196,6 +196,8 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
 
+    generate_initial_rec_model(share_data, now_view_space, share_data->reconstructionIterations);
+
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
     now_best_view = new View(now_view_space->views[0]);
@@ -449,9 +451,10 @@ int NBV_Planner::plan() {
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
-                                // TODO : Give a significative name to the view
+                                // TODO : Give a significant name to the view
+                                std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(share_data->reconstructionIterations + iterations) + ".png";
                                 share_data->sfm_data.getViews().emplace(nb_nbv,
-                                                                        std::make_shared<aliceVision::sfmData::View>("",
+                                                                        std::make_shared<aliceVision::sfmData::View>(img_path,
                                                                                                                      nb_nbv,
                                                                                                                      0,
                                                                                                                      nb_nbv,
@@ -554,7 +557,7 @@ int NBV_Planner::plan() {
                 aliceVision::sfmDataIO::Save(share_data->sfm_data,
                                              share_data->savePath + '/' + share_data->nameOfObject + ".abc",
                                              aliceVision::sfmDataIO::ESfMData::ALL);
-                generate_images(iterations, false, share_data);
+                generate_images(share_data->reconstructionIterations + iterations, false, share_data);
                 status = WaitMoving;
             }
             break;
@@ -800,13 +803,14 @@ void visualize_octomap(pcl::visualization::PCLVisualizer::Ptr &visualizer, const
 void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
     // TODO : Make global variables in Share Data Object
     std::string path_to_abc = share_data->savePath + "/" + share_data->nameOfObject + ".abc";
+    std::string path_to_sfm = share_data->savePath + "/" + share_data->nameOfObject + ".sfm";
     std::string path_to_obj_rescaled = share_data->savePath + "/" + share_data->nameOfObject + "_rescaled" + ".obj";
     std::string path_to_img_folder = share_data->savePath + "/img/";
 
     std::string script_name = share_data->blenderAPIPath + "load_render_abc.py";
     std::string parameters =
             "-f_abc " + path_to_abc + " -f_obj " + path_to_obj_rescaled + " -t " + to_string(save_mode ? 1 : 0) +
-            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".jpg";
+            " -s " + path_to_img_folder + share_data->nameOfObject + "_" + to_string(iteration) + ".png";
 //    If the object comes with texture, read it !
     struct stat buffer{};
     std::string texture_file = share_data->objectFolderPath + share_data->nameOfObject + ".csv";
@@ -1093,7 +1097,55 @@ void compute_quality(Share_Data *share_data, const std::string &pathToCloud, int
     cout << "Finished computing the quality of the partial point cloud" << endl;
 }
 
+void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view_space, int n_rec_views) {
+    vector<View> out;
+    std::sample(current_view_space->views.begin(), current_view_space->views.end(), std::back_inserter(out), n_rec_views, std::mt19937 {std::random_device{}()});
+    std::cout << "There were "<< out.size() << " views randomly selected" << endl;
+    int nb_rec = 1560;
+    int iter = 0;
+    for (View v : out) {
+        cout << "Id : " << v.id << endl;
+        cout << "Position : " << v.init_pos << endl;
+        v.get_next_camera_pos(share_data->now_camera_pose_world,share_data->object_center_world);
 
+        std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(iter) + ".png";
+        auto toto = std::make_shared<aliceVision::sfmData::View>(img_path,
+                                                                 nb_rec,
+                                                                 0,
+                                                                 nb_rec,
+                                                                 share_data->color_intrinsics.width,
+                                                                 share_data->color_intrinsics.height);
+        toto->setFrameId(iter);
+        share_data->sfm_data.getViews().emplace(nb_rec,
+                                                toto);
+        Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * v.pose.inverse()).eval();
+        aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
+                view_pose_world.block<3,3>(0,0).transpose(), view_pose_world.block<3,1>(0,3));
+        share_data->sfm_data.getPoses().emplace(nb_rec,
+                                                aliceVision::sfmData::CameraPose(transform,
+                                                                                 false));
+        cout << "Pose : " << v.pose << endl;
+        aliceVision::sfmDataIO::Save(share_data->sfm_data,
+                                         share_data->savePath + '/' + share_data->nameOfObject + ".abc",
+                                         aliceVision::sfmDataIO::ESfMData::ALL);
+        aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+                                     share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+                                     aliceVision::sfmDataIO::ESfMData::ALL);
+        generate_images(iter, 0 ,share_data);
+        nb_rec++;
+        iter++;
+    }
+    aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+                                     share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+                                     aliceVision::sfmDataIO::ESfMData::ALL);
+//    std::string pathToIntermediateSfMData;
+//    aliceVision::sfmData::SfMData interSfm;
+//    cout << "Enter intermediate sfm data" << endl;
+//    std::cin >> pathToIntermediateSfMData;
+//    aliceVision::sfmDataIO::loadJSON(interSfm, pathToIntermediateSfMData, aliceVision::sfmDataIO::ESfMData::ALL);
+//    for (View v : interSfm.getViews())
+
+}
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {
     // pcl display point cloud
     while (!viewer->wasStopped()) {
