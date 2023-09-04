@@ -144,21 +144,26 @@ Share_Data::~Share_Data() = default;
     return elapsed_time;
 }
 
-/**
- * FIXME : Simplify this function
- */
 void Share_Data::access_directory(const std::string &cd) {
-    std::string temp;
-    for (char i: cd)
-        if (i == '/') {
-            if (access(temp.c_str(), 0) != 0)
-                fs::create_directory(temp);
-            temp += i;
-        } else
-            temp += i;
-    if (access(temp.c_str(), 0) != 0)
-        fs::create_directory(temp);
+    boost::filesystem::path dir(cd);
+    if (boost::filesystem::create_directory(dir)) {
+        std::cerr << "Directory Created: " << cd << std::endl;
+    } else {
+        std::cerr << "The Directory: " << cd << " hasn't been created" << std::endl;
+    }
 }
+//void Share_Data::access_directory(const std::string &cd) {
+//    std::string temp;
+//    for (char i: cd)
+//        if (i == '/') {
+//            if (access(temp.c_str(), 0) != 0)
+//                fs::create_directory(temp);
+//            temp += i;
+//        } else
+//            temp += i;
+//    if (access(temp.c_str(), 0) != 0)
+//        fs::create_directory(temp);
+//}
 
 [[maybe_unused]] void
 Share_Data::save_posetrans_to_disk(Eigen::Matrix4d &T, const std::string &cd, const std::string &name,
