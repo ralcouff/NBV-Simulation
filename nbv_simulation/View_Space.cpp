@@ -81,11 +81,11 @@ View_Space::View_Space(int _id,
 
     /* Filling the octo_model with empty nodes based on the BBOX of the model. */
     auto now_time = clock();
-    for (double x = object_center_world(0) - predicted_size; x <= object_center_world(0) + predicted_size;
+    for (double x = object_center_world(0) - predicted_size + octomap_resolution; x <= object_center_world(0) + predicted_size;
          x += octomap_resolution)
-        for (double y = object_center_world(1) - predicted_size; y <= object_center_world(1) + predicted_size;
+        for (double y = object_center_world(1) - predicted_size + octomap_resolution; y <= object_center_world(1) + predicted_size;
              y += octomap_resolution)
-            for (double z = object_center_world(2) - predicted_size; z <= object_center_world(2) + predicted_size;
+            for (double z = object_center_world(2) - predicted_size + octomap_resolution; z <= object_center_world(2) + predicted_size;
                  z += octomap_resolution)
                 octo_model->setNodeValue(x, y, z, (float) 0, true);
     octo_model->updateInnerOccupancy();
@@ -163,12 +163,12 @@ void View_Space::get_view_space(vector<Eigen::Vector3d> &points) {
     viewnum++;
     while (viewnum != num_of_views) {
         // 3x BBX for one sample area
-        double x = get_random_coordinate(object_center_world(0) - predicted_size * 4,
-                                         object_center_world(0) + predicted_size * 4);
-        double y = get_random_coordinate(object_center_world(1) - predicted_size * 4,
-                                         object_center_world(1) + predicted_size * 4);
-        double z = get_random_coordinate(object_center_world(2) - predicted_size * 4,
-                                         object_center_world(2) + predicted_size * 4);
+        double x = get_random_coordinate(object_center_world(0) - predicted_size * 3,
+                                         object_center_world(0) + predicted_size * 3);
+        double y = get_random_coordinate(object_center_world(1) - predicted_size * 3,
+                                         object_center_world(1) + predicted_size * 3);
+        double z = get_random_coordinate(object_center_world(2) - predicted_size * 3,
+                                         object_center_world(2) + predicted_size * 3);
         View view(Eigen::Vector3d(x, y, z));
         view.id = viewnum;
         // cout << x<<" " << y << " " << z << endl;
@@ -217,9 +217,9 @@ bool View_Space::valid_view(View &view) {
     double z = view.init_pos(2);
     bool valid = true;
     // Object bbx does not create a point of view within 2 times expansion
-    if (x > object_center_world(0) - 2 * predicted_size && x < object_center_world(0) + 2 * predicted_size &&
-        y > object_center_world(1) - 2 * predicted_size && y < object_center_world(1) + 2 * predicted_size &&
-        z > object_center_world(2) - 2 * predicted_size && z < object_center_world(2) + 2 * predicted_size)
+    if (x > object_center_world(0) - 1.5 * predicted_size && x < object_center_world(0) + 1.5 * predicted_size &&
+        y > object_center_world(1) - 1.5 * predicted_size && y < object_center_world(1) + 1.5 * predicted_size &&
+        z > object_center_world(2) - 1.5 * predicted_size && z < object_center_world(2) + 1.5 * predicted_size)
         valid = false;
     // In a ball of radius 4 times the size of BBX
     if (pow2(x - object_center_world(0)) + pow2(y - object_center_world(1)) + pow2(z - object_center_world(2)) -
@@ -239,7 +239,8 @@ bool View_Space::valid_view(View &view) {
 void View_Space::update(int _id,
                         Share_Data *_share_data,
                         pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr& update_cloud) {
+                        const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud,
+                        std::string &path_to_quality) {
     id = _id;
     share_data = _share_data;
 
@@ -266,7 +267,8 @@ void View_Space::update(int _id,
     }
     octo_model->insertPointCloud(
             cloud_octo,
-            octomap::point3d((float) now_camera_pose_world(0, 3), (float) now_camera_pose_world(1, 3), (float) now_camera_pose_world(2, 3)),
+            octomap::point3d((float) now_camera_pose_world(0, 3), (float) now_camera_pose_world(1, 3),
+                             (float) now_camera_pose_world(2, 3)),
             -1,
             true,
             false);
@@ -276,37 +278,67 @@ void View_Space::update(int _id,
     octo_model->updateInnerOccupancy();
 
     /* Updating the quality of each voxel */
-    std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash> key_seen{};
-    for (auto p: update_cloud->points) {
-        octomap::OcTreeKey key;
-        octomap::OcTreeKey gt_key;
-        bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
-        bool key_have_gt = share_data->ground_truth_model->coordToKeyChecked(p.x, p.y, p.z, gt_key);
-        if (key_have) {
-            if (key_seen.find(key) == key_seen.end()) {
-                if (key_have_gt) {
-                    if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
-                        (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
-                    } else {
-                        if ((*share_data->gt_quality_weight)[gt_key] == 1) {
-                            (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
-                                                                          (*share_data->quality_weight)[key]);
+    if (share_data->reconstructionMethod == 0) {
+        std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash> key_seen{};
+        for (auto p: update_cloud->points) {
+            octomap::OcTreeKey key;
+            octomap::OcTreeKey gt_key;
+            bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
+            bool key_have_gt = share_data->ground_truth_model->coordToKeyChecked(p.x, p.y, p.z, gt_key);
+            if (key_have) {
+                if (key_seen.find(key) == key_seen.end()) {
+                    if (key_have_gt) {
+                        if ((*share_data->quality_weight).find(key) == (*share_data->quality_weight).end()) {
+                            (*share_data->quality_weight)[key] = (*share_data->gt_quality_weight)[gt_key];
                         } else {
-                            (*share_data->quality_weight)[key] = std::min(
-                                    pow((*share_data->quality_weight)[key], 0.9),
-                                    1.0);
+                            if ((*share_data->gt_quality_weight)[gt_key] == 1) {
+                                (*share_data->quality_weight)[key] = std::min((*share_data->gt_quality_weight)[gt_key],
+                                                                              (*share_data->quality_weight)[key]);
+                            } else {
+                                (*share_data->quality_weight)[key] = std::min(
+                                        pow((*share_data->quality_weight)[key], 0.9),
+                                        1.0);
+                            }
                         }
                     }
+                    key_seen[key] = 1;
+                } else {
+                    key_seen[key] += 1;
                 }
-                key_seen[key] = 1;
-            } else {
-                key_seen[key] += 1;
+            }
+            if ((*share_data->quality_weight)[key] == 1)
+                octo_model->integrateNodeColor(key, 0, 0, 0);
+            else
+                octo_model->integrateNodeColor(key, 0, (int) (*share_data->quality_weight)[key] * 255, 0);
+        }
+    } else if (share_data->reconstructionMethod == 1) {
+        if (share_data->method_of_IG != OursIG) {
+            while (!std::filesystem::exists(path_to_quality)) {
+                cerr << "Enter a valid path to the quality file" << endl;
+                cin >> path_to_quality;
+            }
+            ifstream quality_file(path_to_quality);
+            std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash> key_seen{};
+            auto last_cloud_acquired = share_data->clouds.back();
+            std::string line;
+            for (auto p: last_cloud_acquired->points) {
+                octomap::OcTreeKey key;
+                getline(quality_file,line);
+                bool key_have = octo_model->coordToKeyChecked(p.x, p.y, p.z, key);
+                if (key_have) {
+                    if (key_seen.find(key) == key_seen.end()) {
+                        (*share_data->quality_weight)[key] = std::stod(line);
+                        key_seen[key] = 1;
+                    } else {
+                        (*share_data->quality_weight)[key] = std::min((*share_data->quality_weight)[key], std::stod(line));
+                        key_seen[key] += 1;
+                    }
+                }
             }
         }
-        if ((*share_data->quality_weight)[key] == 1)
-            octo_model->integrateNodeColor(key, 0, 0, 0);
-        else
-            octo_model->integrateNodeColor(key, 0, (int) (*share_data->quality_weight)[key] * 255, 0);
+    } else {
+        std::cerr << "Wrong reconstruction method" << endl;
+        exit(0);
     }
     octo_model->updateInnerOccupancy();
     cout << "Octomap updated via cloud in: " << clock() - now_time << " ms." << endl;

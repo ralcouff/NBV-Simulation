@@ -148,7 +148,7 @@ double compute_completeness(Share_Data *share_data);
 void compare_octomaps(Share_Data *share_data, int iterations);
 
 
-void compute_quality(Share_Data *share_data, const std::string& pathToCloud, int neighbors);
+void compute_quality(Share_Data *share_data, const std::string& pathToCloud, const std::string &pathToLast3DModel, int neighbors);
 
 void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view_space, int n_rec_views);
 

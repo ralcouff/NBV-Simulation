@@ -47,10 +47,11 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
 
     // Test parameters
     alt_method_of_IG = get_method(_method);
-    method_of_IG = get_method(0);
+    method_of_IG = get_method(10);
     string_test_time = _string_test_time;
     reconstructionIterations = _n_iter;
     reconstructionMethod = _rec_method;
+    pathToLast3DModel = "";
 
     objectFilePath = _model_path;
     objectFolderPath = objectFilePath.substr(0, objectFilePath.find_last_of('/')) + '/';

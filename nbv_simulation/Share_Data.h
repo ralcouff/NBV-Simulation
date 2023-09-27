@@ -77,6 +77,7 @@ public:
     std::string blenderAPIPath;
     std::string qualityAPIPath;
     std::string pythonPath;
+    std::string pathToLast3DModel;
 
     // Point cloud data
     std::atomic<int> valid_clouds{};

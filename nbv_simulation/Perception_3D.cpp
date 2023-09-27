@@ -114,6 +114,7 @@ bool Perception_3D::percept(View *now_best_view) {
         while (!fileExist || !is3DFile) {
             cout << "Enter a valid path to the next partial reconstructed model." << endl;
             cin >> pathTo3DModel;
+            share_data->pathToLast3DModel = pathTo3DModel;
             fileExist = std::filesystem::exists(pathTo3DModel);
             if (fileExist) {
                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp(new pcl::PointCloud<pcl::PointXYZRGB>);

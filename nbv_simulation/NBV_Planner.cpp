@@ -196,7 +196,9 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
 
-    generate_initial_rec_model(share_data, now_view_space, share_data->reconstructionIterations);
+    if (share_data->reconstructionMethod == 1) {
+        generate_initial_rec_model(share_data, now_view_space, share_data->reconstructionIterations);
+    }
 
     // Set the initial viewpoint to a uniform position
     now_view_space->views[0].vis++;
@@ -452,16 +454,19 @@ int NBV_Planner::plan() {
                                 O = view_pose_world * O;
                                 int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
                                 std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(share_data->reconstructionIterations + iterations) + ".png";
+                                cout << "//////////////////////////////////////////////////////////////////////////////////////////" << endl;
+                                cout << img_path << endl;
+                                cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
                                 share_data->sfm_data.getViews().emplace(nb_nbv,
                                                                         std::make_shared<aliceVision::sfmData::View>(img_path,
-                                                                                                                     nb_nbv,
+                                                                                                                     1560+nb_nbv,
                                                                                                                      0,
-                                                                                                                     nb_nbv,
+                                                                                                                     1560+nb_nbv,
                                                                                                                      share_data->color_intrinsics.width,
                                                                                                                      share_data->color_intrinsics.height));
                                 aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
                                         view_pose_world.block<3, 3>(0, 0).transpose(), O.block<3, 1>(0, 0));
-                                share_data->sfm_data.getPoses().emplace(nb_nbv,
+                                share_data->sfm_data.getPoses().emplace(1560+nb_nbv,
                                                                         aliceVision::sfmData::CameraPose(transform,
                                                                                                          false));
                                 visualizer->addLine<pcl::PointXYZ>(pcl::PointXYZ(O(0), O(1), O(2)),
@@ -617,9 +622,10 @@ void create_view_space(View_Space **now_view_space, View *now_best_view, Share_D
 //    save_mid.detach();
     // Calculating keyframe camera poses
     share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-    compute_quality(share_data, share_data->savePath + "/clouds/pointcloud" + to_string(iterations) + ".obj", 30);
+    compute_quality(share_data, share_data->savePath + "/clouds/pointcloud" + to_string(iterations) + ".obj", share_data->pathToLast3DModel, 30);
     // Handling view space
-    (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations]);
+    std::string path_to_quality = share_data->savePath + "/metrics/using_qlt" + to_string(iterations) + ".qlt";
+    (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations], path_to_quality);
     // Update flag bit
     share_data->now_view_space_processed = true;
 }
@@ -817,6 +823,7 @@ void generate_images(int iteration, bool save_mode, Share_Data *share_data) {
         parameters = parameters + " -f_tex " + texture_file;
     std::string command = share_data->pythonPath + " " + script_name + " " + parameters;
     cout << "Generating the image " << iteration << endl;
+    cout << command << endl;
     system(command.c_str());
 }
 
@@ -1086,13 +1093,17 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 
 }
 
-void compute_quality(Share_Data *share_data, const std::string &pathToCloud, int neighbors) {
+void compute_quality(Share_Data *share_data, const std::string &pathToCloud, const std::string &pathToLast3DModel, int neighbors) {
     cout << "Computing the quality of the partial point cloud" << endl;
-    std::string python_script = share_data->qualityAPIPath + "main.py";
-    std::string saveFolder = share_data->savePath + "/metrics/";
-    std::string parameters = pathToCloud + " " + saveFolder + " " + to_string(neighbors);
-    std::string command = share_data->pythonPath + " -W ignore " + python_script + " " + parameters;
-    system(command.c_str());
+    std::vector<int> n_neighbors{30};
+    std::string path_to_obj_rescaled = share_data->savePath + '/' + share_data->nameOfObject + "_rescaled" + ".obj";
+    for (int neighbor: n_neighbors) {
+        std::string python_script = share_data->qualityAPIPath + "main.py";
+        std::string saveFolder = share_data->savePath + "/metrics/";
+        std::string parameters = pathToCloud + " " + saveFolder + " " + to_string(neighbor) + " " + path_to_obj_rescaled + " " + pathToLast3DModel;
+        std::string command = share_data->pythonPath + " -W ignore " + python_script + " " + parameters;
+        system(command.c_str());
+    }
     cout << "Finished computing the quality of the partial point cloud" << endl;
 }
 

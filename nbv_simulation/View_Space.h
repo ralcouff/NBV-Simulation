@@ -72,11 +72,13 @@ public:
      * @param _share_data The data shared through the whole files
      * @param cloud FIXME : Unused
      * @param update_cloud The cloud used to update the octomap
+     * @param path_to_quality The path to the computed quality file
      */
     void update(int _id,
                 Share_Data *_share_data,
                 pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud);
+                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr &update_cloud,
+                std::string& path_to_quality);
 
     /**
      * Adding the BBOx of the object to a PCLVisualizer in green
