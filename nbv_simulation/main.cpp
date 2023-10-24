@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <omp.h>
 
 #include "Share_Data.h"
 #include "NBV_Planner.h"
@@ -55,6 +56,7 @@ void get_run() {
 
 int main(int argc, char **argv) {
 
+    omp_set_num_threads(8);
     const auto config_file = std::string(argv[1]);
     // Init
     ios::sync_with_stdio(false);
@@ -64,7 +66,8 @@ int main(int argc, char **argv) {
     int n_iter = std::stoi(argv[5]);
     int reconstruction_method = std::stoi(argv[6]);
     std::string save_folder = std::string(argv[7]);
-    std::string string_test_time = std::string(argv[8]);
+    std::string preselected_views = std::string(argv[8]);
+    std::string string_test_time = std::string(argv[9]);
 
     cout << "---***--- Launching the NBV algorithm ---***--- " << endl;
     cout << "Configuration file: " << config_file << endl;
@@ -74,10 +77,11 @@ int main(int argc, char **argv) {
     cout << "Reconstruction iterations: " << n_iter << endl;
     cout << "Reconstruction method: " << reconstruction_method << endl;
     cout << "Save folder: " << save_folder << endl;
+    cout << "Preselected views file: " << preselected_views << endl;
     cout << "Start time: " << string_test_time << endl;
 
     // Data area initialisation
-    share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, reconstruction_method, save_folder, string_test_time);
+    share_data = new Share_Data(config_file, model_path, model_qlt_path, method, n_iter, reconstruction_method, save_folder, preselected_views, string_test_time);
     // Console read command threads
 //    thread cmd(get_command);
     // NBV system run threads

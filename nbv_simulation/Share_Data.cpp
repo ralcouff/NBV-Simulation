@@ -6,6 +6,7 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
                        const std::string &_model_qlt_path,
                        short _method, int _n_iter, int _rec_method,
                        const std::string &_save_folder,
+                       const std::string &_preselected_views,
                        const std::string &_string_test_time) {
 
     process_cnt = -1;
@@ -43,15 +44,17 @@ Share_Data::Share_Data(const std::string &_config_file_path, const std::string &
     fs["path_to_nbv-blender-api"] >> blenderAPIPath;
     fs["path_to_python_env"] >> pythonPath;
     fs["path_to_quality-estimator"] >> qualityAPIPath;
+    fs["num_views_per_iteration"] >> numViewsPerIteration;
     fs.release();
 
     // Test parameters
     alt_method_of_IG = get_method(_method);
-    method_of_IG = get_method(10);
+    method_of_IG = get_method(0);
     string_test_time = _string_test_time;
     reconstructionIterations = _n_iter;
     reconstructionMethod = _rec_method;
     pathToLast3DModel = "";
+    preselected_views_file = _preselected_views;
 
     objectFilePath = _model_path;
     objectFolderPath = objectFilePath.substr(0, objectFilePath.find_last_of('/')) + '/';
@@ -231,6 +234,9 @@ short get_method(int _n_test) {
             break;
         case 102:
             method = Test_two;
+            break;
+        case 103:
+            method = Test_real;
             break;
         default:
             cout << "This method does not exists, choosing the default one (0).";

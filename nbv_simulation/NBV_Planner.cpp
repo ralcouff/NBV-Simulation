@@ -195,16 +195,17 @@ NBV_Planner::NBV_Planner(Share_Data *_share_data, int _status) {
     /* Initialize View Space. */
     /* Generates the set of views around the Point Cloud. */
     now_view_space = new View_Space(iterations, share_data, voxel_information, share_data->cloud_ground_truth);
+    now_best_view = new View(now_view_space->views[0]);
 
     if (share_data->reconstructionMethod == 1) {
-        generate_initial_rec_model(share_data, now_view_space, share_data->reconstructionIterations);
+        generate_initial_rec_model(share_data, now_best_view, now_view_space, share_data->reconstructionIterations, share_data->preselected_views_file);
+    } else {
+        // Set the initial viewpoint to a uniform position
+        now_view_space->views[0].vis++;
+        now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+        Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     }
 
-    // Set the initial viewpoint to a uniform position
-    now_view_space->views[0].vis++;
-    now_best_view = new View(now_view_space->views[0]);
-    now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
-    Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
     // Camera class initialization
     percept = new Perception_3D(share_data);
 
@@ -292,7 +293,6 @@ int NBV_Planner::plan() {
             cout << "The current method is : " << endl;
             cout << NBV_Planner::share_data->method_of_IG << endl;
             cout << "***************************************************************************" << endl;
-            compare_octomaps(share_data, iterations);
             if (percept->percept(now_best_view)) {
                 thread next_view_space(create_view_space, &now_view_space, now_best_view, share_data, iterations);
                 next_view_space.detach();
@@ -301,6 +301,7 @@ int NBV_Planner::plan() {
             break;
         case WaitViewSpace:
             if (share_data->now_view_space_processed) {
+                compare_octomaps(share_data, iterations);
                 thread next_views_information(create_views_information,
                                               &now_views_information,
                                               now_best_view,
@@ -405,6 +406,7 @@ int NBV_Planner::plan() {
                         test_view_space->points.resize(needed);
                         visualizer->addPointCloud<pcl::PointXYZRGB>(test_view_space, "test_view_space");
                         bool best_have = false;
+                        int viewsSelected = 0;
                         for (int i = 0; i < now_view_space->views.size(); i++) {
                             if (now_view_space->views[i].vis) {
                                 now_view_space->views[i].get_next_camera_pos(share_data->now_camera_pose_world,
@@ -452,11 +454,8 @@ int NBV_Planner::plan() {
                                 Y = view_pose_world * Y;
                                 Z = view_pose_world * Z;
                                 O = view_pose_world * O;
-                                int nb_nbv = (int) share_data->sfm_data.getPoses().size() + 1;
-                                std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(share_data->reconstructionIterations + iterations) + ".png";
-                                cout << "//////////////////////////////////////////////////////////////////////////////////////////" << endl;
-                                cout << img_path << endl;
-                                cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
+                                int nb_nbv = (int) share_data->sfm_data.getPoses().size();
+                                std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(nb_nbv) + ".png";
                                 share_data->sfm_data.getViews().emplace(nb_nbv,
                                                                         std::make_shared<aliceVision::sfmData::View>(img_path,
                                                                                                                      1560+nb_nbv,
@@ -487,7 +486,17 @@ int NBV_Planner::plan() {
                                                                    0,
                                                                    255,
                                                                    "Z" + to_string(i));
-                                best_have = true;
+                                viewsSelected++;
+                                if (viewsSelected == share_data->numViewsPerIteration) {
+                                    best_have = true;
+                                }
+                                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+                                                                 share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+                                                                 aliceVision::sfmDataIO::ESfMData::ALL);
+                                aliceVision::sfmDataIO::Save(share_data->sfm_data,
+                                                             share_data->savePath + '/' + share_data->nameOfObject + ".abc",
+                                                             aliceVision::sfmDataIO::ESfMData::ALL);
+                                generate_images(nb_nbv, false, share_data);
                                 std::vector<int> rays_id = (*now_views_information->views_to_rays_map)[now_view_space->views[i].id];
                                 for (int r_id: rays_id) {
                                     auto start = now_views_information->rays_info[r_id]->ray->origin;
@@ -522,6 +531,8 @@ int NBV_Planner::plan() {
                         visualizer->close();
                     }
                     double max_utility = -1;
+                    int viewsSelected = 0;
+                    std::ofstream result(share_data->test_base_filename, std::ios_base::app);
                     for (int i = 0; i < now_view_space->views.size(); i++) {
                         cout << "Checking view " << i << endl;
                         if (now_view_space->views[i].vis)
@@ -533,35 +544,41 @@ int NBV_Planner::plan() {
                         cout << "Best_Views : " << share_data->best_views.size() << endl;
                         now_view_space->views[i].can_move = true;
                         cout << "View " << i << " has been chosen." << endl;
-                        break;
-                    }
-                    if (max_utility == -1) {
-                        cout << "Can't move to any viewpoint. Stop." << endl;
-                        status = Over;
-                        break;
-                    }
-                    cout << " Next best view position is: (" << now_best_view->init_pos(0) << ", "
+                        viewsSelected++;
+                        cout << " Next best view position is: (" << now_best_view->init_pos(0) << ", "
                          << now_best_view->init_pos(1) << ", " << now_best_view->init_pos(2) << ")" << endl;
-                    cout << " Next best view final_utility is: " << now_best_view->final_utility << endl;
-                    std::ofstream result(share_data->test_base_filename, std::ios_base::app);
-                    result << share_data->alt_method_of_IG << ',' << share_data->method_of_IG << ','
+                        cout << " Next best view final_utility is: " << now_best_view->final_utility << endl;
+
+                        result << share_data->alt_method_of_IG << ',' << share_data->method_of_IG << ','
                            << share_data->n_model << ',' << share_data->n_size << ','
                            << share_data->reconstructionIterations << ','
                            << std::to_string(iterations) << ',' << now_best_view->id << ','
                            << now_best_view->init_pos(0) << ',' << now_best_view->init_pos(1) << ','
                            << now_best_view->init_pos(2) << ',' << now_best_view->final_utility << ','
                            << compute_completeness(share_data) << endl;
+                        if (viewsSelected == share_data->numViewsPerIteration)
+                            break;
+                        else {
+                            share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+                        }
+
+                    }
                     result.close();
+                    if (max_utility == -1) {
+                        cout << "Can't move to any viewpoint. Stop." << endl;
+                        status = Over;
+                        break;
+                    }
                 }
                 thread next_moving(move_robot, now_best_view, now_view_space, share_data, this);
                 next_moving.detach();
-                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
-                                                 share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
-                                                 aliceVision::sfmDataIO::ESfMData::ALL);
-                aliceVision::sfmDataIO::Save(share_data->sfm_data,
-                                             share_data->savePath + '/' + share_data->nameOfObject + ".abc",
-                                             aliceVision::sfmDataIO::ESfMData::ALL);
-                generate_images(share_data->reconstructionIterations + iterations, false, share_data);
+//                aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+//                                                 share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+//                                                 aliceVision::sfmDataIO::ESfMData::ALL);
+//                aliceVision::sfmDataIO::Save(share_data->sfm_data,
+//                                             share_data->savePath + '/' + share_data->nameOfObject + ".abc",
+//                                             aliceVision::sfmDataIO::ESfMData::ALL);
+//                generate_images(share_data->reconstructionIterations + iterations, false, share_data);
                 status = WaitMoving;
             }
             break;
@@ -618,13 +635,14 @@ void create_view_space(View_Space **now_view_space, View *now_best_view, Share_D
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_mid(new pcl::PointCloud<pcl::PointXYZRGB>);
     *cloud_mid = *share_data->cloud_final;
     save_cloud_mid_thread_process(cloud_mid, "pointcloud" + to_string(iterations), share_data);
-//    thread save_mid(save_cloud_mid_thread_process, cloud_mid, "pointcloud" + to_string(iterations), share_data);
-//    save_mid.detach();
     // Calculating keyframe camera poses
-    share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
-    compute_quality(share_data, share_data->savePath + "/clouds/pointcloud" + to_string(iterations) + ".obj", share_data->pathToLast3DModel, 30);
+    // The else has been done in the generate_initial_rec function
+    if (share_data->reconstructionMethod == 0)
+        share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+    compute_quality(share_data, share_data->savePath + "clouds/pointcloud" + to_string(iterations) + ".obj", share_data->pathToLast3DModel, 50);
     // Handling view space
-    std::string path_to_quality = share_data->savePath + "/metrics/using_qlt" + to_string(iterations) + ".qlt";
+    std::string path_to_quality = share_data->savePath + "metrics/pointcloud" + to_string(iterations) + "_mean_plane_roughness_50.qlt";
+    cout << "Cloud Size in create_view space: " << share_data->clouds[iterations]->size() << endl;
     (*now_view_space)->update(iterations, share_data, share_data->cloud_final, share_data->clouds[iterations], path_to_quality);
     // Update flag bit
     share_data->now_view_space_processed = true;
@@ -713,12 +731,27 @@ void create_views_information(Views_Information **now_views_information,
             cout << "Flow information is zero." << endl;
         for (auto &view: now_view_space->views) {
             if (share_data->method_of_IG == OursIG)
-                view.final_utility =
-                        (1 - share_data->cost_weight) * view.information_gain /
-                        share_data->sum_local_information +
-                        share_data->cost_weight * view.get_global_information() /
-                        share_data->sum_global_information;
-            else if (share_data->method_of_IG == Test_qlt || share_data->method_of_IG == Test_local)
+                if (share_data->sum_local_information == 0 && share_data->sum_global_information == 0) {
+                    cout << "All information is zero." << endl;
+                    view.final_utility = 0;
+                } else if (share_data->sum_local_information == 0) {
+                    cout << "Local information is zero." << endl;
+                    view.final_utility =
+                            share_data->cost_weight * view.get_global_information() /
+                            share_data->sum_global_information;
+                } else if (share_data->sum_global_information == 0) {
+                    cout << "Flow information is zero." << endl;
+                    view.final_utility =
+                            (1 - share_data->cost_weight) * view.information_gain /
+                            share_data->sum_local_information;
+                } else {
+                    view.final_utility =
+                            (1 - share_data->cost_weight) * view.information_gain /
+                            share_data->sum_local_information +
+                            share_data->cost_weight * view.get_global_information() /
+                            share_data->sum_global_information;
+                }
+            else if (share_data->method_of_IG == Test_qlt || share_data->method_of_IG == Test_local || share_data->method_of_IG == Test_real)
                 view.final_utility = (share_data->sum_local_information == 0 ? 0 : (1 - share_data->cost_weight) *
                                                                                    view.information_gain /
                                                                                    share_data->sum_local_information);
@@ -889,22 +922,21 @@ double compute_completeness(Share_Data *share_data) {
     return ratio;
 }
 
-void compare_octomaps(Share_Data *share_data, int iterations) {
+void compare_octomaps(Share_Data *share_data, int iterations, std::string folder) {
 
-    std::string savePathOT = share_data->savePath + '/' + "OT_Comparison/";
+    std::string savePathOT = share_data->savePath + '/' + folder;
     std::string saveResultOT = savePathOT + "evolution.csv";
 
     Share_Data::access_directory(savePathOT);
 
-    std::list<tuple<float, float, float, float>> unknown;
-    std::list<tuple<float, float, float, float>> unknown_but_occupied;
-    std::list<tuple<float, float, float, float>> occupied_but_unknown;
-    std::list<tuple<float, float, float, float>> occupied;
-    std::list<tuple<float, float, float, float>> free_but_unknown;
-    std::list<tuple<float, float, float, float>> free_but_occupied;
-    std::list<tuple<float, float, float, float>> occupiedUnknown_but_unknown;
-    std::list<tuple<float, float, float, float>> occupiedUnknown_but_occupied;
-
+    std::list<tuple<float, float, float, float, float>> unknown;
+    std::list<tuple<float, float, float, float, float>> unknown_but_occupied;
+    std::list<tuple<float, float, float, float, float>> occupied_but_unknown;
+    std::list<tuple<float, float, float, float, float>> occupied;
+    std::list<tuple<float, float, float, float, float>> free_but_unknown;
+    std::list<tuple<float, float, float, float, float>> free_but_occupied;
+    std::list<tuple<float, float, float, float, float>> occupiedUnknown_but_unknown;
+    std::list<tuple<float, float, float, float, float>> occupiedUnknown_but_occupied;
 
     std::map<double, int> occ_map{};
 
@@ -915,11 +947,6 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
     share_data->octo_model->getMetricMin(x_min_octo, y_min_octo, z_min_octo);
     share_data->GT_sample->getMetricMax(x_max_gt, y_max_gt, z_max_gt);
     share_data->GT_sample->getMetricMin(x_min_gt, y_min_gt, z_min_gt);
-
-//    cout << x_max_octo << ", " << y_max_octo << ", " << z_max_octo << endl;
-//    cout << x_min_octo << ", " << y_min_octo << ", " << z_min_octo << endl;
-//    cout << x_max_gt << ", " << y_max_gt << ", " << z_max_gt << endl;
-//    cout << x_min_gt << ", " << y_min_gt << ", " << z_min_gt << endl;
 
     for (double x = std::min(x_min_gt, x_min_octo) + share_data->octomap_resolution / 2;
          x <= std::max(x_max_gt, x_max_octo); x += share_data->octomap_resolution) {
@@ -935,22 +962,23 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
                     octomap::ColorOcTreeNode *voxel_octo = share_data->octo_model->search(octo_key);
                     octomap::ColorOcTreeNode *voxel_gt = share_data->GT_sample->search(gt_key);
                     float octo_occupancy = 0;
+                    float octo_qlt = 1;
                     if (voxel_octo == nullptr && voxel_gt == nullptr) {
-                        unknown.emplace_back(x, y, z, octo_occupancy);
+                        unknown.emplace_back(x, y, z, octo_occupancy, octo_qlt);
                     } else if (voxel_octo == nullptr && voxel_gt->getOccupancy() > 0.5) {
-                        unknown_but_occupied.emplace_back(x, y, z, octo_occupancy);
+                        unknown_but_occupied.emplace_back(x, y, z, octo_occupancy, octo_qlt);
                     } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt == nullptr) {
-                        occupiedUnknown_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        occupiedUnknown_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy(), Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else if (voxel_octo->getOccupancy() == 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        occupiedUnknown_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        occupiedUnknown_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy(),Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt == nullptr) {
-                        occupied_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        occupied_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy(), Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else if (voxel_octo->getOccupancy() > 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        occupied.emplace_back(x, y, z, voxel_octo->getOccupancy(), Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt == nullptr) {
-                        free_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        free_but_unknown.emplace_back(x, y, z, voxel_octo->getOccupancy(), Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else if (voxel_octo->getOccupancy() < 0.5 && voxel_gt->getOccupancy() > 0.5) {
-                        free_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy());
+                        free_but_occupied.emplace_back(x, y, z, voxel_octo->getOccupancy(), Voxel_Information::voxel_quality(octo_key, share_data->quality_weight));
                     } else {
                         cout << "Voxel Octo Occupancy: " << voxel_octo->getOccupancy() << endl;
                         cout << "Voxel GT Occupancy: " << voxel_gt->getOccupancy() << endl;
@@ -985,7 +1013,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
              << occupiedUnknown_but_occupied.size() << endl;
     saveFile.close();
 
-    std::vector<std::list<tuple<float, float, float, float>>> statesList{unknown,
+    std::vector<std::list<tuple<float, float, float, float, float>>> statesList{unknown,
                                                                          unknown_but_occupied,
                                                                          occupied_but_unknown,
                                                                          occupied,
@@ -1005,6 +1033,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
     auto *OubO = new octomap::ColorOcTree(share_data->octomap_resolution);
     auto *allOT = new octomap::ColorOcTree(share_data->octomap_resolution);
     auto *myOT = new octomap::ColorOcTree(share_data->octomap_resolution);
+    auto *qltOT = new octomap::ColorOcTree(share_data->octomap_resolution);
     std::vector<octomap::ColorOcTree *> OTList{U, UbO, ObU, O, FbU, FbO, OubU, OubO};
 
     std::vector<std::string> OTNames{"U", "UbO", "ObU", "O", "FbU", "FbO", "OubU", "OubO"};
@@ -1021,26 +1050,37 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
         octomap::ColorOcTree *current_OT = OTList[i];
         std::string OTName = OTNames[i];
         std::tuple<int, int, int> OTcolor = OTColors[i];
-        std::list<tuple<float, float, float, float>> OTPoints = statesList[i];
+        std::list<tuple<float, float, float, float, float>> OTPoints = statesList[i];
         for (auto p: OTPoints) {
             double x = get<0>(p);
             double y = get<1>(p);
             double z = get<2>(p);
             float occ = get<3>(p);
+            float qlt = get<4>(p);
             current_OT->setNodeValue(x, y, z, (float) 0, true);
             current_OT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
             allOT->setNodeValue(x, y, z, (float) 0, true);
             allOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
             if (OTName == "OubO" || OTName == "FbO" || OTName == "O") {
                 myOT->setNodeValue(x, y, z, (float) 0, true);
+                qltOT->setNodeValue(x,y,z, (float) 0, true);
                 if (OTName == "O") {
-//                    cout << occ << endl;
-//                    cout << ((1-occ)/0.5)*255 << endl;
-//                    cout << (occ/0.5 - 1)*255 << endl;
+//                    cv::Mat occ_color;
+//                    cv::Mat Occ_mat(1,1,CV_8UC1,255*occ);
+//                    cv::applyColorMap(Occ_mat,occ_color,cv::COLORMAP_JET);
+//                    cv::Mat qlt_color;
+//                    cv::Mat Qlt_mat(1,1,CV_8UC1,255*qlt);
+//                    cv::applyColorMap(Qlt_mat,qlt_color,cv::COLORMAP_JET);
+//                    cout << "Colormap test: " << occ_color << endl;
                     myOT->setNodeColor(x, y, z, ((1 - occ) / 0.5) * 255, (occ / 0.5 - 1) * 255, 0);
+                    qltOT->setNodeColor(x,y,z, (1-qlt)*255, qlt*255, 0);
+//                    myOT->setNodeColor(x, y, z, occ_color.at<int>(1,1), occ_color.at<int>(1,2), occ_color.at<int>(1,3));
+//                    qltOT->setNodeColor(x,y,z, qlt_color.at<int>(1,1), qlt_color.at<int>(1,2), qlt_color.at<int>(1,3));
                 } else {
                     myOT->setNodeColor(x, y, z, get<0>(OTcolor), get<1>(OTcolor), get<2>(OTcolor));
+                    qltOT->setNodeColor(x,y,z, 255, 255, 255);
                 }
+                qltOT->updateInnerOccupancy();
                 myOT->updateInnerOccupancy();
             }
         }
@@ -1051,6 +1091,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
     allOT->updateInnerOccupancy();
     allOT->write(savePathOT + "all_" + to_string(iterations) + ".ot");
     myOT->write(savePathOT + "my_" + to_string(iterations) + ".ot");
+    qltOT->write(savePathOT + "qlt_" + to_string(iterations) + ".ot");
 
 
 //    list<tuple<int, int, int>> octo_keys;
@@ -1095,7 +1136,7 @@ void compare_octomaps(Share_Data *share_data, int iterations) {
 
 void compute_quality(Share_Data *share_data, const std::string &pathToCloud, const std::string &pathToLast3DModel, int neighbors) {
     cout << "Computing the quality of the partial point cloud" << endl;
-    std::vector<int> n_neighbors{30};
+    std::vector<int> n_neighbors{50};
     std::string path_to_obj_rescaled = share_data->savePath + '/' + share_data->nameOfObject + "_rescaled" + ".obj";
     for (int neighbor: n_neighbors) {
         std::string python_script = share_data->qualityAPIPath + "main.py";
@@ -1107,47 +1148,123 @@ void compute_quality(Share_Data *share_data, const std::string &pathToCloud, con
     cout << "Finished computing the quality of the partial point cloud" << endl;
 }
 
-void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view_space, int n_rec_views) {
-    vector<View> out;
-    std::sample(current_view_space->views.begin(), current_view_space->views.end(), std::back_inserter(out), n_rec_views, std::mt19937 {std::random_device{}()});
-    std::cout << "There were "<< out.size() << " views randomly selected" << endl;
+void generate_initial_rec_model(Share_Data *share_data, View *current_best_view, View_Space *current_view_space, int n_rec_views, std::string file_init_views) {
+    std::vector<std::pair<std::string, std::vector<float>>> csv_file = read_csv(file_init_views);
     int nb_rec = 1560;
-    int iter = 0;
-    for (View v : out) {
-        cout << "Id : " << v.id << endl;
-        cout << "Position : " << v.init_pos << endl;
-        v.get_next_camera_pos(share_data->now_camera_pose_world,share_data->object_center_world);
-
-        std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(iter) + ".png";
+    for (float id_view : csv_file[6].second) {
+        int int_view_id = static_cast<int>(id_view);
+        cout << "View id: " << int_view_id << endl;
+        View v = current_view_space->views[int_view_id];
+        v.vis++;
+        v.get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+        auto now_best_view = new View(v);
+        now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+        current_view_space->views[v.id].get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+        int nb_poses = share_data->sfm_data.getPoses().size();
+        std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(nb_poses) + ".png";
         auto view = std::make_shared<aliceVision::sfmData::View>(img_path,
-                                                                 nb_rec,
+                                                                 nb_rec + nb_poses,
                                                                  0,
-                                                                 nb_rec,
+                                                                 nb_rec + nb_poses,
                                                                  share_data->color_intrinsics.width,
                                                                  share_data->color_intrinsics.height);
-        view->setFrameId(iter);
-        share_data->sfm_data.getViews().emplace(nb_rec,
+        view->setFrameId(nb_poses);
+        share_data->sfm_data.getViews().emplace(nb_rec + nb_poses,
                                                 view);
         Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * v.pose.inverse()).eval();
         aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
                 view_pose_world.block<3,3>(0,0).transpose(), view_pose_world.block<3,1>(0,3));
-        share_data->sfm_data.getPoses().emplace(nb_rec,
+        share_data->sfm_data.getPoses().emplace(nb_rec + nb_poses,
                                                 aliceVision::sfmData::CameraPose(transform,
                                                                                  false));
-        cout << "Pose : " << v.pose << endl;
+
         aliceVision::sfmDataIO::Save(share_data->sfm_data,
                                          share_data->savePath + '/' + share_data->nameOfObject + ".abc",
                                          aliceVision::sfmDataIO::ESfMData::ALL);
         aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
                                      share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
                                      aliceVision::sfmDataIO::ESfMData::ALL);
-        generate_images(iter, 0 ,share_data);
-        nb_rec++;
-        iter++;
+
+        share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+        share_data->best_views.push_back(*now_best_view);
+        current_best_view = now_best_view;
     }
+
+//    vector<View> out;
+//    std::sample(current_view_space->views.begin(), current_view_space->views.end(), std::back_inserter(out), n_rec_views, std::mt19937 {std::random_device{}()});
+//    std::cout << "There were "<< out.size() << " views randomly selected" << endl;
+//    int nb_rec = 1560;
+//    int iter = 0;
+//    for (View v : out) {
+//        current_view_space->views[v.id].vis++;
+//        v.get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+//        auto now_best_view = new View(v);
+//        now_best_view->get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+//        current_view_space->views[v.id].get_next_camera_pos(share_data->now_camera_pose_world, share_data->object_center_world);
+//        int nb_poses = share_data->sfm_data.getPoses().size();
+//        std::string img_path = share_data->savePath + "/img/" + share_data->nameOfObject + "_" + to_string(nb_poses) + ".png";
+//        auto view = std::make_shared<aliceVision::sfmData::View>(img_path,
+//                                                                 nb_rec + nb_poses,
+//                                                                 0,
+//                                                                 nb_rec + nb_poses,
+//                                                                 share_data->color_intrinsics.width,
+//                                                                 share_data->color_intrinsics.height);
+//        view->setFrameId(nb_poses);
+//        share_data->sfm_data.getViews().emplace(nb_rec + nb_poses,
+//                                                view);
+//        Eigen::Matrix4d view_pose_world = (share_data->now_camera_pose_world * v.pose.inverse()).eval();
+//        aliceVision::geometry::Pose3 transform = aliceVision::geometry::Pose3(
+//                view_pose_world.block<3,3>(0,0).transpose(), view_pose_world.block<3,1>(0,3));
+//        share_data->sfm_data.getPoses().emplace(nb_rec + nb_poses,
+//                                                aliceVision::sfmData::CameraPose(transform,
+//                                                                                 false));
+//
+//        aliceVision::sfmDataIO::Save(share_data->sfm_data,
+//                                         share_data->savePath + '/' + share_data->nameOfObject + ".abc",
+//                                         aliceVision::sfmDataIO::ESfMData::ALL);
+//        aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
+//                                     share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
+//                                     aliceVision::sfmDataIO::ESfMData::ALL);
+//
+//        share_data->now_camera_pose_world = (share_data->now_camera_pose_world * now_best_view->pose.inverse()).eval();
+//        share_data->best_views.push_back(*now_best_view);
+//
+//        generate_images(nb_poses, 0 ,share_data);
+//        nb_rec++;
+//        iter++;
+//    }
     aliceVision::sfmDataIO::saveJSON(share_data->sfm_data,
                                      share_data->savePath + '/' + share_data->nameOfObject + ".sfm",
                                      aliceVision::sfmDataIO::ESfMData::ALL);
+    share_data->method_of_IG = get_method(share_data->alt_method_of_IG);
+}
+
+std::vector<std::pair<std::string, std::vector<float>>> read_csv(std::string filename){
+    std::vector<std::pair<std::string, std::vector<float>>> result;
+    std::ifstream myFile(filename);
+    if(!myFile.is_open()) throw std::runtime_error("Could not open file");
+    std::string line, colname;
+    int val;
+    if(myFile.good())
+    {
+        std::getline(myFile, line);
+        std::stringstream ss(line);
+        while(std::getline(ss, colname, ',')){
+            result.push_back({colname, std::vector<float> {}});
+        }
+    }
+    while(std::getline(myFile, line))
+    {
+        std::stringstream ss(line);
+        int colIdx = 0;
+        while(ss >> val){
+            result.at(colIdx).second.push_back(val);
+            if(ss.peek() == ',') ss.ignore();
+            colIdx++;
+        }
+    }
+    myFile.close();
+    return result;
 }
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer) {

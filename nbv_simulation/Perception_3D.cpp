@@ -42,7 +42,9 @@ bool Perception_3D::percept(View *now_best_view) {
 //                    (*precept_process[i]).join();
 //                }
             /* Traversing the image plane. */
+        #pragma omp parallel for num_threads(12) default(shared)
             for (int x = 0; x < share_data->color_intrinsics.width; ++x)
+            #pragma omp parallel for num_threads(12) default(shared)
                 for (int y = 0; y < share_data->color_intrinsics.height; ++y) {
                     int i = x * share_data->color_intrinsics.height + y;
                     percept_thread_process(x, y, cloud_parallel, &origin, &view_pose_world, share_data);
@@ -138,8 +140,11 @@ bool Perception_3D::percept(View *now_best_view) {
         // Record the current collection point cloud
         share_data->valid_clouds++;
         share_data->clouds.push_back(cloud);
+        cout << "Cloud size: " << cloud->size() << endl;
+        cout << "Cloud size share_data: " << share_data->clouds.back()->size() << endl;
         // Rotate to the world coordinate system
         *share_data->cloud_final += *cloud;
+        cout << "Share Data Cloud size: " << share_data->cloud_final->size() << endl;
         cout << "Virtual cloud got in: " << clock() - now_time << " ms." << endl;
     }
     iterations++;

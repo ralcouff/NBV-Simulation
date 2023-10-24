@@ -277,7 +277,7 @@ void ray_information_thread_process(
     octomap::KeyRay::iterator last;
     octomap::KeyRay::iterator first;
     octomap::KeyRay::iterator end;
-    if (method == Test_qlt || method == Test_two) {
+    if (method == Test_qlt || method == Test_two || method == Test_real) {
         first = rays_info[ray_id]->ray->start_unknown;
         last = rays_info[ray_id]->ray->stop_unknown;
         end = rays_info[ray_id]->ray->stop_unknown;
@@ -327,7 +327,7 @@ void ray_information_thread_process(
                                                                    qlt,
                                                                    rays_info[ray_id]->object_visible);
         rays_info[ray_id]->object_visible *= (1 - on_object);
-        if (method == OursIG || method == Test_local || method == Test_flow || method == Test_qlt)
+        if (method == OursIG || method == Test_local || method == Test_flow || method == Test_qlt || method == Test_real)
             rays_info[ray_id]->visible *= voxel_information->get_voxel_visible(occupancy);
         else
             rays_info[ray_id]->visible *= occupancy;
@@ -339,7 +339,7 @@ void ray_information_thread_process(
     while (last - first < -1)
         first--;
     last++;
-    if (method == Test_qlt || method == Test_two) {
+    if (method == Test_qlt || method == Test_two || method == Test_real) {
         // Update stop to one iterator after the last node
         rays_info[ray_id]->ray->stop_unknown = last;
         // Update start to the first iterator
@@ -384,6 +384,9 @@ inline double information_function(short &method,
             break;
         case Test_qlt:
             final_information = ray_information + visible * (1 - qlt);
+            break;
+        case Test_real:
+            final_information = ray_information + visible * voxel_information * (1-qlt);
             break;
         case OA:
             final_information = ray_information + visible * voxel_information;

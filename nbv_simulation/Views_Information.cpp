@@ -103,70 +103,104 @@ Views_Information::Views_Information(Share_Data *share_data, Voxel_Information *
     convex_3d.emplace_back(x2, y2, z2, 1);
     voxel_information->convex = convex_3d;
     // Ray generators for assigning viewpoints
-    auto **ray_caster = new std::thread *[view_space->views.size()];
-    // Initial subscripts for rays start from 0
+//    if (share_data->method_of_IG != get_method(101) || !share_data->quality_weight->empty()) {
     ray_num = 0;
+#pragma omp parallel for num_threads(12) default(shared)
     for (int i = 0; i < view_space->views.size(); i++) {
-        // Threads that divide into rays for this viewpoint
-        ray_caster[i] = new std::thread(ray_cast_thread_process,
-                                        &ray_num,
-                                        rays_info,
-                                        rays_map,
-                                        views_to_rays_map,
-                                        rays_to_views_map,
-                                        octo_model,
-                                        voxel_information,
-                                        view_space,
-                                        &color_intrinsics,
-                                        i);
-    }
-    /* Wait for each viewpoint ray generator to complete its calculation. */
-    for (int i = 0; i < view_space->views.size(); i++) {
-        (*ray_caster[i]).join();
+        ray_cast_thread_process(&ray_num,
+                                rays_info,
+                                rays_map,
+                                views_to_rays_map,
+                                rays_to_views_map,
+                                octo_model,
+                                voxel_information,
+                                view_space,
+                                &color_intrinsics,
+                                i);
     }
     cout << "Number of rays (ray_num) : " << ray_num << endl;
     cout << "All views' rays generated in " << clock() - now_time << " ms. Starting computation of information."
          << endl;
     /* Allocate a thread to each ray. */
     now_time = clock();
-    auto **rays_process = new std::thread *[ray_num];
+#pragma omp parallel for num_threads(12) default(shared)
     for (int i = 0; i < ray_num; i++) {
-        rays_process[i] = new std::thread(ray_information_thread_process,
-                                          i,
-                                          rays_info,
-                                          rays_map,
-                                          occupancy_map,
-                                          object_weight,
-                                          quality_weight,
-                                          octo_model,
-                                          voxel_information,
-                                          view_space,
-                                          method);
+        ray_information_thread_process(i,
+                                       rays_info,
+                                       rays_map,
+                                       occupancy_map,
+                                       object_weight,
+                                       quality_weight,
+                                       octo_model,
+                                       voxel_information,
+                                       view_space,
+                                       method);
     }
-    /* Waiting for the ray calculation to be completed. */
-    for (int i = 0; i < ray_num; i++) {
-        (*rays_process[i]).join();
-    }
+/*    } else {
+        for (const auto& kv : *share_data->quality_weight){
+            auto toto = share_data->octo_model->keyToCoord(kv.first);
+            for (auto & i : view_space->views) {
+                octomap::point3d view(i.init_pos(0),
+                                      i.init_pos(1),
+                                      i.init_pos(2));
+//                octomap::OcTreeKey key_view;
+                octomap::KeyRay key_ray;
+//                bool key_origin_have = octo_model->coordToKeyChecked(view_space->views[i].init_pos(0),
+//                                                                     view_space->views[i].init_pos(1),
+//                                                                     view_space->views[i].init_pos(2),
+//                                                                     key_view);
+                share_data->octo_model->computeRayKeys(toto, view, key_ray);
+            }
+        }*/
+//}
+
     auto cost_time = clock() - now_time;
-    cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
-    Share_Data::access_directory(share_data->savePath + "/run_time");
+    cout << "All rays' threads over with executed time " << cost_time << " ms." <<
+         endl;
+    Share_Data::access_directory(share_data
+                                         ->savePath + "/run_time");
     std::ofstream fout(share_data->savePath + "/run_time/IG" + std::to_string(view_space->id) + ".txt");
-    fout << cost_time << endl;
-    // Information counters for assigning viewpoints
+    fout << cost_time <<
+         endl;
+// Information counters for assigning viewpoints
     now_time = clock();
     auto **view_gain = new std::thread *[view_space->views.size()];
-    for (int i = 0; i < view_space->views.size(); i++) {
-        // Threads that distribute information statistics for this viewpoint
-        view_gain[i] = new std::thread(information_gain_thread_process, rays_info, views_to_rays_map, view_space, i);
+    for (
+            int i = 0;
+            i < view_space->views.
+
+                    size();
+
+            i++) {
+// Threads that distribute information statistics for this viewpoint
+        view_gain[i] = new
+                std::thread(information_gain_thread_process, rays_info, views_to_rays_map, view_space, i
+        );
     }
-    // Wait for the information on each viewpoint to be counted
-    for (int i = 0; i < view_space->views.size(); i++) {
-        (*view_gain[i]).join();
+// Wait for the information on each viewpoint to be counted
+    for (
+            int i = 0;
+            i < view_space->views.
+
+                    size();
+
+            i++) {
+        (*view_gain[i]).
+
+                join();
+
     }
-    cout << "All views' gain threads over with executed time " << clock() - now_time << " ms." << endl;
-    // Saving teh repartition of quality and occupancy in the model
-    save_quality_map(share_data, quality_weight, iterations);
-    save_occupancy_map(share_data, iterations);
+    cout << "All views' gain threads over with executed time " <<
+
+         clock()
+
+         - now_time << " ms." <<
+         endl;
+// Saving teh repartition of quality and occupancy in the model
+    save_quality_map(share_data, quality_weight, iterations
+    );
+    save_occupancy_map(share_data, iterations
+    );
 }
 
 void Views_Information::update(Share_Data *share_data, View_Space *view_space, int iterations) {
@@ -222,11 +256,11 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         pre_edge_cnt = 0x3f3f3f3f;
     if (edge->points.size() != 0) {
         // Calculating frontier
-        pcl::KdTreeFLANN <pcl::PointXYZ> kdtree;
+        pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
         kdtree.setInputCloud(edge);
         std::vector<int> pointIdxNKNSearch(K);
         std::vector<float> pointNKNSquaredDistance(K);
-        for (auto & point : points) {
+        for (auto &point: points) {
             octomap::OcTreeKey key;
             bool key_have = octo_model->coordToKeyChecked(point, key);
             if (key_have) {
@@ -272,7 +306,7 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         rays_map = new std::unordered_map<Ray, int, Ray_Hash>();
 
         // Calculate the eight vertices of BBX for delineating the ray range
-        std::vector <Eigen::Vector4d> convex_3d;
+        std::vector<Eigen::Vector4d> convex_3d;
         double x1 = view_space->object_center_world(0) - map_size;
         double x2 = view_space->object_center_world(0) + map_size;
         double y1 = view_space->object_center_world(1) - map_size;
@@ -289,50 +323,74 @@ void Views_Information::update(Share_Data *share_data, View_Space *view_space, i
         convex_3d.emplace_back(x2, y2, z2, 1);
         voxel_information->convex = convex_3d;
         // Ray generators for assigning viewpoints
-        auto **ray_caster = new std::thread *[view_space->views.size()];
+//        auto **ray_caster = new std::thread *[view_space->views.size()];
+#pragma omp parallel for num_threads(12) default(shared)
         for (int i = 0; i < view_space->views.size(); i++) {
-            // Threads that divide into rays for this viewpoint
-            ray_caster[i] = new std::thread(ray_cast_thread_process,
-                                            &ray_num,
-                                            rays_info,
-                                            rays_map,
-                                            views_to_rays_map,
-                                            rays_to_views_map,
-                                            octo_model,
-                                            voxel_information,
-                                            view_space,
-                                            &color_intrinsics,
-                                            i);
+//            // Threads that divide into rays for this viewpoint
+//            ray_caster[i] = new std::thread(ray_cast_thread_process,
+//                                            &ray_num,
+//                                            rays_info,
+//                                            rays_map,
+//                                            views_to_rays_map,
+//                                            rays_to_views_map,
+//                                            octo_model,
+//                                            voxel_information,
+//                                            view_space,
+//                                            &color_intrinsics,
+//                                            i);
+            ray_cast_thread_process(
+                    &ray_num,
+                    rays_info,
+                    rays_map,
+                    views_to_rays_map,
+                    rays_to_views_map,
+                    octo_model,
+                    voxel_information,
+                    view_space,
+                    &color_intrinsics,
+                    i);
         }
         // Wait for each viewpoint ray generator to complete its calculation
-        for (int i = 0; i < view_space->views.size(); i++) {
-            (*ray_caster[i]).join();
-        }
+//        for (int i = 0; i < view_space->views.size(); i++) {
+//            (*ray_caster[i]).join();
+//        }
         cout << "ray_num is " << ray_num << endl;
         cout << "All views' rays generated with executed time " << clock() - now_time << " ms. Starting computation."
              << endl;
     }
     // Allocate a thread to each ray
     now_time = clock();
-    auto **rays_process = new std::thread *[ray_num];
+//    auto **rays_process = new std::thread *[ray_num];
+#pragma omp parallel for num_threads(12) default(shared)
     for (int i = 0; i < ray_num; i++) {
         rays_info[i]->clear();
-        rays_process[i] = new std::thread(ray_information_thread_process,
-                                          i,
-                                          rays_info,
-                                          rays_map,
-                                          occupancy_map,
-                                          object_weight,
-                                          quality_weight,
-                                          octo_model,
-                                          voxel_information,
-                                          view_space,
-                                          method);
+//        rays_process[i] = new std::thread(ray_information_thread_process,
+//                                          i,
+//                                          rays_info,
+//                                          rays_map,
+//                                          occupancy_map,
+//                                          object_weight,
+//                                          quality_weight,
+//                                          octo_model,
+//                                          voxel_information,
+//                                          view_space,
+//                                          method);
+        ray_information_thread_process(
+                i,
+                rays_info,
+                rays_map,
+                occupancy_map,
+                object_weight,
+                quality_weight,
+                octo_model,
+                voxel_information,
+                view_space,
+                method);
     }
     // Waiting for the ray calculation to be completed
-    for (int i = 0; i < ray_num; i++) {
-        (*rays_process[i]).join();
-    }
+//    for (int i = 0; i < ray_num; i++) {
+//        (*rays_process[i]).join();
+//    }
     auto cost_time = clock() - now_time;
     cout << "All rays' threads over with executed time " << cost_time << " ms." << endl;
     Share_Data::access_directory(share_data->savePath + "/run_time");

@@ -17,25 +17,26 @@ views_voxels_MF::views_voxels_MF(int _nx, View_Space *_view_space, Views_Informa
     voxel_id_map = new std::unordered_map<octomap::OcTreeKey, int, octomap::OcTreeKey::KeyHash>;
     // Parallel traversal of the voxels on each ray to the corresponding viewpoint
     nz = 0;
-    auto **adjacency_list_process = new std::thread *[views_information->ray_num];
+//    auto **adjacency_list_process = new std::thread *[views_information->ray_num];
+#pragma omp parallel for num_threads(12) default(shared)
     for (int i = 0; i < views_information->ray_num; i++) {
-        adjacency_list_process[i] = new std::thread(adjacency_list_thread_process,
-                                                    i,
-                                                    &nz,
-                                                    nx,
-                                                    nx + ny,
-                                                    voxel_id_map,
-                                                    bipartite_list,
-                                                    view_space,
-                                                    views_information,
-                                                    voxel_information,
-                                                    share_data);
-//        adjacency_list_thread_process(i, &nz, nx, nx + ny, voxel_id_map, bipartite_list, view_space, views_information,
-//                                      voxel_information, share_data);
+//        adjacency_list_process[i] = new std::thread(adjacency_list_thread_process,
+//                                                    i,
+//                                                    &nz,
+//                                                    nx,
+//                                                    nx + ny,
+//                                                    voxel_id_map,
+//                                                    bipartite_list,
+//                                                    view_space,
+//                                                    views_information,
+//                                                    voxel_information,
+//                                                    share_data);
+        adjacency_list_thread_process(i, &nz, nx, nx + ny, voxel_id_map, bipartite_list, view_space, views_information,
+                                      voxel_information, share_data);
     }
-    for (int i = 0; i < views_information->ray_num; i++) {
-        (*adjacency_list_process[i]).join();
-    }
+//    for (int i = 0; i < views_information->ray_num; i++) {
+//        (*adjacency_list_process[i]).join();
+//    }
     // Output the exact figure size
     if (nz != voxel_id_map->size())
         cout << "node_z wrong." << endl;

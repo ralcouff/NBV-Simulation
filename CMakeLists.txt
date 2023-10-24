@@ -17,6 +17,8 @@ find_package(octomap 1.9.1 REQUIRED)
 
 find_package(AliceVision REQUIRED)
 
+find_package(OpenMP REQUIRED)
+
 set(NBV_SIMULATION_SOURCES
         nbv_simulation/main.cpp
         nbv_simulation/utils.cpp
@@ -69,4 +71,5 @@ target_link_libraries(nbv_simulation PUBLIC
         Boost::thread
         aliceVision_sfmData
         aliceVision_sfmDataIO
+        OpenMP::OpenMP_CXX
         )

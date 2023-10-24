@@ -4,7 +4,7 @@ name_of_pcd: "Armadillo"
 method_of_IG : 0
 octomap_resolution: 0.01
 ground_truth_resolution: 0.002
-num_of_max_iteration: 20
+num_of_max_iteration: 15
 show: 1
 move_wait : 0
 nbv_net_path: "D:/jupyter_pytorch_cpu/nbv-net"
@@ -13,32 +13,18 @@ p_unknown_lower_bound: 0.45
 num_of_views : 5000
 cost_weight: 0.5 
 robot_cost_negative: 0
-skip_coefficient : 10.0
+skip_coefficient : 5.0
 num_of_max_flow_node : -1
 interesting_threshold : 0.3
+num_views_per_iteration : 4.0
 
 # Default LiDAr Camera for perfect acquisition
-color_width: 640
-color_height: 480
-color_fx: 6.1040447998046875e+02
-color_fy: 6.0888446044921875e+02
-color_ppx: 3.2476354980468750e+02
-color_ppy: 2.4834353637695313e+02
-color_model: 2
-color_k1: 1.2042199820280075e-01
-color_k2: -2.1373499929904938e-01
-color_k3: 5.3860000334680080e-03
-color_p1: -2.1210000850260258e-03
-color_p2: 0.
-depth_scale: 1.0000000474974513e-03
-
-# 35mm equivalent perfect camera on blender
-#color_width: 1920
-#color_height: 1080
-#color_fx: 1.8666666666666667e+03
-#color_fy: 1.8666666666666667e+03
-#color_ppx: 960
-#color_ppy: 540
+#color_width: 640
+#color_height: 480
+#color_fx: 6.1040447998046875e+02
+#color_fy: 6.0888446044921875e+02
+#color_ppx: 3.2476354980468750e+02
+#color_ppy: 2.4834353637695313e+02
 #color_model: 2
 #color_k1: 1.2042199820280075e-01
 #color_k2: -2.1373499929904938e-01
@@ -46,6 +32,21 @@ depth_scale: 1.0000000474974513e-03
 #color_p1: -2.1210000850260258e-03
 #color_p2: 0.
 #depth_scale: 1.0000000474974513e-03
+
+# 35mm equivalent perfect camera on blender
+color_width: 1920
+color_height: 1080
+color_fx: 1.8666666666666667e+03
+color_fy: 1.8666666666666667e+03
+color_ppx: 960
+color_ppy: 540
+color_model: 2
+color_k1: 1.2042199820280075e-01
+color_k2: -2.1373499929904938e-01
+color_k3: 5.3860000334680080e-03
+color_p1: -2.1210000850260258e-03
+color_p2: 0.
+depth_scale: 1.0000000474974513e-03
 
 path_to_nbv-blender-api: "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/nbv-blender-api/"
 path_to_quality-estimator: "/home/alcoufr/dev/NBV_base/NBV-Simulation_1/quality_estimator/"

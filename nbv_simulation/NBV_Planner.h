@@ -1,7 +1,6 @@
 #ifndef NBV_SIMULATION_NBV_PLANNER_H
 #define NBV_SIMULATION_NBV_PLANNER_H
 
-#include "Share_Data.h"
 #pragma once
 
 #include <memory>
@@ -145,12 +144,13 @@ double compute_completeness(Share_Data *share_data);
  * Make a comparison of the ground truth octomap and the working octomap.
  * @param share_data  The shared data among the whole project
  */
-void compare_octomaps(Share_Data *share_data, int iterations);
-
+void compare_octomaps(Share_Data *share_data, int iterations, std::string folder = "OT_Comparison/");
 
 void compute_quality(Share_Data *share_data, const std::string& pathToCloud, const std::string &pathToLast3DModel, int neighbors);
 
-void generate_initial_rec_model(Share_Data *share_data, View_Space *current_view_space, int n_rec_views);
+void generate_initial_rec_model(Share_Data *share_data, View *current_best_view, View_Space *current_view_space, int n_rec_views, std::string file_init_views);
+
+std::vector<std::pair<std::string, std::vector<float>>> read_csv(std::string filename);
 
 [[maybe_unused]] void show_cloud(const pcl::visualization::PCLVisualizer::Ptr &viewer);
 

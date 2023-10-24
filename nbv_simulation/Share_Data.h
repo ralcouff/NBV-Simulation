@@ -58,6 +58,7 @@ using Views = aliceVision::HashMap<aliceVision::IndexT, std::shared_ptr<View> >;
 #define Test_flow 11
 #define Test_qlt 101
 #define Test_two 102
+#define Test_real 103
 
 /**
  * The class that contains all the data needed for the NBV algorithm.
@@ -78,6 +79,7 @@ public:
     std::string qualityAPIPath;
     std::string pythonPath;
     std::string pathToLast3DModel;
+    std::string preselected_views_file;
 
     // Point cloud data
     std::atomic<int> valid_clouds{};
@@ -161,6 +163,7 @@ public:
     int n_size;
     int n_test;
     int reconstructionIterations;
+    int numViewsPerIteration;
 
 
     /**
@@ -175,7 +178,7 @@ public:
      * @param _save_folder
      * @param _string_test_time
      */
-    explicit Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path, short _method, int _n_iter, int _rec_method, const std::string& _save_folder, const std::string& _string_test_time);
+    explicit Share_Data(const std::string& _config_file_path, const std::string& _model_path, const std::string& _model_qlt_path, short _method, int _n_iter, int _rec_method, const std::string& _save_folder, const std::string& _preselected_views, const std::string& _string_test_time);
 
 
     /**
